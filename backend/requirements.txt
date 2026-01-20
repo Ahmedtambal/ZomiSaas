@@ -26,25 +26,5 @@ pydantic==2.5.3
 pydantic-settings==2.1.0
 email-validator==2.1.0
 
-# CORS & Middleware
-fastapi-cors==0.0.6
-
-# Date & Time
-python-dateutil==2.8.2
-
-# CSV & Excel Export
-pandas==2.2.0
-openpyxl==3.1.2
-
-# Logging & Monitoring
+# Logging
 loguru==0.7.2
-
-# Testing (Development)
-pytest==7.4.4
-pytest-asyncio==0.23.3
-httpx==0.26.0
-
-# Code Quality (Development)
-black==23.12.1
-flake8==7.0.0
-mypy==1.8.0
