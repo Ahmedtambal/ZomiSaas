@@ -1,0 +1,99 @@
+"""
+Main FastAPI application entry point
+"""
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
+import logging
+
+from app.config import settings
+from app.routes import auth
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+# Initialize FastAPI app
+app = FastAPI(
+    title="Zomi Wealth Portal API",
+    description="Corporate wealth management backend API",
+    version="1.0.0",
+    docs_url="/docs" if settings.ENVIRONMENT != "production" else None,
+    redoc_url="/redoc" if settings.ENVIRONMENT != "production" else None,
+)
+
+# =====================================================
+# Security Middleware
+# =====================================================
+
+# CORS - Strict configuration
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[settings.FRONTEND_URL] if settings.FRONTEND_URL else [],
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],  # Specific methods only
+    allow_headers=[
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "Origin",
+        "X-Requested-With",
+    ],  # Specific headers only - NO wildcard
+    expose_headers=["Content-Length", "X-Total-Count"],
+    max_age=3600,  # Cache preflight requests for 1 hour
+)
+
+# Trusted Host - Prevent host header attacks
+if settings.ENVIRONMENT == "production":
+    app.add_middleware(
+        TrustedHostMiddleware,
+        allowed_hosts=[settings.FRONTEND_URL.replace("https://", "").replace("http://", "")]
+    )
+
+# GZip compression
+app.add_middleware(GZipMiddleware, minimum_size=1000)
+
+# =====================================================
+# Routes
+# =====================================================
+
+app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
+
+# =====================================================
+# Health Check
+# =====================================================
+
+@app.get("/health", tags=["Health"])
+async def health_check():
+    """Health check endpoint"""
+    return {
+        "status": "healthy",
+        "environment": settings.ENVIRONMENT,
+        "version": "1.0.0"
+    }
+
+@app.get("/", tags=["Root"])
+async def root():
+    """Root endpoint"""
+    return {
+        "message": "Zomi Wealth Portal API",
+        "version": "1.0.0",
+        "docs": "/docs" if settings.ENVIRONMENT != "production" else "disabled"
+    }
+
+# =====================================================
+# Startup & Shutdown Events
+# =====================================================
+
+@app.on_event("startup")
+async def startup_event():
+    logger.info(f"🚀 Starting Zomi Wealth Portal API - {settings.ENVIRONMENT}")
+    logger.info(f"📍 Frontend URL: {settings.FRONTEND_URL}")
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    logger.info("👋 Shutting down Zomi Wealth Portal API")

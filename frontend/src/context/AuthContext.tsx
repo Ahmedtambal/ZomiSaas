@@ -1,10 +1,12 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, AuthState } from '../types';
+import { authService } from '../services/authService';
 
 interface AuthContextType extends AuthState {
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, fullName: string, inviteCode: string) => Promise<void>;
-  logout: () => void;
+  registerAdmin: (fullName: string, email: string, password: string, jobTitle: string, organizationName: string) => Promise<void>;
+  registerUser: (fullName: string, email: string, password: string, jobTitle: string, inviteCode: string) => Promise<void>;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -29,8 +31,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   });
 
   useEffect(() => {
+    // Check if user is authenticated on mount
     const storedUser = localStorage.getItem('zomi_user');
-    if (storedUser) {
+    const accessToken = authService.getAccessToken();
+    
+    if (storedUser && accessToken) {
       setAuthState({
         user: JSON.parse(storedUser),
         isAuthenticated: true,
@@ -42,50 +47,117 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   }, []);
 
   const login = async (email: string, password: string) => {
-    const mockUser: User = {
-      id: '1',
-      email,
-      fullName: 'Admin User',
-      role: 'Admin',
-      createdAt: new Date().toISOString(),
-    };
+    try {
+      const response = await authService.login({ email, password });
+      
+      const user: User = {
+        id: response.data.user.id,
+        email: response.data.user.email,
+        fullName: response.data.user.full_name,
+        role: response.data.user.role === 'admin' ? 'Admin' : 'Member',
+        createdAt: response.data.user.created_at,
+      };
 
-    localStorage.setItem('zomi_user', JSON.stringify(mockUser));
-    setAuthState({
-      user: mockUser,
-      isAuthenticated: true,
-      isLoading: false,
-    });
+      localStorage.setItem('zomi_user', JSON.stringify(user));
+      setAuthState({
+        user,
+        isAuthenticated: true,
+        isLoading: false,
+      });
+    } catch (error) {
+      console.error('Login error:', error);
+      throw error;
+    }
   };
 
-  const register = async (email: string, password: string, fullName: string, inviteCode: string) => {
-    const mockUser: User = {
-      id: '2',
-      email,
-      fullName,
-      role: 'Member',
-      createdAt: new Date().toISOString(),
-    };
+  const registerAdmin = async (
+    fullName: string,
+    email: string,
+    password: string,
+    jobTitle: string,
+    organizationName: string
+  ) => {
+    try {
+      const response = await authService.signupAdmin({
+        full_name: fullName,
+        email,
+        password,
+        job_title: jobTitle,
+        organization_name: organizationName,
+      });
 
-    localStorage.setItem('zomi_user', JSON.stringify(mockUser));
-    setAuthState({
-      user: mockUser,
-      isAuthenticated: true,
-      isLoading: false,
-    });
+      const user: User = {
+        id: response.data.user.id,
+        email: response.data.user.email,
+        fullName: response.data.user.full_name,
+        role: 'Admin',
+        createdAt: response.data.user.created_at,
+      };
+
+      localStorage.setItem('zomi_user', JSON.stringify(user));
+      setAuthState({
+        user,
+        isAuthenticated: true,
+        isLoading: false,
+      });
+    } catch (error) {
+      console.error('Admin registration error:', error);
+      throw error;
+    }
   };
 
-  const logout = () => {
-    localStorage.removeItem('zomi_user');
-    setAuthState({
-      user: null,
-      isAuthenticated: false,
-      isLoading: false,
-    });
+  const registerUser = async (
+    fullName: string,
+    email: string,
+    password: string,
+    jobTitle: string,
+    inviteCode: string
+  ) => {
+    try {
+      const response = await authService.signupUser({
+        full_name: fullName,
+        email,
+        password,
+        job_title: jobTitle,
+        invite_code: inviteCode,
+      });
+
+      const user: User = {
+        id: response.data.user.id,
+        email: response.data.user.email,
+        fullName: response.data.user.full_name,
+        role: 'Member',
+        createdAt: response.data.user.created_at,
+      };
+
+      localStorage.setItem('zomi_user', JSON.stringify(user));
+      setAuthState({
+        user,
+        isAuthenticated: true,
+        isLoading: false,
+      });
+    } catch (error) {
+      console.error('User registration error:', error);
+      throw error;
+    }
+  };
+
+  const logout = async () => {
+    try {
+      await authService.logout();
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      setAuthState({
+        user: null,
+        isAuthenticated: false,
+        isLoading: false,
+      });
+    }
   };
 
   return (
-    <AuthContext.Provider value={{ ...authState, login, register, logout }}>
+    <AuthContext.Provider value={{ ...authState, login, registerAdmin, registerUser, logout }}>
       {children}
     </AuthContext.Provider>
   );

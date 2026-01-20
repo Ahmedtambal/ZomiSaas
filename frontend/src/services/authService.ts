@@ -1,0 +1,240 @@
+/**
+ * Authentication API Service
+ * Handles all authentication-related API calls
+ */
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
+interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+interface AdminSignupRequest {
+  full_name: string;
+  email: string;
+  password: string;
+  job_title: string;
+  organization_name: string;
+  role: 'admin';
+}
+
+interface UserSignupRequest {
+  full_name: string;
+  email: string;
+  password: string;
+  job_title: string;
+  invite_code: string;
+  role: 'user';
+}
+
+interface AuthResponse {
+  message: string;
+  data: {
+    access_token: string;
+    refresh_token: string;
+    token_type: string;
+    expires_in: number;
+    user: {
+      id: string;
+      organization_id: string;
+      full_name: string;
+      email: string;
+      job_title: string;
+      role: string;
+      is_active: boolean;
+      is_email_verified: boolean;
+      created_at: string;
+      updated_at: string;
+    };
+  };
+}
+
+interface RefreshTokenRequest {
+  refresh_token: string;
+}
+
+interface RefreshTokenResponse {
+  message: string;
+  data: {
+    access_token: string;
+    token_type: string;
+    expires_in: number;
+  };
+}
+
+class AuthService {
+  private accessToken: string | null = null;
+  private refreshToken: string | null = null;
+
+  constructor() {
+    // Load tokens from localStorage on initialization
+    this.accessToken = localStorage.getItem('access_token');
+    this.refreshToken = localStorage.getItem('refresh_token');
+  }
+
+  /**
+   * Admin signup - creates organization and admin user
+   */
+  async signupAdmin(data: Omit<AdminSignupRequest, 'role'>): Promise<AuthResponse> {
+    const response = await fetch(`${API_URL}/api/auth/signup/admin`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ ...data, role: 'admin' }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Admin signup failed');
+    }
+
+    const result: AuthResponse = await response.json();
+    this.setTokens(result.data.access_token, result.data.refresh_token);
+    return result;
+  }
+
+  /**
+   * User signup - requires valid invite code
+   */
+  async signupUser(data: Omit<UserSignupRequest, 'role'>): Promise<AuthResponse> {
+    const response = await fetch(`${API_URL}/api/auth/signup/user`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ ...data, role: 'user' }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'User signup failed');
+    }
+
+    const result: AuthResponse = await response.json();
+    this.setTokens(result.data.access_token, result.data.refresh_token);
+    return result;
+  }
+
+  /**
+   * Login
+   */
+  async login(credentials: LoginRequest): Promise<AuthResponse> {
+    const response = await fetch(`${API_URL}/api/auth/login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(credentials),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Login failed');
+    }
+
+    const result: AuthResponse = await response.json();
+    this.setTokens(result.data.access_token, result.data.refresh_token);
+    return result;
+  }
+
+  /**
+   * Refresh access token
+   */
+  async refreshAccessToken(): Promise<string> {
+    if (!this.refreshToken) {
+      throw new Error('No refresh token available');
+    }
+
+    const response = await fetch(`${API_URL}/api/auth/refresh`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ refresh_token: this.refreshToken }),
+    });
+
+    if (!response.ok) {
+      this.clearTokens();
+      throw new Error('Token refresh failed');
+    }
+
+    const result: RefreshTokenResponse = await response.json();
+    this.setAccessToken(result.data.access_token);
+    return result.data.access_token;
+  }
+
+  /**
+   * Logout
+   */
+  async logout(): Promise<void> {
+    if (this.refreshToken) {
+      try {
+        await fetch(`${API_URL}/api/auth/logout`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ refresh_token: this.refreshToken }),
+        });
+      } catch (error) {
+        console.error('Logout request failed:', error);
+      }
+    }
+    this.clearTokens();
+  }
+
+  /**
+   * Get access token
+   */
+  getAccessToken(): string | null {
+    return this.accessToken;
+  }
+
+  /**
+   * Get refresh token
+   */
+  getRefreshToken(): string | null {
+    return this.refreshToken;
+  }
+
+  /**
+   * Check if user is authenticated
+   */
+  isAuthenticated(): boolean {
+    return !!this.accessToken;
+  }
+
+  /**
+   * Set tokens
+   */
+  private setTokens(accessToken: string, refreshToken: string): void {
+    this.accessToken = accessToken;
+    this.refreshToken = refreshToken;
+    localStorage.setItem('access_token', accessToken);
+    localStorage.setItem('refresh_token', refreshToken);
+  }
+
+  /**
+   * Set access token only
+   */
+  private setAccessToken(accessToken: string): void {
+    this.accessToken = accessToken;
+    localStorage.setItem('access_token', accessToken);
+  }
+
+  /**
+   * Clear tokens
+   */
+  private clearTokens(): void {
+    this.accessToken = null;
+    this.refreshToken = null;
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+    localStorage.removeItem('zomi_user');
+  }
+}
+
+export const authService = new AuthService();
+export type { AdminSignupRequest, UserSignupRequest, LoginRequest, AuthResponse };

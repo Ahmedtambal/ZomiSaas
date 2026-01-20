@@ -33,7 +33,7 @@ fastapi-cors==0.0.6
 python-dateutil==2.8.2
 
 # CSV & Excel Export
-pandas==2.1.4
+pandas==2.2.0
 openpyxl==3.1.2
 
 # Logging & Monitoring
