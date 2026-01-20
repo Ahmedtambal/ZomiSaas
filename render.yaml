@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: zomi-wealth-dashboard
+    runtime: node
+    region: frankfurt # Closest to London (eu-central)
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm run preview
+    envVars:
+      - key: NODE_VERSION
+        value: 18.18.0
+      - key: VITE_SUPABASE_URL
+        sync: false
+      - key: VITE_SUPABASE_ANON_KEY
+        sync: false
+    healthCheckPath: /
+    autoDeploy: true
