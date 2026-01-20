@@ -95,9 +95,6 @@ export const LoginPage = ({ onShowRegister }: LoginPageProps) => {
             </button>
           </p>
         </div>
-
-        <div className="mt-6 text-center text-xs text-slate-500">
-          UK/GDPR Compliant • Hosted in London (eu-west-2)
         </div>
       </div>
     </div>

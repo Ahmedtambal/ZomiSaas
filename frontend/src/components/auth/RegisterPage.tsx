@@ -291,10 +291,6 @@ export const RegisterPage = ({ onShowLogin }: RegisterPageProps) => {
             {isLoading ? 'Creating Account...' : 'Create Account'}
           </button>
         </form>
-
-        <div className="mt-6 text-center text-xs text-slate-500">
-          UK/GDPR Compliant • Hosted in London (eu-west-2)
-        </div>
       </div>
     </div>
   );
