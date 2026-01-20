@@ -1,6 +1,6 @@
-# Zomi Wealth Portal - Corporate Wealth Management SaaS
+# Zomi Wealth Portal
 
-A professional wealth management dashboard for UK-based pension scheme advisers. Built with React, TypeScript, Supabase, and hosted on Render.
+Corporate wealth management SaaS platform for UK-based pension scheme advisers.
 
 ## 🚀 Features
 

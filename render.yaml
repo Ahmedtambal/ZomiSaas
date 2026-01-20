@@ -1,11 +1,12 @@
 services:
+  # Frontend - React App
   - type: web
-    name: zomi-wealth-dashboard
+    name: zomi-frontend
     runtime: node
-    region: frankfurt # Closest to London (eu-central)
+    region: frankfurt
     plan: free
-    buildCommand: npm install && npm run build
-    startCommand: npm run preview
+    buildCommand: cd frontend && npm install && npm run build
+    startCommand: cd frontend && npm run preview
     envVars:
       - key: NODE_VERSION
         value: 18.18.0
