@@ -6,6 +6,7 @@ from jose import JWTError, jwt
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
 from uuid import UUID
+import hashlib
 
 from app.config import settings
 
@@ -18,13 +19,23 @@ class AuthService:
     
     @staticmethod
     def hash_password(password: str) -> str:
-        """Hash a password using bcrypt"""
-        return pwd_context.hash(password)
+        """
+        Hash a password using bcrypt.
+        Uses SHA256 pre-hashing to handle passwords longer than 72 bytes.
+        """
+        # Pre-hash with SHA256 to handle any length password
+        password_hash = hashlib.sha256(password.encode('utf-8')).hexdigest()
+        return pwd_context.hash(password_hash)
     
     @staticmethod
     def verify_password(plain_password: str, hashed_password: str) -> bool:
-        """Verify a password against its hash"""
-        return pwd_context.verify(plain_password, hashed_password)
+        """
+        Verify a password against its hash.
+        Uses SHA256 pre-hashing to match the hashing process.
+        """
+        # Pre-hash with SHA256 to match the hashing process
+        password_hash = hashlib.sha256(plain_password.encode('utf-8')).hexdigest()
+        return pwd_context.verify(password_hash, hashed_password)
     
     @staticmethod
     def create_access_token(data: Dict[str, Any], expires_delta: Optional[timedelta] = None) -> str:
