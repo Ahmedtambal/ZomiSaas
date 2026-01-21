@@ -4,11 +4,12 @@ import { useAuth } from '../../context/AuthContext';
 
 interface RegisterPageProps {
   onShowLogin: () => void;
+  onRegistrationSuccess?: (email: string) => void;
 }
 
 type TabType = 'admin' | 'user';
 
-export const RegisterPage = ({ onShowLogin }: RegisterPageProps) => {
+export const RegisterPage = ({ onShowLogin, onRegistrationSuccess }: RegisterPageProps) => {
   const [activeTab, setActiveTab] = useState<TabType>('user');
   const [formData, setFormData] = useState({
     email: '',
@@ -88,6 +89,11 @@ export const RegisterPage = ({ onShowLogin }: RegisterPageProps) => {
           formData.jobTitle,
           formData.inviteCode
         );
+      }
+      
+      // Show email confirmation page
+      if (onRegistrationSuccess) {
+        onRegistrationSuccess(formData.email);
       }
     } catch (err: any) {
       setError(err.message || 'Registration failed. Please try again.');

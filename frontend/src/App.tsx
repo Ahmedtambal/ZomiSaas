@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { LoginPage } from './components/auth/LoginPage';
 import { RegisterPage } from './components/auth/RegisterPage';
+import { EmailConfirmationPage } from './components/auth/EmailConfirmationPage';
 import { DashboardLayout } from './components/layout/DashboardLayout';
 import { ExecutiveDashboard } from './components/dashboard/ExecutiveDashboard';
 import { DatabaseSelector } from './components/members/DatabaseSelector';
@@ -13,7 +14,8 @@ import { DatabaseType, IO_UPLOAD_COLUMNS, NEW_EMPLOYEE_UPLOAD_COLUMNS } from './
 
 function AppContent() {
   const { isAuthenticated, isLoading } = useAuth();
-  const [authView, setAuthView] = useState<'login' | 'register'>('login');
+  const [authView, setAuthView] = useState<'login' | 'register' | 'email-confirmation'>('login');
+  const [registeredEmail, setRegisteredEmail] = useState<string>('');
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [dynamicFormId, setDynamicFormId] = useState<string | null>(null);
   const [selectedDatabase, setSelectedDatabase] = useState<DatabaseType | null>(null);
@@ -29,10 +31,25 @@ function AppContent() {
   }
 
   if (!isAuthenticated) {
+    if (authView === 'email-confirmation') {
+      return (
+        <EmailConfirmationPage 
+          email={registeredEmail}
+          onBackToLogin={() => setAuthView('login')}
+        />
+      );
+    }
+    
     return authView === 'login' ? (
       <LoginPage onShowRegister={() => setAuthView('register')} />
     ) : (
-      <RegisterPage onShowLogin={() => setAuthView('login')} />
+      <RegisterPage 
+        onShowLogin={() => setAuthView('login')}
+        onRegistrationSuccess={(email) => {
+          setRegisteredEmail(email);
+          setAuthView('email-confirmation');
+        }}
+      />
     );
   }
 
