@@ -1,93 +1,69 @@
 """
-Authentication Service - Password Hashing & JWT Tokens
+Authentication Service - Supabase Auth Integration
 """
-from passlib.context import CryptContext
-from jose import JWTError, jwt
-from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
-from uuid import UUID
-import hashlib
-
-from app.config import settings
-
-# Password hashing context - disable bcrypt 72-byte truncation error
-pwd_context = CryptContext(
-    schemes=["bcrypt"], 
-    deprecated="auto",
-    bcrypt__default_rounds=12,
-    bcrypt__truncate_error=False  # Disable 72-byte error, auto-truncate instead
-)
+from app.services.database_service import db_service
 
 
 class AuthService:
-    """Authentication utilities"""
+    """Supabase Authentication utilities"""
     
     @staticmethod
-    def hash_password(password: str) -> str:
-        """Hash a password using bcrypt (auto-truncates to 72 bytes)"""
-        return pwd_context.hash(password)
-    
-    @staticmethod
-    def verify_password(plain_password: str, hashed_password: str) -> bool:
-        """Verify a password against its hash"""
-        return pwd_context.verify(plain_password, hashed_password)
-    
-    @staticmethod
-    def create_access_token(data: Dict[str, Any], expires_delta: Optional[timedelta] = None) -> str:
-        """Create JWT access token"""
-        to_encode = data.copy()
-        
-        if expires_delta:
-            expire = datetime.utcnow() + expires_delta
-        else:
-            expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-        
-        to_encode.update({
-            "exp": expire,
-            "iat": datetime.utcnow(),
-            "type": "access"
-        })
-        
-        encoded_jwt = jwt.encode(
-            to_encode,
-            settings.SECRET_KEY,
-            algorithm=settings.ALGORITHM
-        )
-        return encoded_jwt
-    
-    @staticmethod
-    def create_refresh_token(data: Dict[str, Any]) -> str:
-        """Create JWT refresh token"""
-        to_encode = data.copy()
-        expire = datetime.utcnow() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
-        
-        to_encode.update({
-            "exp": expire,
-            "iat": datetime.utcnow(),
-            "type": "refresh"
-        })
-        
-        encoded_jwt = jwt.encode(
-            to_encode,
-            settings.SECRET_KEY,
-            algorithm=settings.ALGORITHM
-        )
-        return encoded_jwt
-    
-    @staticmethod
-    def decode_token(token: str) -> Optional[Dict[str, Any]]:
-        """Decode and validate JWT token"""
+    async def signup_with_email(email: str, password: str, user_metadata: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Sign up a new user using Supabase Auth
+        Returns: Supabase auth response with user and session
+        """
         try:
-            payload = jwt.decode(
-                token,
-                settings.SECRET_KEY,
-                algorithms=[settings.ALGORITHM]
-            )
-            return payload
-        except JWTError:
+            response = db_service.client.auth.sign_up({
+                "email": email,
+                "password": password,
+                "options": {
+                    "data": user_metadata  # Store additional user data
+                }
+            })
+            return response
+        except Exception as e:
+            raise Exception(f"Signup failed: {str(e)}")
+    
+    @staticmethod
+    async def signin_with_email(email: str, password: str) -> Dict[str, Any]:
+        """
+        Sign in a user using Supabase Auth
+        Returns: Supabase auth response with user and session
+        """
+        try:
+            response = db_service.client.auth.sign_in_with_password({
+                "email": email,
+                "password": password
+            })
+            return response
+        except Exception as e:
+            raise Exception(f"Login failed: {str(e)}")
+    
+    @staticmethod
+    async def signout(access_token: str) -> bool:
+        """Sign out a user"""
+        try:
+            db_service.client.auth.sign_out()
+            return True
+        except Exception as e:
+            return False
+    
+    @staticmethod
+    async def get_user_from_token(access_token: str) -> Optional[Dict[str, Any]]:
+        """Get user details from access token"""
+        try:
+            response = db_service.client.auth.get_user(access_token)
+            return response.user if response else None
+        except Exception as e:
             return None
     
     @staticmethod
-    def validate_token_type(payload: Dict[str, Any], expected_type: str) -> bool:
-        """Validate token type (access or refresh)"""
-        return payload.get("type") == expected_type
+    async def refresh_session(refresh_token: str) -> Dict[str, Any]:
+        """Refresh access token using refresh token"""
+        try:
+            response = db_service.client.auth.refresh_session(refresh_token)
+            return response
+        except Exception as e:
+            raise Exception(f"Token refresh failed: {str(e)}")

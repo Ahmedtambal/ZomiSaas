@@ -11,12 +11,6 @@ supabase
 postgrest
 python-dotenv
 
-# Authentication & Security
-pyjwt
-python-jose[cryptography]
-passlib[bcrypt]
-cryptography
-
 # HTTP Client
 httpx
 aiohttp
