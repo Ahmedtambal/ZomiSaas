@@ -95,7 +95,6 @@ export const LoginPage = ({ onShowRegister }: LoginPageProps) => {
             </button>
           </p>
         </div>
-        </div>
       </div>
     </div>
   );
