@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Mail, CheckCircle, XCircle, Loader2, Leaf } from 'lucide-react';
+import { Mail, X, Loader2, Leaf, Sparkles } from 'lucide-react';
 
 interface EmailConfirmationPageProps {
   email: string;
@@ -7,10 +7,13 @@ interface EmailConfirmationPageProps {
 }
 
 export const EmailConfirmationPage = ({ email, onBackToLogin }: EmailConfirmationPageProps) => {
-  const [status, setStatus] = useState<'pending' | 'success' | 'error'>('pending');
   const [countdown, setCountdown] = useState(60);
+  const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
+    // Trigger animation
+    setTimeout(() => setIsVisible(true), 50);
+
     // Countdown timer for resend button
     if (countdown > 0) {
       const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
@@ -24,36 +27,79 @@ export const EmailConfirmationPage = ({ email, onBackToLogin }: EmailConfirmatio
     // Add your resend email API call here
   };
 
+  const handleClose = () => {
+    setIsVisible(false);
+    setTimeout(onBackToLogin, 300); // Wait for animation
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
-      <div className="glass-panel rounded-3xl p-8 w-full max-w-md">
-        <div className="flex flex-col items-center mb-8">
-          <div className="w-16 h-16 bg-zomi-green rounded-2xl flex items-center justify-center mb-4 shadow-lg">
-            <Leaf className="w-10 h-10 text-white" />
+    <div 
+      className={`fixed inset-0 z-50 flex items-center justify-center p-4 transition-all duration-300 ${
+        isVisible ? 'opacity-100 backdrop-blur-md' : 'opacity-0 backdrop-blur-none'
+      }`}
+      style={{ backgroundColor: 'rgba(0, 0, 0, 0.4)' }}
+      onClick={handleClose}
+    >
+      <div 
+        className={`glass-panel rounded-3xl p-8 w-full max-w-md shadow-2xl border border-white/20 transform transition-all duration-300 ${
+          isVisible ? 'scale-100 opacity-100' : 'scale-95 opacity-0'
+        }`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Close Button */}
+        <button
+          onClick={handleClose}
+          className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-slate-700 transition-all duration-200"
+        >
+          <X className="w-5 h-5" />
+        </button>
+
+        {/* Header */}
+        <div className="flex flex-col items-center mb-6">
+          <div className="relative">
+            <div className="w-16 h-16 bg-gradient-to-br from-zomi-green to-emerald-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg animate-pulse">
+              <Leaf className="w-10 h-10 text-white" />
+            </div>
+            <div className="absolute -top-1 -right-1">
+              <Sparkles className="w-5 h-5 text-yellow-400 animate-bounce" />
+            </div>
           </div>
-          <h1 className="text-3xl font-bold text-slate-900 mb-2">Check Your Email</h1>
+          <h1 className="text-2xl font-bold text-slate-900 mb-1">Check Your Email</h1>
+          <p className="text-sm text-slate-600">Verification Required</p>
         </div>
 
-        <div className="text-center mb-8">
-          <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Mail className="w-10 h-10 text-blue-600" />
+        {/* Email Icon & Message */}
+        <div className="text-center mb-6">
+          <div className="relative inline-block mb-4">
+            <div className="w-20 h-20 bg-gradient-to-br from-blue-100 to-blue-200 rounded-full flex items-center justify-center shadow-inner">
+              <Mail className="w-10 h-10 text-blue-600" />
+            </div>
+            <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-zomi-green rounded-full flex items-center justify-center border-2 border-white">
+              <span className="text-white text-xs font-bold">✓</span>
+            </div>
           </div>
           
-          <h2 className="text-xl font-semibold text-slate-900 mb-3">
-            Verification Email Sent
+          <h2 className="text-lg font-semibold text-slate-900 mb-2">
+            Verification Email Sent!
           </h2>
           
-          <p className="text-slate-600 mb-2">
+          <p className="text-sm text-slate-600 mb-2">
             We've sent a verification link to:
           </p>
           
-          <p className="text-zomi-green font-semibold mb-4">
-            {email}
-          </p>
+          <div className="bg-gradient-to-r from-zomi-green/10 to-emerald-100/50 border border-zomi-green/30 rounded-xl px-4 py-2 mb-4">
+            <p className="text-zomi-green font-semibold text-sm break-all">
+              {email}
+            </p>
+          </div>
           
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-slate-700 text-left">
-            <p className="font-semibold mb-2">📧 Next Steps:</p>
-            <ol className="list-decimal list-inside space-y-1">
+          {/* Instructions Box with Glassmorphism */}
+          <div className="bg-white/60 backdrop-blur-sm border border-blue-200/50 rounded-xl p-4 text-sm text-slate-700 text-left shadow-inner">
+            <div className="flex items-start gap-2 mb-2">
+              <span className="text-lg">📧</span>
+              <p className="font-semibold text-slate-900">Next Steps:</p>
+            </div>
+            <ol className="list-decimal list-inside space-y-1.5 text-slate-700">
               <li>Check your inbox (and spam folder)</li>
               <li>Click the verification link in the email</li>
               <li>You'll be redirected back to login</li>
@@ -61,11 +107,12 @@ export const EmailConfirmationPage = ({ email, onBackToLogin }: EmailConfirmatio
           </div>
         </div>
 
-        <div className="space-y-4">
+        {/* Action Buttons */}
+        <div className="space-y-3">
           <button
             onClick={handleResendEmail}
             disabled={countdown > 0}
-            className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-3 rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-white/70 hover:bg-white/90 backdrop-blur-sm text-slate-700 font-semibold py-3 rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md border border-slate-200/50"
           >
             {countdown > 0 ? (
               <span className="flex items-center justify-center gap-2">
@@ -78,16 +125,17 @@ export const EmailConfirmationPage = ({ email, onBackToLogin }: EmailConfirmatio
           </button>
 
           <button
-            onClick={onBackToLogin}
-            className="w-full bg-zomi-green hover:bg-zomi-green/90 text-white font-semibold py-3 rounded-xl transition-all duration-200"
+            onClick={handleClose}
+            className="w-full bg-gradient-to-r from-zomi-green to-emerald-600 hover:from-zomi-green/90 hover:to-emerald-600/90 text-white font-semibold py-3 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl"
           >
             Back to Login
           </button>
         </div>
 
-        <div className="mt-6 pt-6 border-t border-slate-200">
+        {/* Footer Note */}
+        <div className="mt-5 pt-5 border-t border-slate-200/50">
           <p className="text-center text-xs text-slate-500">
-            Didn't receive the email? Check your spam folder or contact support.
+            💡 Didn't receive the email? Check your spam folder or contact support.
           </p>
         </div>
       </div>
