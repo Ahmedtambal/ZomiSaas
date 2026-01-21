@@ -21,21 +21,21 @@ class AuthService:
     def hash_password(password: str) -> str:
         """
         Hash a password using bcrypt.
-        Uses SHA256 pre-hashing to handle passwords longer than 72 bytes.
+        Truncates password to 72 bytes to comply with bcrypt limitation.
         """
-        # Pre-hash with SHA256 to handle any length password
-        password_hash = hashlib.sha256(password.encode('utf-8')).hexdigest()
-        return pwd_context.hash(password_hash)
+        # Truncate to 72 bytes as required by bcrypt
+        password_bytes = password.encode('utf-8')[:72]
+        return pwd_context.hash(password_bytes)
     
     @staticmethod
     def verify_password(plain_password: str, hashed_password: str) -> bool:
         """
         Verify a password against its hash.
-        Uses SHA256 pre-hashing to match the hashing process.
+        Truncates password to 72 bytes to match the hashing process.
         """
-        # Pre-hash with SHA256 to match the hashing process
-        password_hash = hashlib.sha256(plain_password.encode('utf-8')).hexdigest()
-        return pwd_context.verify(password_hash, hashed_password)
+        # Truncate to 72 bytes to match the hashing process
+        password_bytes = plain_password.encode('utf-8')[:72]
+        return pwd_context.verify(password_bytes, hashed_password)
     
     @staticmethod
     def create_access_token(data: Dict[str, Any], expires_delta: Optional[timedelta] = None) -> str:
