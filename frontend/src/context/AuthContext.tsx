@@ -86,6 +86,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         organization_name: organizationName,
       });
 
+      // Check if email confirmation is required
+      if (response.email_confirmation_required) {
+        // Don't set auth state, just return to show confirmation page
+        return;
+      }
+
       const user: User = {
         id: response.data.user.id,
         email: response.data.user.email,
@@ -121,6 +127,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         job_title: jobTitle,
         invite_code: inviteCode,
       });
+
+      // Check if email confirmation is required
+      if (response.email_confirmation_required) {
+        // Don't set auth state, just return to show confirmation page
+        return;
+      }
 
       const user: User = {
         id: response.data.user.id,

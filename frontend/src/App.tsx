@@ -31,25 +31,28 @@ function AppContent() {
   }
 
   if (!isAuthenticated) {
-    if (authView === 'email-confirmation') {
-      return (
-        <EmailConfirmationPage 
-          email={registeredEmail}
-          onBackToLogin={() => setAuthView('login')}
-        />
-      );
-    }
-    
-    return authView === 'login' ? (
-      <LoginPage onShowRegister={() => setAuthView('register')} />
-    ) : (
-      <RegisterPage 
-        onShowLogin={() => setAuthView('login')}
-        onRegistrationSuccess={(email) => {
-          setRegisteredEmail(email);
-          setAuthView('email-confirmation');
-        }}
-      />
+    return (
+      <>
+        {authView === 'login' ? (
+          <LoginPage onShowRegister={() => setAuthView('register')} />
+        ) : (
+          <RegisterPage 
+            onShowLogin={() => setAuthView('login')}
+            onRegistrationSuccess={(email) => {
+              setRegisteredEmail(email);
+              setAuthView('email-confirmation');
+            }}
+          />
+        )}
+        
+        {/* Email Confirmation Modal */}
+        {authView === 'email-confirmation' && (
+          <EmailConfirmationPage 
+            email={registeredEmail}
+            onBackToLogin={() => setAuthView('login')}
+          />
+        )}
+      </>
     );
   }
 

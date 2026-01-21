@@ -30,7 +30,9 @@ interface UserSignupRequest {
 
 interface AuthResponse {
   message: string;
-  data: {
+  email_confirmation_required?: boolean;
+  email?: string;
+  data?: {
     access_token: string;
     refresh_token: string;
     token_type: string;
@@ -91,7 +93,12 @@ class AuthService {
     }
 
     const result: AuthResponse = await response.json();
-    this.setTokens(result.data.access_token, result.data.refresh_token);
+    
+    // Only set tokens if they exist (not required for email confirmation)
+    if (result.data) {
+      this.setTokens(result.data.access_token, result.data.refresh_token);
+    }
+    
     return result;
   }
 
@@ -113,7 +120,12 @@ class AuthService {
     }
 
     const result: AuthResponse = await response.json();
-    this.setTokens(result.data.access_token, result.data.refresh_token);
+    
+    // Only set tokens if they exist (not required for email confirmation)
+    if (result.data) {
+      this.setTokens(result.data.access_token, result.data.refresh_token);
+    }
+    
     return result;
   }
 

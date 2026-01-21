@@ -63,35 +63,42 @@ export const RegisterPage = ({ onShowLogin, onRegistrationSuccess }: RegisterPag
     setIsLoading(true);
 
     try {
+      let requiresEmailConfirmation = false;
+      
       if (activeTab === 'admin') {
         // Admin signup
         if (!formData.organizationName) {
           setError('Organization name is required for admin signup');
+          setIsLoading(false);
           return;
         }
-        await registerAdmin(
+        const response = await registerAdmin(
           formData.fullName,
           formData.email,
           formData.password,
           formData.jobTitle,
           formData.organizationName
         );
+        // Check if email confirmation is needed (registerAdmin returns void normally, but no redirect happens)
+        requiresEmailConfirmation = true;
       } else {
         // User signup
         if (!formData.inviteCode || formData.inviteCode.length !== 8) {
           setError('Valid 8-character invite code is required');
+          setIsLoading(false);
           return;
         }
-        await registerUser(
+        const response = await registerUser(
           formData.fullName,
           formData.email,
           formData.password,
           formData.jobTitle,
           formData.inviteCode
         );
+        requiresEmailConfirmation = true;
       }
       
-      // Show email confirmation page
+      // Show email confirmation popup
       if (onRegistrationSuccess) {
         onRegistrationSuccess(formData.email);
       }
