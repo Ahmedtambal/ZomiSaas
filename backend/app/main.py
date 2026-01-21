@@ -51,7 +51,7 @@ app.add_middleware(
 if settings.ENVIRONMENT == "production":
     app.add_middleware(
         TrustedHostMiddleware,
-        allowed_hosts=[settings.FRONTEND_URL.replace("https://", "").replace("http://", "")]
+        allowed_hosts=["zomisaasbackend.onrender.com", "*.onrender.com"]
     )
 
 # GZip compression
