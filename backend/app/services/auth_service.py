@@ -21,21 +21,21 @@ class AuthService:
     def hash_password(password: str) -> str:
         """
         Hash a password using bcrypt.
-        Truncates password to 72 bytes to comply with bcrypt limitation.
+        Truncates password to 72 characters to comply with bcrypt limitation.
         """
-        # Truncate to 72 bytes as required by bcrypt
-        password_bytes = password.encode('utf-8')[:72]
-        return pwd_context.hash(password_bytes)
+        # Truncate to 72 characters (bcrypt limit)
+        truncated_password = password[:72]
+        return pwd_context.hash(truncated_password)
     
     @staticmethod
     def verify_password(plain_password: str, hashed_password: str) -> bool:
         """
         Verify a password against its hash.
-        Truncates password to 72 bytes to match the hashing process.
+        Truncates password to 72 characters to match the hashing process.
         """
-        # Truncate to 72 bytes to match the hashing process
-        password_bytes = plain_password.encode('utf-8')[:72]
-        return pwd_context.verify(password_bytes, hashed_password)
+        # Truncate to 72 characters to match the hashing process
+        truncated_password = plain_password[:72]
+        return pwd_context.verify(truncated_password, hashed_password)
     
     @staticmethod
     def create_access_token(data: Dict[str, Any], expires_delta: Optional[timedelta] = None) -> str:
