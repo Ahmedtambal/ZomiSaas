@@ -10,8 +10,13 @@ import hashlib
 
 from app.config import settings
 
-# Password hashing context
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Password hashing context - disable bcrypt 72-byte truncation error
+pwd_context = CryptContext(
+    schemes=["bcrypt"], 
+    deprecated="auto",
+    bcrypt__default_rounds=12,
+    bcrypt__truncate_error=False  # Disable 72-byte error, auto-truncate instead
+)
 
 
 class AuthService:
@@ -19,23 +24,13 @@ class AuthService:
     
     @staticmethod
     def hash_password(password: str) -> str:
-        """
-        Hash a password using bcrypt.
-        Truncates password to 72 characters to comply with bcrypt limitation.
-        """
-        # Truncate to 72 characters (bcrypt limit)
-        truncated_password = password[:72]
-        return pwd_context.hash(truncated_password)
+        """Hash a password using bcrypt (auto-truncates to 72 bytes)"""
+        return pwd_context.hash(password)
     
     @staticmethod
     def verify_password(plain_password: str, hashed_password: str) -> bool:
-        """
-        Verify a password against its hash.
-        Truncates password to 72 characters to match the hashing process.
-        """
-        # Truncate to 72 characters to match the hashing process
-        truncated_password = plain_password[:72]
-        return pwd_context.verify(truncated_password, hashed_password)
+        """Verify a password against its hash"""
+        return pwd_context.verify(plain_password, hashed_password)
     
     @staticmethod
     def create_access_token(data: Dict[str, Any], expires_delta: Optional[timedelta] = None) -> str:
