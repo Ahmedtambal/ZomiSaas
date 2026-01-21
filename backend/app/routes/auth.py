@@ -8,7 +8,7 @@ from typing import Dict, Any
 from app.models.user import UserCreate, UserLogin, TokenRefresh
 from app.viewmodels.auth_viewmodel import auth_viewmodel
 
-router = APIRouter(prefix="/auth", tags=["authentication"])
+router = APIRouter()
 
 
 @router.post("/signup/admin", status_code=status.HTTP_201_CREATED)
