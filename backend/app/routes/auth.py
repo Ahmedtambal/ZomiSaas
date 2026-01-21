@@ -47,6 +47,14 @@ async def signup_admin(user_data: UserCreate) -> Dict[str, Any]:
             detail=error or "Signup failed"
         )
     
+    # Check if email confirmation is required
+    if error == "EMAIL_CONFIRMATION_REQUIRED":
+        return {
+            "message": "Account created successfully. Please check your email to verify your account.",
+            "email_confirmation_required": True,
+            "email": user_data.email
+        }
+    
     return {
         "message": "Admin account created successfully",
         "data": token_response.model_dump()
@@ -88,6 +96,14 @@ async def signup_user(user_data: UserCreate) -> Dict[str, Any]:
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=error or "Signup failed"
         )
+    
+    # Check if email confirmation is required
+    if error == "EMAIL_CONFIRMATION_REQUIRED":
+        return {
+            "message": "Account created successfully. Please check your email to verify your account.",
+            "email_confirmation_required": True,
+            "email": user_data.email
+        }
     
     return {
         "message": "User account created successfully",

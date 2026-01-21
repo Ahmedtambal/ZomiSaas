@@ -59,6 +59,11 @@ class AuthViewModel:
                 "details": {"type": "admin", "email": user_data.email}
             })
             
+            # Check if session exists (it won't if email confirmation is required)
+            if not auth_response.session:
+                # Email confirmation required - return success but no tokens
+                return True, None, "EMAIL_CONFIRMATION_REQUIRED"
+            
             # Get user profile
             profile = await db_service.get_user_profile_by_id(auth_response.user.id)
             
@@ -135,6 +140,11 @@ class AuthViewModel:
                 "resource": "user",
                 "details": {"type": "user", "email": user_data.email, "invite_code": user_data.invite_code}
             })
+            
+            # Check if session exists (it won't if email confirmation is required)
+            if not auth_response.session:
+                # Email confirmation required - return success but no tokens
+                return True, None, "EMAIL_CONFIRMATION_REQUIRED"
             
             # Create token response
             token_response = TokenResponse(
