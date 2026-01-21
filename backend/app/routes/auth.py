@@ -156,14 +156,17 @@ async def refresh_token(token_data: TokenRefresh) -> Dict[str, Any]:
 @router.post("/logout")
 async def logout(token_data: TokenRefresh) -> Dict[str, Any]:
     """
-    Logout endpoint - revokes refresh token
+    Logout endpoint - signs out user via Supabase Auth
     
     Required fields:
-    - refresh_token
-    """
-    from app.services.database_service import db_service
+    - refresh_token (used to identify session)
     
-    success = await db_service.revoke_refresh_token(token_data.refresh_token)
+    Note: Supabase Auth manages session invalidation
+    """
+    from app.services.auth_service import AuthService
+    
+    auth_service = AuthService()
+    success = await auth_service.signout(token_data.refresh_token)
     
     if not success:
         raise HTTPException(

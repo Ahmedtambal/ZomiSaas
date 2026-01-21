@@ -43,44 +43,54 @@ class SupabaseService:
             logger.error(f"Error getting organization: {e}")
             return None
     
-    # ==================== Users ====================
+    # ==================== User Profiles ====================
     
-    async def create_user(self, user_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Create a new user"""
+    async def create_user_profile(self, user_id: str, profile_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Create a new user profile (linked to auth.users)"""
         try:
-            response = self.client.table("users").insert(user_data).execute()
+            profile_data['id'] = user_id  # Link to auth.users.id
+            response = self.client.table("user_profiles").insert(profile_data).execute()
             return response.data[0] if response.data else None
         except Exception as e:
-            logger.error(f"Error creating user: {e}")
+            logger.error(f"Error creating user profile: {e}")
             raise
     
-    async def get_user_by_email(self, email: str) -> Optional[Dict[str, Any]]:
-        """Get user by email"""
+    async def get_user_profile_by_id(self, user_id: str) -> Optional[Dict[str, Any]]:
+        """Get user profile by auth user ID"""
         try:
-            response = self.client.table("users").select("*").eq("email", email.lower()).execute()
+            response = self.client.table("user_profiles").select("*").eq("id", user_id).execute()
             return response.data[0] if response.data else None
         except Exception as e:
-            logger.error(f"Error getting user by email: {e}")
+            logger.error(f"Error getting user profile: {e}")
             return None
     
-    async def get_user_by_id(self, user_id: UUID) -> Optional[Dict[str, Any]]:
-        """Get user by ID"""
+    async def get_user_profile_by_email(self, email: str) -> Optional[Dict[str, Any]]:
+        """Get user profile by email (through auth.users)"""
         try:
-            response = self.client.table("users").select("*").eq("id", str(user_id)).execute()
-            return response.data[0] if response.data else None
+            # First get the user from auth.users
+            response = self.client.auth.admin.list_users()
+            auth_user = None
+            for user in response:
+                if user.email == email.lower():
+                    auth_user = user
+                    break
+            
+            if not auth_user:
+                return None
+            
+            # Then get their profile
+            return await self.get_user_profile_by_id(auth_user.id)
         except Exception as e:
-            logger.error(f"Error getting user by ID: {e}")
+            logger.error(f"Error getting user profile by email: {e}")
             return None
     
-    async def update_user_login_time(self, user_id: UUID) -> bool:
-        """Update user's last login timestamp"""
+    async def update_user_profile(self, user_id: str, profile_data: Dict[str, Any]) -> bool:
+        """Update user profile"""
         try:
-            self.client.table("users").update({
-                "last_login_at": "now()"
-            }).eq("id", str(user_id)).execute()
+            self.client.table("user_profiles").update(profile_data).eq("id", user_id).execute()
             return True
         except Exception as e:
-            logger.error(f"Error updating login time: {e}")
+            logger.error(f"Error updating user profile: {e}")
             return False
     
     # ==================== Invite Codes ====================
@@ -94,52 +104,17 @@ class SupabaseService:
             logger.error(f"Error getting invite code: {e}")
             return None
     
-    async def mark_invite_code_used(self, code_id: UUID, user_id: UUID) -> bool:
+    async def mark_invite_code_used(self, code_id: UUID, user_id: str) -> bool:
         """Mark invite code as used"""
         try:
             self.client.table("invite_codes").update({
                 "is_used": True,
-                "used_by": str(user_id),
+                "used_by": user_id,  # Now references auth.users.id
                 "used_at": "now()"
             }).eq("id", str(code_id)).execute()
             return True
         except Exception as e:
             logger.error(f"Error marking invite code as used: {e}")
-            return False
-    
-    # ==================== Refresh Tokens ====================
-    
-    async def save_refresh_token(self, user_id: UUID, token: str, expires_at: str) -> bool:
-        """Save refresh token to database"""
-        try:
-            self.client.table("refresh_tokens").insert({
-                "user_id": str(user_id),
-                "token": token,
-                "expires_at": expires_at
-            }).execute()
-            return True
-        except Exception as e:
-            logger.error(f"Error saving refresh token: {e}")
-            return False
-    
-    async def get_refresh_token(self, token: str) -> Optional[Dict[str, Any]]:
-        """Get refresh token from database"""
-        try:
-            response = self.client.table("refresh_tokens").select("*").eq("token", token).is_("revoked_at", "null").execute()
-            return response.data[0] if response.data else None
-        except Exception as e:
-            logger.error(f"Error getting refresh token: {e}")
-            return None
-    
-    async def revoke_refresh_token(self, token: str) -> bool:
-        """Revoke refresh token"""
-        try:
-            self.client.table("refresh_tokens").update({
-                "revoked_at": "now()"
-            }).eq("token", token).execute()
-            return True
-        except Exception as e:
-            logger.error(f"Error revoking refresh token: {e}")
             return False
     
     # ==================== Audit Logs ====================

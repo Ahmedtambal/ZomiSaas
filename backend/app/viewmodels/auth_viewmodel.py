@@ -1,76 +1,86 @@
 """
-Authentication ViewModel - Business Logic Layer
+Authentication ViewModel - Business Logic Layer with Supabase Auth
 """
 from typing import Optional, Dict, Any, Tuple
 from uuid import UUID
-from datetime import datetime, timedelta
+from datetime import datetime
 import logging
 
 from app.models.user import UserCreate, UserResponse, TokenResponse
-from app.models.organization import OrganizationResponse
 from app.services.auth_service import AuthService
 from app.services.database_service import db_service
-from app.config import settings
 
 logger = logging.getLogger(__name__)
 
 
 class AuthViewModel:
-    """Authentication business logic"""
+    """Authentication business logic using Supabase Auth"""
     
     def __init__(self):
         self.auth_service = AuthService()
     
     async def signup_admin(self, user_data: UserCreate) -> Tuple[bool, Optional[TokenResponse], Optional[str]]:
         """
-        Admin signup flow - creates new organization and admin user
-        Returns: (success, token_response, error_message)
+        Admin signup flow using Supabase Auth
+        Creates organization and signs up user via Supabase
         """
         try:
-            # Validate admin signup data
             if not user_data.organization_name:
                 return False, None, "Organization name is required for admin signup"
             
-            # Check if user already exists
-            existing_user = await db_service.get_user_by_email(user_data.email)
-            if existing_user:
-                return False, None, "User with this email already exists"
-            
-            # Create organization
+            # Create organization first
             org = await db_service.create_organization(user_data.organization_name)
             if not org:
                 return False, None, "Failed to create organization"
             
-            # Hash password
-            password_hash = self.auth_service.hash_password(user_data.password)
+            # Sign up with Supabase Auth (includes email verification)
+            auth_response = await self.auth_service.signup_with_email(
+                email=user_data.email,
+                password=user_data.password,
+                user_metadata={
+                    "full_name": user_data.full_name,
+                    "job_title": user_data.job_title or "",
+                    "role": "admin",
+                    "organization_id": str(org["id"])
+                }
+            )
             
-            # Create admin user
-            user_dict = {
-                "organization_id": str(org["id"]),
-                "full_name": user_data.full_name,
-                "email": user_data.email.lower(),
-                "job_title": user_data.job_title,
-                "password_hash": password_hash,
-                "role": "admin",
-                "is_active": True,
-                "is_email_verified": False
-            }
+            if not auth_response.user:
+                return False, None, "Signup failed"
             
-            user = await db_service.create_user(user_dict)
-            if not user:
-                return False, None, "Failed to create user"
-            
-            # Generate tokens
-            token_response = await self._generate_tokens(user)
+            # User profile will be created automatically by database trigger
             
             # Log audit event
             await db_service.create_audit_log({
-                "user_id": str(user["id"]),
+                "user_id": auth_response.user.id,
                 "organization_id": str(org["id"]),
                 "action": "signup",
                 "resource": "user",
                 "details": {"type": "admin", "email": user_data.email}
             })
+            
+            # Get user profile
+            profile = await db_service.get_user_profile_by_id(auth_response.user.id)
+            
+            # Create token response
+            token_response = TokenResponse(
+                access_token=auth_response.session.access_token,
+                refresh_token=auth_response.session.refresh_token,
+                token_type="bearer",
+                expires_in=auth_response.session.expires_in or 3600,
+                user=UserResponse(
+                    id=UUID(auth_response.user.id),
+                    organization_id=UUID(org["id"]),
+                    full_name=user_data.full_name,
+                    email=auth_response.user.email,
+                    job_title=user_data.job_title,
+                    role="admin",
+                    is_active=True,
+                    is_email_verified=auth_response.user.email_confirmed_at is not None,
+                    created_at=datetime.fromisoformat(auth_response.user.created_at.replace("Z", "+00:00")),
+                    last_login_at=None
+                )
+            )
             
             return True, token_response, None
             
@@ -80,66 +90,71 @@ class AuthViewModel:
     
     async def signup_user(self, user_data: UserCreate) -> Tuple[bool, Optional[TokenResponse], Optional[str]]:
         """
-        User signup flow - validates invite code and creates user
-        Returns: (success, token_response, error_message)
+        User signup flow using Supabase Auth with invite code validation
         """
         try:
-            # Validate user signup data
             if not user_data.invite_code:
                 return False, None, "Invite code is required for user signup"
-            
-            # Check if user already exists
-            existing_user = await db_service.get_user_by_email(user_data.email)
-            if existing_user:
-                return False, None, "User with this email already exists"
             
             # Get and validate invite code
             invite_code = await db_service.get_invite_code(user_data.invite_code)
             if not invite_code:
                 return False, None, "Invalid invite code"
             
-            # Check if code is already used
             if invite_code["is_used"]:
                 return False, None, "Invite code has already been used"
             
-            # Check if code is expired
+            # Check expiration
             expires_at = datetime.fromisoformat(invite_code["expires_at"].replace("Z", "+00:00"))
-            if datetime.utcnow() > expires_at:
+            if datetime.utcnow() > expires_at.replace(tzinfo=None):
                 return False, None, "Invite code has expired"
             
-            # Hash password
-            password_hash = self.auth_service.hash_password(user_data.password)
+            # Sign up with Supabase Auth
+            auth_response = await self.auth_service.signup_with_email(
+                email=user_data.email,
+                password=user_data.password,
+                user_metadata={
+                    "full_name": user_data.full_name,
+                    "job_title": user_data.job_title or "",
+                    "role": invite_code["role"],
+                    "organization_id": str(invite_code["organization_id"])
+                }
+            )
             
-            # Create user
-            user_dict = {
-                "organization_id": str(invite_code["organization_id"]),
-                "full_name": user_data.full_name,
-                "email": user_data.email.lower(),
-                "job_title": user_data.job_title,
-                "password_hash": password_hash,
-                "role": invite_code["role"],
-                "is_active": True,
-                "is_email_verified": False
-            }
-            
-            user = await db_service.create_user(user_dict)
-            if not user:
-                return False, None, "Failed to create user"
+            if not auth_response.user:
+                return False, None, "Signup failed"
             
             # Mark invite code as used
-            await db_service.mark_invite_code_used(invite_code["id"], user["id"])
-            
-            # Generate tokens
-            token_response = await self._generate_tokens(user)
+            await db_service.mark_invite_code_used(invite_code["id"], auth_response.user.id)
             
             # Log audit event
             await db_service.create_audit_log({
-                "user_id": str(user["id"]),
+                "user_id": auth_response.user.id,
                 "organization_id": str(invite_code["organization_id"]),
                 "action": "signup",
                 "resource": "user",
                 "details": {"type": "user", "email": user_data.email, "invite_code": user_data.invite_code}
             })
+            
+            # Create token response
+            token_response = TokenResponse(
+                access_token=auth_response.session.access_token,
+                refresh_token=auth_response.session.refresh_token,
+                token_type="bearer",
+                expires_in=auth_response.session.expires_in or 3600,
+                user=UserResponse(
+                    id=UUID(auth_response.user.id),
+                    organization_id=UUID(invite_code["organization_id"]),
+                    full_name=user_data.full_name,
+                    email=auth_response.user.email,
+                    job_title=user_data.job_title,
+                    role=invite_code["role"],
+                    is_active=True,
+                    is_email_verified=auth_response.user.email_confirmed_at is not None,
+                    created_at=datetime.fromisoformat(auth_response.user.created_at.replace("Z", "+00:00")),
+                    last_login_at=None
+                )
+            )
             
             return True, token_response, None
             
@@ -149,133 +164,76 @@ class AuthViewModel:
     
     async def login(self, email: str, password: str) -> Tuple[bool, Optional[TokenResponse], Optional[str]]:
         """
-        Login flow - validates credentials and generates tokens
-        Returns: (success, token_response, error_message)
+        Login flow using Supabase Auth
         """
         try:
-            # Get user by email
-            user = await db_service.get_user_by_email(email)
-            if not user:
+            # Sign in with Supabase Auth
+            auth_response = await self.auth_service.signin_with_email(email, password)
+            
+            if not auth_response.user or not auth_response.session:
                 return False, None, "Invalid email or password"
             
-            # Verify password
-            if not self.auth_service.verify_password(password, user["password_hash"]):
-                return False, None, "Invalid email or password"
-            
-            # Check if user is active
-            if not user["is_active"]:
-                return False, None, "Account is deactivated"
-            
-            # Update last login time
-            await db_service.update_user_login_time(user["id"])
-            
-            # Generate tokens
-            token_response = await self._generate_tokens(user)
+            # Get user profile
+            profile = await db_service.get_user_profile_by_id(auth_response.user.id)
+            if not profile:
+                return False, None, "User profile not found"
             
             # Log audit event
             await db_service.create_audit_log({
-                "user_id": str(user["id"]),
-                "organization_id": str(user["organization_id"]),
+                "user_id": auth_response.user.id,
+                "organization_id": profile["organization_id"],
                 "action": "login",
                 "resource": "user",
                 "details": {"email": email}
             })
             
+            # Create token response
+            token_response = TokenResponse(
+                access_token=auth_response.session.access_token,
+                refresh_token=auth_response.session.refresh_token,
+                token_type="bearer",
+                expires_in=auth_response.session.expires_in or 3600,
+                user=UserResponse(
+                    id=UUID(auth_response.user.id),
+                    organization_id=UUID(profile["organization_id"]),
+                    full_name=profile["full_name"],
+                    email=auth_response.user.email,
+                    job_title=profile.get("job_title"),
+                    role=profile["role"],
+                    is_active=True,
+                    is_email_verified=auth_response.user.email_confirmed_at is not None,
+                    created_at=datetime.fromisoformat(profile["created_at"].replace("Z", "+00:00")),
+                    last_login_at=datetime.utcnow()
+                )
+            )
+            
             return True, token_response, None
             
         except Exception as e:
             logger.error(f"Login error: {e}")
-            return False, None, str(e)
+            return False, None, "Invalid email or password"
     
     async def refresh_token(self, refresh_token: str) -> Tuple[bool, Optional[Dict[str, Any]], Optional[str]]:
         """
-        Refresh token flow - validates refresh token and generates new access token
-        Returns: (success, token_dict, error_message)
+        Refresh token flow using Supabase Auth
         """
         try:
-            # Decode refresh token
-            payload = self.auth_service.decode_token(refresh_token)
-            if not payload:
-                return False, None, "Invalid refresh token"
+            # Refresh session with Supabase
+            auth_response = await self.auth_service.refresh_session(refresh_token)
             
-            # Validate token type
-            if not self.auth_service.validate_token_type(payload, "refresh"):
-                return False, None, "Invalid token type"
-            
-            # Check if token exists in database and is not revoked
-            token_record = await db_service.get_refresh_token(refresh_token)
-            if not token_record:
-                return False, None, "Refresh token not found or revoked"
-            
-            # Check if token is expired
-            expires_at = datetime.fromisoformat(token_record["expires_at"].replace("Z", "+00:00"))
-            if datetime.utcnow() > expires_at:
-                return False, None, "Refresh token has expired"
-            
-            # Get user
-            user_id = payload.get("user_id")
-            user = await db_service.get_user_by_id(UUID(user_id))
-            if not user or not user["is_active"]:
-                return False, None, "User not found or inactive"
-            
-            # Generate new access token
-            access_token = self.auth_service.create_access_token({
-                "user_id": str(user["id"]),
-                "email": user["email"],
-                "role": user["role"],
-                "organization_id": str(user["organization_id"])
-            })
+            if not auth_response.session:
+                return False, None, "Invalid or expired refresh token"
             
             return True, {
-                "access_token": access_token,
+                "access_token": auth_response.session.access_token,
+                "refresh_token": auth_response.session.refresh_token,
                 "token_type": "bearer",
-                "expires_in": settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
+                "expires_in": auth_response.session.expires_in or 3600
             }, None
             
         except Exception as e:
             logger.error(f"Refresh token error: {e}")
-            return False, None, str(e)
-    
-    async def _generate_tokens(self, user: Dict[str, Any]) -> TokenResponse:
-        """Generate access and refresh tokens for user"""
-        # Create token data
-        token_data = {
-            "user_id": str(user["id"]),
-            "email": user["email"],
-            "role": user["role"],
-            "organization_id": str(user["organization_id"])
-        }
-        
-        # Generate tokens
-        access_token = self.auth_service.create_access_token(token_data)
-        refresh_token = self.auth_service.create_refresh_token(token_data)
-        
-        # Save refresh token to database
-        expires_at = (datetime.utcnow() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)).isoformat()
-        await db_service.save_refresh_token(user["id"], refresh_token, expires_at)
-        
-        # Create user response
-        user_response = UserResponse(
-            id=UUID(user["id"]),
-            organization_id=UUID(user["organization_id"]),
-            full_name=user["full_name"],
-            email=user["email"],
-            job_title=user["job_title"],
-            role=user["role"],
-            is_active=user["is_active"],
-            is_email_verified=user["is_email_verified"],
-            created_at=datetime.fromisoformat(user["created_at"].replace("Z", "+00:00")),
-            updated_at=datetime.fromisoformat(user["updated_at"].replace("Z", "+00:00"))
-        )
-        
-        # Create token response
-        return TokenResponse(
-            access_token=access_token,
-            refresh_token=refresh_token,
-            token_type="bearer",
-            expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-            user=user_response
-        )
+            return False, None, "Token refresh failed"
 
 
 # Singleton instance
