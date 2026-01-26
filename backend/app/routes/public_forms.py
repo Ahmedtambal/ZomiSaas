@@ -156,12 +156,13 @@ async def submit_form(token: str, submission_data: Dict[str, Any], request: Requ
             "ni_number": submission_data.get("nationalInsuranceNumber"),  # SW form uses camelCase
             "date_of_birth": submission_data.get("dateOfBirth"),  # SW form uses camelCase
             "gender": submission_data.get("gender"),
+            "marital_status": submission_data.get("maritalStatus"),  # NEW: Marital Status field
             
             # Address (from SW form fields)
             "address_line_1": submission_data.get("addressLine1"),  # SW form uses camelCase
             "address_line_2": submission_data.get("addressLine2"),
-            "city_town": submission_data.get("town"),
-            "county": submission_data.get("county"),
+            "address_line_3": submission_data.get("addressLine3"),  # NEW: Address 3
+            "address_line_4": submission_data.get("addressLine4"),  # NEW: Address 4
             "postcode": submission_data.get("postcode"),
             "uk_resident": submission_data.get("ukResident") == "Yes" if submission_data.get("ukResident") else None,  # Convert string to boolean
             "nationality": submission_data.get("nationality"),
