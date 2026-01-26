@@ -50,40 +50,47 @@ async def get_current_user(authorization: Optional[str] = Header(None)) -> Dict[
             headers={"WWW-Authenticate": "Bearer"},
         )
     
-    # Verify JWT token
+    # Verify Supabase JWT token and get user
     try:
-        payload = jwt.decode(
-            token,
-            settings.JWT_SECRET,
-            algorithms=["HS256"]
-        )
+        # Import here to avoid circular dependency
+        from app.services.database_service import db_service
         
-        # Extract user info from token
-        user_data = {
-            "id": payload.get("sub"),
-            "email": payload.get("email"),
-            "role": payload.get("role"),
-            "organization_id": payload.get("organization_id"),
-        }
+        # Verify token with Supabase
+        response = db_service.client.auth.get_user(token)
         
-        if not user_data["id"]:
+        if not response.user:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid token payload",
+                detail="Invalid token",
             )
+        
+        user_id = response.user.id
+        
+        # Get user profile from database to get organization_id and role
+        profile = await db_service.get_user_profile_by_id(user_id)
+        
+        if not profile:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="User profile not found",
+            )
+        
+        # Return user data
+        user_data = {
+            "id": user_id,
+            "email": response.user.email,
+            "role": profile.get("role"),
+            "organization_id": profile.get("organization_id"),
+        }
         
         return user_data
         
-    except InvalidTokenError as e:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Invalid token: {str(e)}",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token validation failed",
+            detail=f"Token validation failed: {str(e)}",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
