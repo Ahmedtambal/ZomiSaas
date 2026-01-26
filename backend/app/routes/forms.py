@@ -13,6 +13,14 @@ from app.routes.auth import get_current_user
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
+
+# ============================================================================
+# FORM CRUD ENDPOINTS
+# ============================================================================
+
+@router.post("", status_code=status.HTTP_201_CREATED)
+async def create_form(
     form_data: Dict[str, Any],
     current_user: dict = Depends(get_current_user)
 ) -> Dict[str, Any]:
