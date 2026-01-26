@@ -9,7 +9,7 @@ from app.routes.auth import get_current_user
 
 router = APIRouter()
 
-@router.get("/")
+@router.get("")
 async def get_companies(
     organization_id: Optional[str] = None,
     current_user: dict = Depends(get_current_user)

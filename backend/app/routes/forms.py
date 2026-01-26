@@ -17,7 +17,7 @@ router = APIRouter()
 # FORM CRUD ENDPOINTS
 # ============================================================================
 
-@router.post("/", status_code=status.HTTP_201_CREATED)
+@router.post("", status_code=status.HTTP_201_CREATED)
 async def create_form(
     form_data: Dict[str, Any],
     current_user: dict = Depends(get_current_user)
@@ -71,7 +71,7 @@ async def create_form(
         )
 
 
-@router.get("/")
+@router.get("")
 async def list_forms(
     organization_id: Optional[str] = None,
     template_type: Optional[str] = None,
