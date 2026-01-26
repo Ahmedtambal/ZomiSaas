@@ -29,7 +29,8 @@ async def get_companies(
         # Query companies table with RLS
         response = db_service.client.table("companies").select("*").eq("organization_id", org_id).execute()
         
-        return response.data
+        # Return empty array if no data
+        return response.data if response.data else []
     
     except Exception as e:
         raise HTTPException(

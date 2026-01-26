@@ -23,7 +23,7 @@ export const FormsListPage: React.FC<FormsListPageProps> = ({ onCreateNewForm })
       setLoading(true);
       const filters = filter === 'all' ? {} : { templateType: filter };
       const data = await getForms(filters);
-      setForms(data);
+      setForms(Array.isArray(data) ? data : []);
     } catch (err) {
       setError('Failed to load forms');
       console.error('Failed to load forms:', err);
@@ -133,7 +133,7 @@ export const FormsListPage: React.FC<FormsListPageProps> = ({ onCreateNewForm })
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {forms.map((form) => (
+          {(forms || []).map((form) => (
             <div
               key={form.id}
               className="bg-white/10 backdrop-blur-lg rounded-xl p-6 hover:bg-white/15 transition-all"

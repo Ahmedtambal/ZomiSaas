@@ -74,7 +74,7 @@ export const getForms = async (filters?: {
   if (filters?.isActive !== undefined) params.append('is_active', String(filters.isActive));
   
   const response = await api.get(`/api/forms?${params.toString()}`);
-  return response.data;
+  return Array.isArray(response.data) ? response.data : [];
 };
 
 /**
@@ -120,7 +120,7 @@ export const getTokens = async (formId: string, filters?: {
   if (filters?.companyId) params.append('company_id', filters.companyId);
   
   const response = await api.get(`/api/forms/${formId}/tokens?${params.toString()}`);
-  return response.data;
+  return Array.isArray(response.data) ? response.data : [];
 };
 
 /**
@@ -147,7 +147,7 @@ export const getSubmissions = async (formId: string, filters?: {
   if (filters?.endDate) params.append('end_date', filters.endDate);
   
   const response = await api.get(`/api/forms/${formId}/submissions?${params.toString()}`);
-  return response.data;
+  return Array.isArray(response.data) ? response.data : [];
 };
 
 // =====================================================

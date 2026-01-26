@@ -81,7 +81,9 @@ export const SWNewEmployeeForm: React.FC = () => {
         });
         if (response.ok) {
           const data = await response.json();
-          setCompanies(data);
+          setCompanies(Array.isArray(data) ? data : []);
+        } else {
+          setCompanies([]);
         }
       } catch (err) {
         console.error('Failed to fetch companies:', err);
@@ -515,7 +517,7 @@ export const SWNewEmployeeForm: React.FC = () => {
                       className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
                     >
                       <option value="">Select Company</option>
-                      {companies.map((company) => (
+                      {(companies || []).map((company) => (
                         <option key={company.id} value={company.id}>
                           {company.name}
                         </option>

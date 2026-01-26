@@ -44,7 +44,7 @@ export const FormTokenManager: React.FC<FormTokenManagerProps> = ({ formId }) =>
     try {
       setLoading(true);
       const data = await getTokens(formId);
-      setTokens(data);
+      setTokens(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Failed to load tokens:', err);
     } finally {
@@ -62,7 +62,9 @@ export const FormTokenManager: React.FC<FormTokenManagerProps> = ({ formId }) =>
       });
       if (response.ok) {
         const data = await response.json();
-        setCompanies(data);
+        setCompanies(Array.isArray(data) ? data : []);
+      } else {
+        setCompanies([]);
       }
     } catch (err) {
       console.error('Failed to fetch companies:', err);
@@ -122,13 +124,14 @@ export const FormTokenManager: React.FC<FormTokenManagerProps> = ({ formId }) =>
   };
 
   const getFilteredTokens = () => {
+    const safeTokens = tokens || [];
     switch (filter) {
       case 'active':
-        return tokens.filter(t => t.isActive && !isTokenExpired(t.expiresAt));
+        return safeTokens.filter(t => t.isActive && !isTokenExpired(t.expiresAt));
       case 'expired':
-        return tokens.filter(t => !t.isActive || isTokenExpired(t.expiresAt));
+        return safeTokens.filter(t => !t.isActive || isTokenExpired(t.expiresAt));
       default:
-        return tokens;
+        return safeTokens;
     }
   };
 
@@ -332,7 +335,7 @@ export const FormTokenManager: React.FC<FormTokenManagerProps> = ({ formId }) =>
                   className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
                 >
                   <option value="">Select Company</option>
-                  {companies.map((company) => (
+                  {(companies || []).map((company) => (
                     <option key={company.id} value={company.id}>
                       {company.name}
                     </option>
