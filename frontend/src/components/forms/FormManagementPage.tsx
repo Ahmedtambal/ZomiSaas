@@ -70,7 +70,10 @@ export const FormManagementPage: React.FC = () => {
       });
       if (response.ok) {
         const data = await response.json();
+        console.log('Companies loaded:', data); // Debug log
         setCompanies(Array.isArray(data) ? data : []);
+      } else {
+        console.error('Failed to load companies:', response.status);
       }
     } catch (err) {
       console.error('Failed to fetch companies:', err);
@@ -222,29 +225,29 @@ export const FormManagementPage: React.FC = () => {
           {(forms || []).map((form) => (
             <div
               key={form.id}
-              className="glass-panel rounded-xl p-6 hover:bg-white/15 transition-all"
+              className="bg-slate-800/40 backdrop-blur-sm rounded-xl p-6 hover:bg-slate-800/60 transition-all border border-white/10 shadow-lg"
             >
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
-                    <h3 className="text-white font-semibold text-xl">{form.name}</h3>
+                    <h3 className="text-white font-semibold text-xl">{form.name || 'Untitled Form'}</h3>
                     {form.templateType === 'sw_new_employee' && (
-                      <span className="px-3 py-1 bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-purple-300 rounded-full text-xs font-medium border border-purple-500/30">
+                      <span className="px-3 py-1 bg-gradient-to-r from-purple-500/30 to-pink-500/30 text-purple-200 rounded-full text-xs font-medium border border-purple-400/40">
                         SW New Employee
                       </span>
                     )}
                   </div>
                   {form.description && (
-                    <p className="text-white/70 mb-3">{form.description}</p>
+                    <p className="text-slate-300 mb-3">{form.description}</p>
                   )}
-                  <div className="flex items-center gap-4 text-white/50 text-sm">
+                  <div className="flex items-center gap-4 text-slate-400 text-sm">
                     <span className="flex items-center gap-1.5">
                       <Calendar className="w-4 h-4" />
                       {form.createdAt ? new Date(form.createdAt).toLocaleDateString() : 'Recently created'}
                     </span>
                     <span className="flex items-center gap-1.5">
                       <CheckCircle className="w-4 h-4 text-zomi-green" />
-                      <span className="text-white/70">{form.formData?.fields?.length || 0} fields</span>
+                      <span className="text-slate-300">{form.formData?.fields?.length || 0} fields</span>
                     </span>
                   </div>
                 </div>
@@ -261,14 +264,17 @@ export const FormManagementPage: React.FC = () => {
               </div>
 
               {/* Generate Link Section */}
-              <div className="border-t border-white/10 pt-4 mt-4">
-                <h4 className="text-white/90 font-medium mb-3 flex items-center gap-2">
+              <div className="border-t border-slate-600/50 pt-4 mt-4">
+                <h4 className="text-slate-200 font-medium mb-3 flex items-center gap-2">
                   <ExternalLink className="w-4 h-4 text-zomi-green" />
                   Generate Shareable Link
+                  {companies.length > 0 && (
+                    <span className="text-xs text-slate-400">({companies.length} companies available)</span>
+                  )}
                 </h4>
                 <div className="flex items-center gap-3">
                   <select
-                    className="flex-1 glass-panel rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-zomi-green/50 appearance-none cursor-pointer bg-slate-900/50"
+                    className="flex-1 bg-slate-700/50 border border-slate-600 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-zomi-green/50 appearance-none cursor-pointer"
                     onChange={(e) => {
                       if (e.target.value) {
                         handleGenerateLink(form.id, e.target.value);
@@ -277,7 +283,9 @@ export const FormManagementPage: React.FC = () => {
                     }}
                     defaultValue=""
                   >
-                    <option value="" disabled>Select company to generate link...</option>
+                    <option value="" disabled>
+                      {companies.length === 0 ? 'No companies available - Add companies first' : 'Select company to generate link...'}
+                    </option>
                     {(companies || []).map((company) => (
                       <option key={company.id} value={company.id}>
                         {company.name}
@@ -286,7 +294,7 @@ export const FormManagementPage: React.FC = () => {
                   </select>
                   <button
                     onClick={() => setSelectedFormForLinks(form.id)}
-                    className="px-4 py-2.5 glass-panel text-white rounded-lg hover:bg-white/20 transition-all flex items-center gap-2"
+                    className="px-4 py-2.5 bg-slate-700/50 border border-slate-600 text-white rounded-lg hover:bg-slate-600/50 transition-all flex items-center gap-2"
                   >
                     <Eye className="w-4 h-4" />
                     View Links
