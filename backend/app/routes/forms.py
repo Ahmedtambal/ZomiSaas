@@ -264,6 +264,11 @@ async def generate_token(
         
         token_record = response.data[0]
         
+        # Update form's linked_company_id if not already set
+        db_service.client.table("forms").update({
+            "linked_company_id": token_data["company_id"]
+        }).eq("id", form_id).execute()
+        
         # Return token info
         return {
             "id": token_record["id"],

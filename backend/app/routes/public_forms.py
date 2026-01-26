@@ -201,6 +201,11 @@ async def submit_form(token: str, submission_data: Dict[str, Any], request: Requ
         
         employee = employee_response.data[0]
         
+        # Update form's matched_company_id to track which company submitted
+        db_service.client.table("forms").update({
+            "matched_company_id": company["id"]
+        }).eq("id", token_record["form_id"]).execute()
+        
         # Increment token submission count
         db_service.client.table("form_tokens").update({
             "submission_count": token_record["submission_count"] + 1,
