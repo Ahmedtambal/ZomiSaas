@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 import secrets
 
 from app.services.database_service import db_service
+from app.routes.auth import get_current_user
 
 router = APIRouter()
 
@@ -17,32 +18,39 @@ router = APIRouter()
 # ============================================================================
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
-async def create_form(form_data: Dict[str, Any], request: Request) -> Dict[str, Any]:
+async def create_form(
+    form_data: Dict[str, Any],
+    current_user: dict = Depends(get_current_user)
+) -> Dict[str, Any]:
     """
     Create a new form
     
     Required fields:
     - name: Form name
     - description: Form description
-    - fields: Array of form fields
+    - form_data: Object with fields array
     - template_type: 'custom', 'sw_new_employee', or 'io_upload'
     - linked_company_id: UUID of company (optional)
     """
-    # TODO: Get user from JWT token
-    # user_id = get_current_user(request)
-    
     try:
+        # Get user info from JWT
+        user_id = current_user.get("id")
+        org_id = current_user.get("organization_id")
+        
+        # Extract form_data structure
+        form_definition = form_data.get("form_data", {})
+        
         # Create form in database
         response = db_service.client.table("forms").insert({
-            "organization_id": form_data.get("organization_id"),
-            "created_by_user_id": form_data.get("created_by_user_id"),
+            "organization_id": org_id,
+            "created_by_user_id": user_id,
             "template_type": form_data.get("template_type", "custom"),
             "linked_company_id": form_data.get("linked_company_id"),
             "form_data": {
-                "name": form_data["name"],
+                "name": form_data.get("name"),
                 "description": form_data.get("description", ""),
-                "fields": form_data["fields"],
-                "isActive": form_data.get("isActive", True)
+                "fields": form_definition.get("fields", []),
+                "isActive": True
             },
             "processing_status": "Active"
         }).execute()
@@ -53,10 +61,8 @@ async def create_form(form_data: Dict[str, Any], request: Request) -> Dict[str, 
                 detail="Failed to create form"
             )
         
-        return {
-            "message": "Form created successfully",
-            "data": response.data[0]
-        }
+        # Return form object directly for frontend compatibility
+        return response.data[0]
         
     except Exception as e:
         raise HTTPException(
@@ -68,7 +74,8 @@ async def create_form(form_data: Dict[str, Any], request: Request) -> Dict[str, 
 @router.get("/")
 async def list_forms(
     organization_id: Optional[str] = None,
-    template_type: Optional[str] = None
+    template_type: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
 ) -> Dict[str, Any]:
     """
     List all forms for an organization
@@ -78,20 +85,21 @@ async def list_forms(
     - template_type: Filter by template type
     """
     try:
+        # Use user's organization if not specified
+        org_id = organization_id or current_user.get("organization_id")
+        
         query = db_service.client.table("forms").select("*")
         
-        if organization_id:
-            query = query.eq("organization_id", organization_id)
+        if org_id:
+            query = query.eq("organization_id", org_id)
         
         if template_type:
             query = query.eq("template_type", template_type)
         
         response = query.order("created_at", desc=True).execute()
         
-        return {
-            "message": "Forms retrieved successfully",
-            "data": response.data
-        }
+        # Return array directly for frontend compatibility
+        return response.data if response.data else []
         
     except Exception as e:
         raise HTTPException(
@@ -101,7 +109,10 @@ async def list_forms(
 
 
 @router.get("/{form_id}")
-async def get_form(form_id: str) -> Dict[str, Any]:
+async def get_form(
+    form_id: str,
+    current_user: dict = Depends(get_current_user)
+) -> Dict[str, Any]:
     """Get a specific form by ID"""
     try:
         response = db_service.client.table("forms").select("*").eq("id", form_id).execute()
@@ -112,10 +123,8 @@ async def get_form(form_id: str) -> Dict[str, Any]:
                 detail="Form not found"
             )
         
-        return {
-            "message": "Form retrieved successfully",
-            "data": response.data[0]
-        }
+        # Return form object directly
+        return response.data[0]
         
     except HTTPException:
         raise
@@ -127,7 +136,11 @@ async def get_form(form_id: str) -> Dict[str, Any]:
 
 
 @router.put("/{form_id}")
-async def update_form(form_id: str, form_data: Dict[str, Any]) -> Dict[str, Any]:
+async def update_form(
+    form_id: str,
+    form_data: Dict[str, Any],
+    current_user: dict = Depends(get_current_user)
+) -> Dict[str, Any]:
     """
     Update a form (creator only)
     
@@ -151,10 +164,8 @@ async def update_form(form_id: str, form_data: Dict[str, Any]) -> Dict[str, Any]
                 detail="Form not found or you don't have permission to edit"
             )
         
-        return {
-            "message": "Form updated successfully",
-            "data": response.data[0]
-        }
+        # Return updated form directly
+        return response.data[0]
         
     except HTTPException:
         raise
@@ -166,7 +177,10 @@ async def update_form(form_id: str, form_data: Dict[str, Any]) -> Dict[str, Any]
 
 
 @router.delete("/{form_id}")
-async def delete_form(form_id: str) -> Dict[str, Any]:
+async def delete_form(
+    form_id: str,
+    current_user: dict = Depends(get_current_user)
+) -> Dict[str, Any]:
     """
     Delete a form (creator only)
     
@@ -199,38 +213,44 @@ async def delete_form(form_id: str) -> Dict[str, Any]:
 # ============================================================================
 
 @router.post("/{form_id}/tokens", status_code=status.HTTP_201_CREATED)
-async def generate_token(form_id: str, token_data: Dict[str, Any]) -> Dict[str, Any]:
+async def generate_token(
+    form_id: str,
+    token_data: Dict[str, Any],
+    current_user: dict = Depends(get_current_user)
+) -> Dict[str, Any]:
     """
     Generate a secure token for form access
     
     Required fields:
     - company_id: UUID of company
-    - organization_id: UUID of organization
-    - created_by_user_id: UUID of user creating token
     
     Optional fields:
-    - expires_days: Number of days until expiry (default: 30)
+    - expiry_days: Number of days until expiry (default: 30)
     - max_submissions: Maximum submissions allowed (default: null/unlimited)
     """
     try:
+        # Get user info from JWT
+        user_id = current_user.get("id")
+        org_id = current_user.get("organization_id")
+        
         # Generate secure 32-character token
         secure_token = secrets.token_urlsafe(32)
         
         # Calculate expiry date
-        expires_days = token_data.get("expires_days", 30)
+        expiry_days = token_data.get("expiry_days", 30)
         expires_at = None
-        if expires_days:
-            expires_at = (datetime.utcnow() + timedelta(days=expires_days)).isoformat()
+        if expiry_days:
+            expires_at = (datetime.utcnow() + timedelta(days=expiry_days)).isoformat()
         
         # Create token record
         response = db_service.client.table("form_tokens").insert({
             "form_id": form_id,
             "company_id": token_data["company_id"],
-            "organization_id": token_data["organization_id"],
+            "organization_id": org_id,
             "token": secure_token,
             "expires_at": expires_at,
             "max_submissions": token_data.get("max_submissions"),
-            "created_by_user_id": token_data["created_by_user_id"],
+            "created_by_user_id": user_id,
             "is_active": True,
             "submission_count": 0,
             "access_count": 0
@@ -244,17 +264,17 @@ async def generate_token(form_id: str, token_data: Dict[str, Any]) -> Dict[str, 
         
         token_record = response.data[0]
         
-        # Generate full URL
-        # TODO: Get from environment variable
-        frontend_url = "https://zomisaas.onrender.com"
-        token_url = f"{frontend_url}/public/form/{secure_token}"
-        
+        # Return token info
         return {
-            "message": "Token generated successfully",
-            "data": {
-                **token_record,
-                "url": token_url
-            }
+            "id": token_record["id"],
+            "token": secure_token,
+            "formId": form_id,
+            "companyId": token_data["company_id"],
+            "expiresAt": expires_at,
+            "maxSubmissions": token_data.get("max_submissions"),
+            "isActive": True,
+            "submissionCount": 0,
+            "createdAt": token_record["created_at"]
         }
         
     except Exception as e:
@@ -265,27 +285,18 @@ async def generate_token(form_id: str, token_data: Dict[str, Any]) -> Dict[str, 
 
 
 @router.get("/{form_id}/tokens")
-async def list_tokens(form_id: str) -> Dict[str, Any]:
+async def list_tokens(
+    form_id: str,
+    current_user: dict = Depends(get_current_user)
+) -> List[Dict[str, Any]]:
     """List all tokens for a specific form"""
     try:
         response = db_service.client.table("form_tokens").select(
             "*, companies(name)"
         ).eq("form_id", form_id).order("created_at", desc=True).execute()
         
-        # Add URLs to each token
-        frontend_url = "https://zomisaas.onrender.com"
-        tokens_with_urls = [
-            {
-                **token,
-                "url": f"{frontend_url}/public/form/{token['token']}"
-            }
-            for token in response.data
-        ]
-        
-        return {
-            "message": "Tokens retrieved successfully",
-            "data": tokens_with_urls
-        }
+        # Return array directly for frontend compatibility
+        return response.data if response.data else []
         
     except Exception as e:
         raise HTTPException(
@@ -295,7 +306,11 @@ async def list_tokens(form_id: str) -> Dict[str, Any]:
 
 
 @router.put("/tokens/{token_id}")
-async def update_token(token_id: str, token_data: Dict[str, Any]) -> Dict[str, Any]:
+async def update_token(
+    token_id: str,
+    token_data: Dict[str, Any],
+    current_user: dict = Depends(get_current_user)
+) -> Dict[str, Any]:
     """
     Update token settings (deactivate, extend expiry, etc.)
     """
@@ -321,10 +336,8 @@ async def update_token(token_id: str, token_data: Dict[str, Any]) -> Dict[str, A
                 detail="Token not found"
             )
         
-        return {
-            "message": "Token updated successfully",
-            "data": response.data[0]
-        }
+        # Return updated token directly
+        return response.data[0]
         
     except HTTPException:
         raise
@@ -336,7 +349,10 @@ async def update_token(token_id: str, token_data: Dict[str, Any]) -> Dict[str, A
 
 
 @router.get("/{form_id}/submissions")
-async def get_form_submissions(form_id: str) -> Dict[str, Any]:
+async def get_form_submissions(
+    form_id: str,
+    current_user: dict = Depends(get_current_user)
+) -> List[Dict[str, Any]]:
     """
     Get all submissions for a specific form
     """
@@ -346,10 +362,8 @@ async def get_form_submissions(form_id: str) -> Dict[str, Any]:
             "*, form_tokens!inner(form_id)"
         ).eq("form_tokens.form_id", form_id).execute()
         
-        return {
-            "message": "Submissions retrieved successfully",
-            "data": response.data
-        }
+        # Return array directly for frontend compatibility
+        return response.data if response.data else []
         
     except Exception as e:
         raise HTTPException(
