@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { CheckCircle, Building2, Calendar, Users, AlertCircle } from 'lucide-react';
 import { getFormByToken, submitFormByToken } from '../../services/formService';
 import { FormDefinition } from '../../types/forms';
+import SearchableSelect from './SearchableSelect';
 
 interface TokenInfo {
   max_submissions: number | null;
@@ -132,6 +133,23 @@ export const PublicFormView: React.FC<PublicFormViewProps> = ({ token }) => {
     const errorClasses = hasError ? "border-red-500 ring-2 ring-red-500/50" : "";
 
     switch (field.type) {
+      case 'searchable-select':
+        return (
+          <div key={field.name} className="space-y-2">
+            <label className="block text-gray-800 font-medium">
+              {field.label} {field.required && <span className="text-red-500">*</span>}
+            </label>
+            <SearchableSelect
+              options={field.options || []}
+              value={formData[field.name] || ''}
+              onChange={(value) => handleInputChange(field.name, value)}
+              placeholder={`Select ${field.label}`}
+              required={field.required}
+            />
+            {hasError && <p className="text-red-600 text-sm flex items-center gap-1 mt-1"><AlertCircle className="w-4 h-4" />{errors[field.name]}</p>}
+          </div>
+        );
+
       case 'select':
         return (
           <div key={field.name} className="space-y-2">
@@ -186,6 +204,7 @@ export const PublicFormView: React.FC<PublicFormViewProps> = ({ token }) => {
             {hasError && <p className="text-red-600 text-sm ml-8 flex items-center gap-1"><AlertCircle className="w-4 h-4" />{errors[field.name]}</p>}
           </div>
         );
+
 
       default:
         return (

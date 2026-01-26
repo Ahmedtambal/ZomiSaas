@@ -7,25 +7,25 @@ import { getForms, createForm, deleteForm, generateToken, getTokens, refreshForm
 // Pre-defined SW New Employee Form Template
 const SW_NEW_EMPLOYEE_TEMPLATE = {
   fields: [
-    { name: 'title', label: 'Title', type: 'select', required: true, options: ['Mr', 'Mrs', 'Miss', 'Ms', 'Dr'] },
+    { name: 'title', label: 'Title', type: 'select', required: true, options: ['Mr', 'Mrs', 'Miss', 'Ms', 'Dr', 'Mx', 'Professor', 'Lady', 'Sir', 'Dame', 'Lord', 'Rabbi', 'Reverend', 'Other'] },
     { name: 'forename', label: 'Forename', type: 'text', required: true },
     { name: 'surname', label: 'Surname', type: 'text', required: true },
     { name: 'nationalInsuranceNumber', label: 'NI Number', type: 'text', required: true },
     { name: 'dateOfBirth', label: 'Date of Birth', type: 'date', required: true },
-    { name: 'gender', label: 'Sex', type: 'select', required: true, options: ['Male', 'Female', 'Other', 'Prefer not to say'] },
-    { name: 'maritalStatus', label: 'Marital Status', type: 'select', required: true, options: ['Single', 'Married', 'Divorced', 'Widowed', 'Civil Partnership'] },
+    { name: 'gender', label: 'Sex', type: 'select', required: true, options: ['Male', 'Female'] },
+    { name: 'maritalStatus', label: 'Marital Status', type: 'select', required: true, options: ['Single', 'Married', 'Divorced', 'Separated', 'Widowed'] },
     { name: 'addressLine1', label: 'Address 1', type: 'text', required: true },
     { name: 'addressLine2', label: 'Address 2', type: 'text', required: false },
     { name: 'addressLine3', label: 'Address 3', type: 'text', required: false },
     { name: 'addressLine4', label: 'Address 4', type: 'text', required: false },
     { name: 'postcode', label: 'Postcode', type: 'text', required: true },
     { name: 'ukResident', label: 'UK Resident', type: 'select', required: true, options: ['Yes', 'No'] },
-    { name: 'nationality', label: 'Nationality', type: 'text', required: true },
+    { name: 'nationality', label: 'Nationality', type: 'searchable-select', required: true, options: ['British', 'Unknown', 'Afghan', 'Alander', 'Albanian', 'Algerian', 'American', 'American Samoan', 'Andorran', 'Angolan', 'Anguillan', 'Antiguan', 'Argentine', 'Armenian', 'Aruban', 'Australian', 'Austrian', 'Azerbaijani', 'Bahamian', 'Bahraini', 'Bangladeshi', 'Barbadian', 'Basotho', 'Batswana', 'Belarusian', 'Belgian', 'Belizean', 'Beninese', 'Bermudan', 'Bhutanese', 'Bolivian', 'Bosnian', 'Brazilian', 'British Virgin Islan', 'Bruneian', 'Bulgarian', 'Burkinabe', 'Burmese', 'Burundian', 'Cambodian', 'Cameroonian', 'Canadian', 'Cape Verdean', 'Caymanian', 'Central African', 'Chadian', 'Chilean', 'Chinese', 'Christmas Islander', 'Cocos Islander', 'Colombian', 'Comoran', 'Congolese', 'Cook Islander', 'Costa Rican', 'Croatian', 'Cuban', 'Cypriot', 'Czech', 'Danish', 'Djiboutian', 'Dominican', 'Dominican Republican', 'Dutch', 'Dutch Antillean', 'Ecuadorian', 'Egyptian', 'Emirian', 'Equatorial Guinean', 'Eritrean', 'Estonian', 'Ethiopian', 'Falkland Islander', 'Faroese', 'Fijian', 'Filipino', 'Finnish', 'French', 'French Guianese', 'French Polynesian', 'Gabonese', 'Gambian', 'Georgian', 'German', 'Ghanaian', 'Gibraltarian', 'Greek', 'Greenlander', 'Grenadian', 'Guadeloupian', 'Guamanian', 'Guatamalan', 'Guinea-Bissauan', 'Guinean', 'Guyanese', 'Haitian', 'HK Chinese', 'Honduran', 'Hungarian', 'Icelander'] },
     { name: 'salary', label: 'Salary', type: 'number', required: true },
     { name: 'employmentStartDate', label: 'Employment Start Date', type: 'date', required: true },
     { name: 'selectedRetirementAge', label: 'Selected Retirement Age', type: 'number', required: true },
     { name: 'sectionNumber', label: 'Section Number', type: 'text', required: false },
-    { name: 'pensionInvestmentApproach', label: 'Pension Investment Approach', type: 'select', required: true, options: ['Conservative', 'Moderate', 'Aggressive'] },
+    { name: 'pensionInvestmentApproach', label: 'Pension Investment Approach', type: 'searchable-select', required: true, options: ['Adventurous Targeting Annuity', 'Adventurous Targeting Encashment', 'Adventurous Targeting Flex Access', 'Balanced Targeting Annuity', 'Balanced Targeting Encashment', 'Balanced Targeting Flex Access', 'Cautious Targeting Annuity', 'Cautious Targeting Encashment', 'Cautious Targeting Flex Access', 'Premier Adventurous Targeting Annuity', 'Premier Adventurous Targeting Encashment', 'Premier Adventurous Targeting Flex Access', 'Premier Balanced Targeting Annuity', 'Premier Balanced Targeting Encashment', 'Premier Balanced Targeting Flex Access', 'Premier Cautious Targeting Annuity', 'Premier Cautious Targeting Encashment', 'Premier Cautious Targeting Flex Access'] },
   ]
 };
 
