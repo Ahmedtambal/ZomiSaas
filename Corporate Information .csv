@@ -1,0 +1,24 @@
+,,,,Pension ,,,,IO Pension -  Upload Template requirements ,,,,,Group Risk ,,,,Group PMI,,
+Company,,"Pension 
+Y/N","SMART
+Y/N",Pension Postponement ,Pension Pack ,Pension Provider Information ,,Scheme Ref,Category Name,Advice Type,Selling Adviser ID,,Group Life,Group Critical Illness,Group Income Protection ,,Bupa Group PMI Cover,,Additional Info
+sd,,Y,Y,3 months ,Y, Pension  - Royal London - Client Uploads new member and pension contributions ,,IOB68952681,5.00%EE 4.00%ER.SMART,Migrated Plans,132972,,N,N,N,,N,,
+fsfd,,Y,Y,3 months ,Y,Pension Aegon - Client Uploads new member and pension contributions ,,IOB68952686,5.00%EE 4.00%ER.SMART,Migrated Plans,132972,,Y,N,N,,N,,
+fdf,,Y,Y,3 months ,Y,Pension - Scottish Widows - We upload new members. Client uploads the pension contribution.,,IOB68952622,3.40%EE 6.00%ER,Migrated Plans,132972,,Y,N,Y,,BUPA Cover (ER only pays for EE),,Salex including an employer NI saving. Confirmation that Bupa and the Group Income Protection have been added to IO and processed.
+ds,,Y,Y,3 months ,Y,Pension - Scottish Widows - We upload new members. Client uploads the pension contributions ,,,4.00%EE 10.00%ER,,,,Y,N,N,,N,,Salex including an employer NI saving 
+ss,,Y,Y,3 months ,Y,Pension - Scottish Widows - We upload new members. Client uploads the pension contributions ,,IOB68952621,3.00%EE 6.00%ER,Migrated Plans,132972,,Y,N,N,,N,,Salex including an employer NI saving 
+ds,,Y,Y,3 months ,Y,Pension - Scottish Widows - We upload new members. Client uploads the pension contributions ,,,3.00%EE 6.00%ER,,,,Y,N,N,,N,,Salex including an employer NI saving 
+f,,Y,Y,Day 1 ,Y,Pension Opt Enrol - we process and upload the pension contributions ,,IOB68952698,5.00%EE 3.00%ER,Migrated Plans,132972,,Y,N,N,,N,,
+sfs,,Y,Y,Day 1 ,Y,Pension Opt Enrol - we process and upload the pension contributions ,,IOB68952741,5.00%EE 5.00%ER.SMART,Migrated Plans,132972,,Y,N,N,,N,,
+s,,Y,Y,3 months ,Y,Pension - Scottish Widows - We upload new members. Client uploads the pension contribution.,,IOB68952665,5.00%EE 15.00%ER.SMART,Migrated Plans,132972,,Y,N,N,,N,,Additional Smart ERNI Calculator required to update IO.
+fdf,,Y,Y,3 months ,Y, Pension  - Royal London - Client Uploads new member and pension contributions ,,IOB68952678,4.00%EE 5.00%ER.SMART,Migrated Plans,132972,,Y,N,N,,N,,
+f,,Y,Y,Day 1 ,Y, Pension  - Royal London - Client Uploads new member and pension contributions ,,IOB74802028,5.00%EE 4.00%ER.SMART,Pre-Existing Plan,132972,,N,N,N,,N,,
+f,,Y,Y,3 months ,Y, Pension  - Royal London - Client Uploads new member and pension contributions ,,IOB68952671,5.00%EE 3.00%ER.SMART,Migrated Plans,132972,,N,N,N,,N,,
+Company,,Y,N,Day 1 ,N, Pension  - Aviva - Client Uploads new member and pension contributions ,,IOB68952715,4.00%EE 4.00%ER,Migrated Plans,132972,,N,N,N,,N,,
+ds,,Y,Y,3 months ,Y,Pension - Scottish Widows - Client Uploads new member and pension contributions ,,IOB68952669,5.00%EE 3.00%ER.SMART,Migrated Plans,132972,,N,N,N,,N,,
+Company,,Y,Y,Day 1 ,Y,Pension - Scottish Widows - We upload new members. Client uploads the pension contribution.,,IOB68952647,5.00%EE 3.00%ER.SMART,Migrated Plans,132972,,Y,Y,Y,,Y,,
+fdf,,Y,Y,Day 1 ,Y,Pension - Scottish Widows - Client Uploads new member and pension contributions ,,IOB68952648,4.00%EE 5.00%ER.SMART,Migrated Plans,132972,,N,N,N,,N,,
+fdf,,Y,Y,Day 1 ,Y, Pension  - Aviva - We new member and & client uploads the pension contributions ,,IOB72144457,3.00%EE 7.00%ER.SMART,Pre-Existing Plan,132972,,Y,N,N,,N,,
+fdf,,Y,Y,3 months ,Y, Pension  - Royal London - Client Uploads new member and pension contributions ,,IOB68952677,4.00%EE 5.00%ER.SMART,Migrated Plans,132972,,Y,N,N,,N,,Additional Smart ERNI Calculator required to update IO.
+df,,Y,Y,Day 1 ,Y,Pension - Scottish Widows - We upload new members. We upload the pension contribution.,,IOB68952655,5.00%EE 4.00%ER.SMART,Migrated Plans,132972,,N,N,N,,N,,
+fdf,,Y,Y,3 months ,Y,Pension Opt Enrol - we process and upload the pension contributions ,,IOB68952692,4.00%EE 3.00%ER.SMART,Migrated Plans,132972,,Y,N,Y,,N,,

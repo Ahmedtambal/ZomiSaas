@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { BrowserRouter, Routes, Route, useParams } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { LoginPage } from './components/auth/LoginPage';
 import { RegisterPage } from './components/auth/RegisterPage';
@@ -7,10 +8,18 @@ import { DashboardLayout } from './components/layout/DashboardLayout';
 import { ExecutiveDashboard } from './components/dashboard/ExecutiveDashboard';
 import { DatabaseSelector } from './components/members/DatabaseSelector';
 import { MembersTable } from './components/members/MembersTable';
-import { FormGenerator } from './components/forms/FormGenerator';
+import { FormsListPage } from './components/forms/FormsListPage';
 import { DynamicFormRenderer } from './components/forms/DynamicFormRenderer';
+import { PublicFormView } from './components/forms/PublicFormView';
+import { SWNewEmployeeForm } from './components/forms/SWNewEmployeeForm';
 import { SettingsPage } from './components/settings/SettingsPage';
 import { DatabaseType, IO_UPLOAD_COLUMNS, NEW_EMPLOYEE_UPLOAD_COLUMNS } from './types';
+
+// Wrapper component for public form route
+function PublicFormRoute() {
+  const { token } = useParams<{ token: string }>();
+  return <PublicFormView token={token || ''} />;
+}
 
 function AppContent() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -73,7 +82,9 @@ function AppContent() {
           />
         );
       case 'forms':
-        return <FormGenerator />;
+        return <FormsListPage onCreateNewForm={() => setCurrentPage('sw-new-employee')} />;
+      case 'sw-new-employee':
+        return <SWNewEmployeeForm />;
       case 'settings':
         return <SettingsPage />;
       case 'dynamicForm':
@@ -103,9 +114,17 @@ function AppContent() {
 
 function App() {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <BrowserRouter>
+      <AuthProvider>
+        <Routes>
+          {/* Public route - no authentication required */}
+          <Route path="/public/form/:token" element={<PublicFormRoute />} />
+          
+          {/* All other routes require authentication */}
+          <Route path="/*" element={<AppContent />} />
+        </Routes>
+      </AuthProvider>
+    </BrowserRouter>
   );
 }
 

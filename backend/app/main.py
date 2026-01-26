@@ -8,7 +8,7 @@ from fastapi.middleware.gzip import GZipMiddleware
 import logging
 
 from app.config import settings
-from app.routes import auth
+from app.routes import auth, forms, public_forms, companies
 
 # Configure logging
 logging.basicConfig(
@@ -62,6 +62,9 @@ app.add_middleware(GZipMiddleware, minimum_size=1000)
 # =====================================================
 
 app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
+app.include_router(forms.router, prefix="/api/forms", tags=["Forms"])
+app.include_router(public_forms.router, prefix="/api/public", tags=["Public"])
+app.include_router(companies.router, prefix="/api/companies", tags=["Companies"])
 
 # =====================================================
 # Health Check

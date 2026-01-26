@@ -24,10 +24,28 @@ export interface FormDefinition {
   id: string;
   name: string;
   description: string;
-  fields: FormField[];
+  formData: {
+    fields: Array<{
+      name: string;
+      label: string;
+      type: string;
+      required: boolean;
+      options?: string[];
+      pattern?: string;
+      min?: number;
+      max?: number;
+      step?: number;
+      placeholder?: string;
+    }>;
+  };
   createdAt: string;
-  updatedAt: string;
+  updatedAt?: string;
   isActive: boolean;
+  // Database fields
+  organizationId?: string;
+  createdByUserId?: string;
+  templateType?: 'custom' | 'sw_new_employee' | 'io_upload';
+  linkedCompanyId?: string;
 }
 
 export interface FormSubmission {
@@ -36,8 +54,29 @@ export interface FormSubmission {
   data: Record<string, any>;
   submittedAt: string;
   ipAddress?: string;
+  organizationId?: string;
+  processingStatus?: string;
+  matchedCompanyId?: string;
 }
 
+export interface FormToken {
+  id: string;
+  formId: string;
+  companyId: string;
+  organizationId: string;
+  token: string;
+  url: string;
+  expiresAt: string | null;
+  maxSubmissions: number | null;
+  submissionCount: number;
+  isActive: boolean;
+  createdByUserId: string;
+  createdAt: string;
+  lastAccessedAt: string | null;
+  accessCount: number;
+}
+
+// Legacy interface for backward compatibility
 export interface GeneratedLink {
   id: string;
   formId: string;
