@@ -302,7 +302,7 @@ export const PublicFormView: React.FC<PublicFormViewProps> = ({ token }) => {
           )}
 
           <div className="space-y-6">
-            {form?.formData?.fields?.map(renderField)}
+            {((form as any)?.form_data?.fields || form?.formData?.fields)?.map(renderField)}
           </div>
 
           <div className="mt-8 pt-6 border-t border-gray-300">
