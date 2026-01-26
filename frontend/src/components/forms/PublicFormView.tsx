@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { CheckCircle, Building2, Calendar, Users, AlertCircle } from 'lucide-react';
 import { getFormByToken, submitFormByToken } from '../../services/formService';
 import { FormDefinition } from '../../types/forms';
 
@@ -126,7 +127,7 @@ export const PublicFormView: React.FC<PublicFormViewProps> = ({ token }) => {
   };
 
   const renderField = (field: any) => {
-    const commonClasses = "w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-purple-500";
+    const baseInputClasses = "w-full bg-white/60 backdrop-blur-sm border border-gray-300 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#38b000] focus:border-transparent transition-all";
     const hasError = !!errors[field.name];
     const errorClasses = hasError ? "border-red-500 ring-2 ring-red-500/50" : "";
 
@@ -134,13 +135,13 @@ export const PublicFormView: React.FC<PublicFormViewProps> = ({ token }) => {
       case 'select':
         return (
           <div key={field.name} className="space-y-2">
-            <label className="block text-white font-medium">
-              {field.label} {field.required && <span className="text-red-400">*</span>}
+            <label className="block text-gray-800 font-medium">
+              {field.label} {field.required && <span className="text-red-500">*</span>}
             </label>
             <select
               value={formData[field.name] || ''}
               onChange={(e) => handleInputChange(field.name, e.target.value)}
-              className={`${commonClasses} ${errorClasses}`}
+              className={`${baseInputClasses} ${errorClasses}`}
             >
               <option value="">Select {field.label}</option>
               {field.options?.map((option: string) => (
@@ -149,24 +150,24 @@ export const PublicFormView: React.FC<PublicFormViewProps> = ({ token }) => {
                 </option>
               ))}
             </select>
-            {hasError && <p className="text-red-400 text-sm">{errors[field.name]}</p>}
+            {hasError && <p className="text-red-600 text-sm flex items-center gap-1"><AlertCircle className="w-4 h-4" />{errors[field.name]}</p>}
           </div>
         );
 
       case 'textarea':
         return (
           <div key={field.name} className="space-y-2">
-            <label className="block text-white font-medium">
-              {field.label} {field.required && <span className="text-red-400">*</span>}
+            <label className="block text-gray-800 font-medium">
+              {field.label} {field.required && <span className="text-red-500">*</span>}
             </label>
             <textarea
               value={formData[field.name] || ''}
               onChange={(e) => handleInputChange(field.name, e.target.value)}
               placeholder={field.placeholder}
               rows={4}
-              className={`${commonClasses} ${errorClasses} resize-none`}
+              className={`${baseInputClasses} ${errorClasses} resize-none`}
             />
-            {hasError && <p className="text-red-400 text-sm">{errors[field.name]}</p>}
+            {hasError && <p className="text-red-600 text-sm flex items-center gap-1"><AlertCircle className="w-4 h-4" />{errors[field.name]}</p>}
           </div>
         );
 
@@ -177,20 +178,20 @@ export const PublicFormView: React.FC<PublicFormViewProps> = ({ token }) => {
               type="checkbox"
               checked={formData[field.name] || false}
               onChange={(e) => handleInputChange(field.name, e.target.checked)}
-              className="w-5 h-5 rounded border-white/20 bg-white/10 text-purple-500 focus:ring-2 focus:ring-purple-500"
+              className="w-5 h-5 rounded border-gray-300 text-[#38b000] focus:ring-2 focus:ring-[#38b000]"
             />
-            <label className="text-white">
-              {field.label} {field.required && <span className="text-red-400">*</span>}
+            <label className="text-gray-800">
+              {field.label} {field.required && <span className="text-red-500">*</span>}
             </label>
-            {hasError && <p className="text-red-400 text-sm ml-8">{errors[field.name]}</p>}
+            {hasError && <p className="text-red-600 text-sm ml-8 flex items-center gap-1"><AlertCircle className="w-4 h-4" />{errors[field.name]}</p>}
           </div>
         );
 
       default:
         return (
           <div key={field.name} className="space-y-2">
-            <label className="block text-white font-medium">
-              {field.label} {field.required && <span className="text-red-400">*</span>}
+            <label className="block text-gray-800 font-medium">
+              {field.label} {field.required && <span className="text-red-500">*</span>}
             </label>
             <input
               type={field.type}
@@ -200,9 +201,9 @@ export const PublicFormView: React.FC<PublicFormViewProps> = ({ token }) => {
               min={field.min}
               max={field.max}
               step={field.step}
-              className={`${commonClasses} ${errorClasses}`}
+              className={`${baseInputClasses} ${errorClasses}`}
             />
-            {hasError && <p className="text-red-400 text-sm">{errors[field.name]}</p>}
+            {hasError && <p className="text-red-600 text-sm flex items-center gap-1"><AlertCircle className="w-4 h-4" />{errors[field.name]}</p>}
           </div>
         );
     }
@@ -210,10 +211,10 @@ export const PublicFormView: React.FC<PublicFormViewProps> = ({ token }) => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-6">
-        <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-white mx-auto mb-4"></div>
-          <p className="text-white text-lg">Loading form...</p>
+      <div className="min-h-screen bg-gradient-to-br from-[#fefae0] to-white flex items-center justify-center p-6 font-['Inter',_'Roboto',_sans-serif]">
+        <div className="bg-white/60 backdrop-blur-xl rounded-2xl p-8 text-center shadow-lg border border-white/40">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-[#38b000] mx-auto mb-4"></div>
+          <p className="text-gray-800 text-lg font-medium">Loading form...</p>
         </div>
       </div>
     );
@@ -221,15 +222,15 @@ export const PublicFormView: React.FC<PublicFormViewProps> = ({ token }) => {
 
   if (error && !form) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-6">
-        <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 max-w-md w-full text-center">
-          <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className="min-h-screen bg-gradient-to-br from-[#fefae0] to-white flex items-center justify-center p-6 font-['Inter',_'Roboto',_sans-serif]">
+        <div className="bg-white/60 backdrop-blur-xl rounded-2xl p-8 max-w-md w-full text-center shadow-lg border border-white/40">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </div>
-          <h2 className="text-2xl font-bold text-white mb-2">Form Unavailable</h2>
-          <p className="text-white/60">{error}</p>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Form Unavailable</h2>
+          <p className="text-gray-700">{error}</p>
         </div>
       </div>
     );
@@ -237,19 +238,17 @@ export const PublicFormView: React.FC<PublicFormViewProps> = ({ token }) => {
 
   if (submitted) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-6">
-        <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 max-w-md w-full text-center">
-          <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
+      <div className="min-h-screen bg-gradient-to-br from-[#fefae0] to-white flex items-center justify-center p-6 font-['Inter',_'Roboto',_sans-serif]">
+        <div className="bg-white/60 backdrop-blur-xl rounded-2xl p-8 max-w-md w-full text-center shadow-lg border border-white/40">
+          <div className="w-20 h-20 bg-[#c7f9cc] rounded-full flex items-center justify-center mx-auto mb-6">
+            <CheckCircle className="w-12 h-12 text-[#38b000]" />
           </div>
-          <h2 className="text-2xl font-bold text-white mb-2">Submission Successful!</h2>
-          <p className="text-white/60 mb-4">
+          <h2 className="text-3xl font-bold text-gray-900 mb-3">Submission Successful!</h2>
+          <p className="text-gray-700 mb-4 text-lg">
             Your form has been submitted successfully.
           </p>
-          <p className="text-white/40 text-sm">
-            Submission ID: {submissionId}
+          <p className="text-gray-600 text-sm font-mono bg-gray-100 px-4 py-2 rounded-lg">
+            ID: {submissionId}
           </p>
         </div>
       </div>
@@ -257,36 +256,36 @@ export const PublicFormView: React.FC<PublicFormViewProps> = ({ token }) => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-6">
-      <div className="max-w-3xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-[#fefae0] to-white p-6 font-['Inter',_'Roboto',_sans-serif]">
+      <div className="max-w-4xl mx-auto">
         {/* Header */}
-        <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 mb-6">
+        <div className="bg-white/60 backdrop-blur-xl rounded-2xl p-8 mb-6 shadow-lg border border-white/40">
           <div className="flex items-start justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-white mb-2">{form?.name}</h1>
+            <div className="flex-1">
+              <h1 className="text-4xl font-bold text-gray-900 mb-3">{form?.name}</h1>
               {form?.description && (
-                <p className="text-white/60">{form.description}</p>
+                <p className="text-gray-700 text-lg leading-relaxed">{form.description}</p>
               )}
               {company && (
-                <p className="text-white/80 mt-2 flex items-center gap-2">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                  </svg>
-                  {company.name}
-                </p>
+                <div className="mt-4 flex items-center gap-2 text-gray-800 bg-[#c7f9cc]/40 px-4 py-2 rounded-lg inline-flex">
+                  <Building2 className="w-5 h-5 text-[#38b000]" />
+                  <span className="font-medium">{company.name}</span>
+                </div>
               )}
             </div>
             {tokenInfo && (
-              <div className="text-right">
+              <div className="text-right ml-4">
                 {tokenInfo.max_submissions && (
-                  <p className="text-white/60 text-sm">
-                    {tokenInfo.submission_count} / {tokenInfo.max_submissions} submissions
-                  </p>
+                  <div className="flex items-center gap-2 text-gray-700 text-sm mb-2">
+                    <Users className="w-4 h-4" />
+                    <span>{tokenInfo.submission_count} / {tokenInfo.max_submissions} submissions</span>
+                  </div>
                 )}
                 {tokenInfo.expires_at && (
-                  <p className="text-white/60 text-sm">
-                    Expires: {new Date(tokenInfo.expires_at).toLocaleDateString()}
-                  </p>
+                  <div className="flex items-center gap-2 text-gray-700 text-sm">
+                    <Calendar className="w-4 h-4" />
+                    <span>Expires: {new Date(tokenInfo.expires_at).toLocaleDateString()}</span>
+                  </div>
                 )}
               </div>
             )}
@@ -294,9 +293,10 @@ export const PublicFormView: React.FC<PublicFormViewProps> = ({ token }) => {
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="bg-white/10 backdrop-blur-lg rounded-2xl p-8">
+        <form onSubmit={handleSubmit} className="bg-white/60 backdrop-blur-xl rounded-2xl p-8 shadow-lg border border-white/40">
           {error && (
-            <div className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-lg text-red-200">
+            <div className="mb-6 p-4 bg-red-100 border border-red-300 rounded-lg text-red-800 flex items-center gap-2">
+              <AlertCircle className="w-5 h-5" />
               {error}
             </div>
           )}
@@ -305,19 +305,29 @@ export const PublicFormView: React.FC<PublicFormViewProps> = ({ token }) => {
             {form?.formData?.fields?.map(renderField)}
           </div>
 
-          <div className="mt-8 pt-6 border-t border-white/20">
+          <div className="mt-8 pt-6 border-t border-gray-300">
             <button
               type="submit"
               disabled={submitting}
-              className="w-full px-6 py-4 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white text-lg font-semibold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full px-6 py-4 bg-[#38b000] hover:bg-[#2d8c00] text-white text-lg font-semibold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md flex items-center justify-center gap-2"
             >
-              {submitting ? 'Submitting...' : 'Submit Form'}
+              {submitting ? (
+                <>
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                  Submitting...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="w-5 h-5" />
+                  Submit Form
+                </>
+              )}
             </button>
           </div>
         </form>
 
         {/* Footer */}
-        <div className="text-center mt-6 text-white/40 text-sm">
+        <div className="text-center mt-6 text-gray-600 text-sm">
           <p>Powered by Zomi Wealth Portal</p>
         </div>
       </div>

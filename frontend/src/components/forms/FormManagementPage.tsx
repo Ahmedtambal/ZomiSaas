@@ -42,6 +42,7 @@ export const FormManagementPage: React.FC = () => {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [generatingLink, setGeneratingLink] = useState(false);
   const [copiedLink, setCopiedLink] = useState<string | null>(null);
+  const [generatedLinks, setGeneratedLinks] = useState<Record<string, string>>({});
 
   useEffect(() => {
     loadForms();
@@ -63,17 +64,21 @@ export const FormManagementPage: React.FC = () => {
   const loadCompanies = async () => {
     try {
       const token = localStorage.getItem('access_token');
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'https://zomisaasbackend.onrender.com'}/api/companies`, {
+      const API_URL = import.meta.env.VITE_API_URL || 'https://zomisaasbackend.onrender.com';
+      const response = await fetch(`${API_URL}/api/companies`, {
         headers: {
           'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
         },
       });
       if (response.ok) {
         const data = await response.json();
-        console.log('Companies loaded:', data); // Debug log
+        console.log('Companies API response:', data); // Debug log
+        console.log('Companies array:', Array.isArray(data) ? data : []);
         setCompanies(Array.isArray(data) ? data : []);
       } else {
-        console.error('Failed to load companies:', response.status);
+        const errorText = await response.text();
+        console.error('Failed to load companies:', response.status, errorText);
       }
     } catch (err) {
       console.error('Failed to fetch companies:', err);
@@ -121,12 +126,13 @@ export const FormManagementPage: React.FC = () => {
       
       const publicUrl = `${window.location.origin}/public/form/${token.token}`;
       
+      // Store the generated link
+      setGeneratedLinks(prev => ({ ...prev, [formId]: publicUrl }));
+      
       // Copy to clipboard
       await navigator.clipboard.writeText(publicUrl);
-      setCopiedLink(token.token);
+      setCopiedLink(formId);
       setTimeout(() => setCopiedLink(null), 3000);
-      
-      alert(`Link generated and copied to clipboard!\n\n${publicUrl}`);
     } catch (err) {
       console.error('Failed to generate link:', err);
       alert('Failed to generate link');
@@ -172,24 +178,24 @@ export const FormManagementPage: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 font-['Inter',_'Roboto',_sans-serif]">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-bold text-white mb-2">Form Management</h2>
-          <p className="text-white/60">Create forms and generate shareable links</p>
+          <p className="text-white/60">Create forms and generate shareable links for companies</p>
         </div>
         <div className="flex gap-3">
           <button
             onClick={createSWEmployeeForm}
-            className="px-5 py-2.5 bg-gradient-to-r from-zomi-green to-emerald-600 text-white rounded-lg hover:opacity-90 transition-opacity flex items-center gap-2 font-medium shadow-lg shadow-zomi-green/25"
+            className="px-5 py-2.5 bg-zomi-green text-white rounded-lg hover:bg-emerald-600 transition-colors flex items-center gap-2 font-medium shadow-md"
           >
             <Plus className="w-5 h-5" />
             Create SW Employee Form
           </button>
           <button
             onClick={() => setShowBuilder(true)}
-            className="px-5 py-2.5 glass-panel text-white rounded-lg hover:bg-white/20 transition-all flex items-center gap-2 font-medium"
+            className="px-5 py-2.5 bg-zomi-green text-white rounded-lg hover:bg-emerald-600 transition-colors flex items-center gap-2 font-medium shadow-md"
           >
             <Plus className="w-5 h-5" />
             Custom Form
@@ -204,17 +210,17 @@ export const FormManagementPage: React.FC = () => {
           <p className="text-white/60">Loading forms...</p>
         </div>
       ) : forms.length === 0 ? (
-        <div className="glass-panel rounded-xl p-12 text-center">
-          <div className="w-20 h-20 bg-gradient-to-br from-zomi-green/20 to-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-zomi-green/30">
+        <div className="bg-white rounded-xl p-12 text-center shadow-sm border border-gray-200">
+          <div className="w-20 h-20 bg-zomi-green/10 rounded-full flex items-center justify-center mx-auto mb-4">
             <svg className="w-10 h-10 text-zomi-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
           </div>
-          <h3 className="text-white text-xl font-semibold mb-2">No forms yet</h3>
-          <p className="text-white/60 mb-6">Create your first form to get started</p>
+          <h3 className="text-gray-900 text-xl font-semibold mb-2">No forms yet</h3>
+          <p className="text-gray-600 mb-6">Create your first form to get started</p>
           <button
             onClick={createSWEmployeeForm}
-            className="px-6 py-3 bg-gradient-to-r from-zomi-green to-emerald-600 text-white rounded-lg hover:opacity-90 transition-opacity inline-flex items-center gap-2 font-medium shadow-lg shadow-zomi-green/25"
+            className="px-6 py-3 bg-zomi-green text-white rounded-lg hover:bg-emerald-600 transition-colors inline-flex items-center gap-2 font-medium shadow-md"
           >
             <Plus className="w-5 h-5" />
             Create SW Employee Form
@@ -225,29 +231,29 @@ export const FormManagementPage: React.FC = () => {
           {(forms || []).map((form) => (
             <div
               key={form.id}
-              className="bg-slate-800/40 backdrop-blur-sm rounded-xl p-6 hover:bg-slate-800/60 transition-all border border-white/10 shadow-lg"
+              className="bg-white rounded-xl p-6 hover:shadow-lg transition-shadow border border-gray-200 shadow-sm"
             >
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
-                    <h3 className="text-white font-semibold text-xl">{form.name || 'Untitled Form'}</h3>
+                    <h3 className="text-gray-900 font-semibold text-xl">{form.name || 'Untitled Form'}</h3>
                     {form.templateType === 'sw_new_employee' && (
-                      <span className="px-3 py-1 bg-gradient-to-r from-purple-500/30 to-pink-500/30 text-purple-200 rounded-full text-xs font-medium border border-purple-400/40">
+                      <span className="px-3 py-1 bg-zomi-green/10 text-zomi-green rounded-full text-xs font-medium border border-zomi-green/20">
                         SW New Employee
                       </span>
                     )}
                   </div>
                   {form.description && (
-                    <p className="text-slate-300 mb-3">{form.description}</p>
+                    <p className="text-gray-600 mb-3 leading-relaxed">{form.description}</p>
                   )}
-                  <div className="flex items-center gap-4 text-slate-400 text-sm">
+                  <div className="flex items-center gap-4 text-gray-500 text-sm">
                     <span className="flex items-center gap-1.5">
                       <Calendar className="w-4 h-4" />
                       {form.createdAt ? new Date(form.createdAt).toLocaleDateString() : 'Recently created'}
                     </span>
                     <span className="flex items-center gap-1.5">
                       <CheckCircle className="w-4 h-4 text-zomi-green" />
-                      <span className="text-slate-300">{form.formData?.fields?.length || 0} fields</span>
+                      <span className="text-gray-700 font-medium">{form.formData?.fields?.length || 0} fields</span>
                     </span>
                   </div>
                 </div>
@@ -255,7 +261,7 @@ export const FormManagementPage: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => handleDeleteForm(form.id)}
-                    className="p-2 text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                     title="Delete form"
                   >
                     <Trash2 className="w-5 h-5" />
@@ -264,17 +270,17 @@ export const FormManagementPage: React.FC = () => {
               </div>
 
               {/* Generate Link Section */}
-              <div className="border-t border-slate-600/50 pt-4 mt-4">
-                <h4 className="text-slate-200 font-medium mb-3 flex items-center gap-2">
+              <div className="border-t border-gray-200 pt-4 mt-4">
+                <h4 className="text-gray-900 font-medium mb-3 flex items-center gap-2">
                   <ExternalLink className="w-4 h-4 text-zomi-green" />
                   Generate Shareable Link
                   {companies.length > 0 && (
-                    <span className="text-xs text-slate-400">({companies.length} companies available)</span>
+                    <span className="text-xs text-gray-500 font-normal">({companies.length} companies)</span>
                   )}
                 </h4>
                 <div className="flex items-center gap-3">
                   <select
-                    className="flex-1 bg-slate-700/50 border border-slate-600 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-zomi-green/50 appearance-none cursor-pointer"
+                    className="flex-1 bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-gray-900 focus:outline-none focus:ring-2 focus:ring-zomi-green focus:border-transparent appearance-none cursor-pointer"
                     onChange={(e) => {
                       if (e.target.value) {
                         handleGenerateLink(form.id, e.target.value);
@@ -294,16 +300,34 @@ export const FormManagementPage: React.FC = () => {
                   </select>
                   <button
                     onClick={() => setSelectedFormForLinks(form.id)}
-                    className="px-4 py-2.5 bg-slate-700/50 border border-slate-600 text-white rounded-lg hover:bg-slate-600/50 transition-all flex items-center gap-2"
+                    className="px-4 py-2.5 bg-zomi-green text-white rounded-lg hover:bg-emerald-600 transition-colors flex items-center gap-2 font-medium shadow-md"
                   >
                     <Eye className="w-4 h-4" />
                     View Links
                   </button>
                 </div>
-                {copiedLink && (
-                  <div className="mt-3 flex items-center gap-2 text-zomi-green text-sm bg-zomi-green/10 px-3 py-2 rounded-lg border border-zomi-green/20">
-                    <CheckCircle className="w-4 h-4" />
-                    Link copied to clipboard!
+                {generatedLinks[form.id] && (
+                  <div className="mt-3 space-y-2">
+                    <label className="block text-gray-700 text-sm font-medium">Generated Link</label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={generatedLinks[form.id]}
+                        readOnly
+                        className="flex-1 bg-gray-50 border border-gray-300 rounded-lg px-4 py-2.5 text-gray-900 text-sm font-mono"
+                      />
+                      <button
+                        onClick={async () => {
+                          await navigator.clipboard.writeText(generatedLinks[form.id]);
+                          setCopiedLink(form.id);
+                          setTimeout(() => setCopiedLink(null), 2000);
+                        }}
+                        className="px-4 py-2.5 bg-zomi-green text-white rounded-lg hover:bg-emerald-600 transition-colors flex items-center gap-2 font-medium shadow-md"
+                      >
+                        <Copy className="w-4 h-4" />
+                        {copiedLink === form.id ? 'Copied!' : 'Copy'}
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>

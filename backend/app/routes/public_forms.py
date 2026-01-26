@@ -67,20 +67,14 @@ async def get_form_by_token(token: str, request: Request) -> Dict[str, Any]:
             "last_accessed_at": datetime.utcnow().isoformat()
         }).eq("id", token_record["id"]).execute()
         
-        # Return form with company info
+        # Return form with company info directly (no wrapper)
         return {
-            "message": "Form retrieved successfully",
-            "data": {
-                "form": token_record["forms"],
-                "company": token_record["companies"],
-                "token_info": {
-                    "expires_at": token_record["expires_at"],
-                    "submissions_remaining": (
-                        token_record["max_submissions"] - token_record["submission_count"]
-                        if token_record["max_submissions"]
-                        else None
-                    )
-                }
+            "form": token_record["forms"],
+            "company": token_record["companies"],
+            "token_info": {
+                "expires_at": token_record["expires_at"],
+                "max_submissions": token_record["max_submissions"],
+                "submission_count": token_record["submission_count"]
             }
         }
         
@@ -149,35 +143,37 @@ async def submit_form(token: str, submission_data: Dict[str, Any], request: Requ
         client_ip = request.client.host if request.client else None
         user_agent = request.headers.get("user-agent", "")
         
-        # Enrich employee data with company rules from Master Rulebook
+        # Map SW Employee form fields to employees table columns
         employee_data = {
             "organization_id": token_record["organization_id"],
             "company_id": company["id"],
             "source_form_id": token_record["form_id"],
             
-            # Employee data from form
+            # Personal Information (from SW_NEW_EMPLOYEE_TEMPLATE fields)
             "title": submission_data.get("title"),
-            "first_name": submission_data.get("forename"),
+            "first_name": submission_data.get("forename"),  # SW form uses 'forename'
             "surname": submission_data.get("surname"),
-            "ni_number": submission_data.get("ni_number"),
-            "date_of_birth": submission_data.get("date_of_birth"),
-            "gender": submission_data.get("sex"),
-            "marital_status": submission_data.get("marital_status"),
+            "ni_number": submission_data.get("nationalInsuranceNumber"),  # SW form uses camelCase
+            "date_of_birth": submission_data.get("dateOfBirth"),  # SW form uses camelCase
+            "gender": submission_data.get("gender"),
             
-            # Address
-            "address_line_1": submission_data.get("address_1"),
-            "address_line_2": submission_data.get("address_2"),
-            "address_line_3": submission_data.get("address_3"),
-            "address_line_4": submission_data.get("address_4"),
+            # Address (from SW form fields)
+            "address_line_1": submission_data.get("addressLine1"),  # SW form uses camelCase
+            "address_line_2": submission_data.get("addressLine2"),
+            "city_town": submission_data.get("town"),
+            "county": submission_data.get("county"),
             "postcode": submission_data.get("postcode"),
-            "uk_resident": submission_data.get("uk_resident"),
+            "uk_resident": submission_data.get("ukResident") == "Yes" if submission_data.get("ukResident") else None,  # Convert string to boolean
             "nationality": submission_data.get("nationality"),
             
-            # Employment
+            # Employment (from SW form fields)
             "pensionable_salary": submission_data.get("salary"),
-            "employment_start_date": submission_data.get("employment_start_date"),
-            "selected_retirement_age": submission_data.get("selected_retirement_age"),
-            "pension_investment_approach": submission_data.get("pension_investment_approach"),
+            "employment_start_date": submission_data.get("employmentStartDate"),  # SW form uses camelCase
+            "selected_retirement_age": submission_data.get("selectedRetirementAge"),  # SW form uses camelCase
+            "pension_investment_approach": submission_data.get("pensionInvestmentApproach"),  # SW form uses camelCase
+            
+            # Section information (optional SW form field)
+            "split_template_group_name": submission_data.get("sectionNumber"),  # Mapping sectionNumber to split_template_group_name
             
             # Auto-filled from company (Master Rulebook)
             "client_category": company.get("category_name"),
@@ -227,13 +223,11 @@ async def submit_form(token: str, submission_data: Dict[str, Any], request: Requ
             "user_agent": user_agent
         })
         
+        # Return directly without message wrapper
         return {
-            "message": "Form submitted successfully",
-            "data": {
-                "employee_id": employee["id"],
-                "submission_id": employee["id"],
-                "company_name": company["name"]
-            }
+            "employee_id": employee["id"],
+            "submission_id": employee["id"],
+            "company_name": company["name"]
         }
         
     except HTTPException:
