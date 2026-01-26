@@ -24,6 +24,7 @@ app = FastAPI(
     version="1.0.0",
     docs_url="/docs" if settings.ENVIRONMENT != "production" else None,
     redoc_url="/redoc" if settings.ENVIRONMENT != "production" else None,
+    redirect_slashes=False,  # Disable automatic slash redirects to prevent CORS issues
 )
 
 # =====================================================
