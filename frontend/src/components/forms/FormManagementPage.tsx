@@ -173,22 +173,22 @@ export const FormManagementPage: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-white mb-2">Form Management</h2>
+          <h2 className="text-3xl font-bold text-white mb-2">Form Management</h2>
           <p className="text-white/60">Create forms and generate shareable links</p>
         </div>
         <div className="flex gap-3">
           <button
             onClick={createSWEmployeeForm}
-            className="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:opacity-90 flex items-center gap-2"
+            className="px-5 py-2.5 bg-gradient-to-r from-zomi-green to-emerald-600 text-white rounded-lg hover:opacity-90 transition-opacity flex items-center gap-2 font-medium shadow-lg shadow-zomi-green/25"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-5 h-5" />
             Create SW Employee Form
           </button>
           <button
             onClick={() => setShowBuilder(true)}
-            className="px-4 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 flex items-center gap-2"
+            className="px-5 py-2.5 glass-panel text-white rounded-lg hover:bg-white/20 transition-all flex items-center gap-2 font-medium"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-5 h-5" />
             Custom Form
           </button>
         </div>
@@ -196,22 +196,22 @@ export const FormManagementPage: React.FC = () => {
 
       {/* Forms List */}
       {loading ? (
-        <div className="bg-white/10 backdrop-blur-lg rounded-xl p-8 text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+        <div className="glass-panel rounded-xl p-8 text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zomi-green mx-auto mb-4"></div>
           <p className="text-white/60">Loading forms...</p>
         </div>
       ) : forms.length === 0 ? (
-        <div className="bg-white/10 backdrop-blur-lg rounded-xl p-12 text-center">
-          <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-10 h-10 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="glass-panel rounded-xl p-12 text-center">
+          <div className="w-20 h-20 bg-gradient-to-br from-zomi-green/20 to-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-zomi-green/30">
+            <svg className="w-10 h-10 text-zomi-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
           </div>
-          <p className="text-white text-lg mb-2">No forms yet</p>
+          <h3 className="text-white text-xl font-semibold mb-2">No forms yet</h3>
           <p className="text-white/60 mb-6">Create your first form to get started</p>
           <button
             onClick={createSWEmployeeForm}
-            className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:opacity-90 inline-flex items-center gap-2"
+            className="px-6 py-3 bg-gradient-to-r from-zomi-green to-emerald-600 text-white rounded-lg hover:opacity-90 transition-opacity inline-flex items-center gap-2 font-medium shadow-lg shadow-zomi-green/25"
           >
             <Plus className="w-5 h-5" />
             Create SW Employee Form
@@ -222,29 +222,29 @@ export const FormManagementPage: React.FC = () => {
           {(forms || []).map((form) => (
             <div
               key={form.id}
-              className="bg-white/10 backdrop-blur-lg rounded-xl p-6 hover:bg-white/15 transition-all border border-white/10"
+              className="glass-panel rounded-xl p-6 hover:bg-white/15 transition-all"
             >
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
                     <h3 className="text-white font-semibold text-xl">{form.name}</h3>
                     {form.templateType === 'sw_new_employee' && (
-                      <span className="px-3 py-1 bg-blue-500/20 text-blue-400 rounded-full text-xs font-medium">
+                      <span className="px-3 py-1 bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-purple-300 rounded-full text-xs font-medium border border-purple-500/30">
                         SW New Employee
                       </span>
                     )}
                   </div>
                   {form.description && (
-                    <p className="text-white/60 mb-3">{form.description}</p>
+                    <p className="text-white/70 mb-3">{form.description}</p>
                   )}
-                  <div className="flex items-center gap-4 text-white/40 text-sm">
-                    <span className="flex items-center gap-1">
+                  <div className="flex items-center gap-4 text-white/50 text-sm">
+                    <span className="flex items-center gap-1.5">
                       <Calendar className="w-4 h-4" />
-                      Created {new Date(form.createdAt).toLocaleDateString()}
+                      {form.createdAt ? new Date(form.createdAt).toLocaleDateString() : 'Recently created'}
                     </span>
-                    <span className="flex items-center gap-1">
-                      <CheckCircle className="w-4 h-4" />
-                      {form.formData?.fields?.length || 0} fields
+                    <span className="flex items-center gap-1.5">
+                      <CheckCircle className="w-4 h-4 text-zomi-green" />
+                      <span className="text-white/70">{form.formData?.fields?.length || 0} fields</span>
                     </span>
                   </div>
                 </div>
@@ -262,10 +262,13 @@ export const FormManagementPage: React.FC = () => {
 
               {/* Generate Link Section */}
               <div className="border-t border-white/10 pt-4 mt-4">
-                <h4 className="text-white font-medium mb-3">Generate Shareable Link</h4>
+                <h4 className="text-white/90 font-medium mb-3 flex items-center gap-2">
+                  <ExternalLink className="w-4 h-4 text-zomi-green" />
+                  Generate Shareable Link
+                </h4>
                 <div className="flex items-center gap-3">
                   <select
-                    className="flex-1 bg-white/5 border border-white/20 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className="flex-1 glass-panel rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-zomi-green/50 appearance-none cursor-pointer bg-slate-900/50"
                     onChange={(e) => {
                       if (e.target.value) {
                         handleGenerateLink(form.id, e.target.value);
@@ -283,14 +286,14 @@ export const FormManagementPage: React.FC = () => {
                   </select>
                   <button
                     onClick={() => setSelectedFormForLinks(form.id)}
-                    className="px-4 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 flex items-center gap-2"
+                    className="px-4 py-2.5 glass-panel text-white rounded-lg hover:bg-white/20 transition-all flex items-center gap-2"
                   >
                     <Eye className="w-4 h-4" />
                     View Links
                   </button>
                 </div>
                 {copiedLink && (
-                  <div className="mt-3 flex items-center gap-2 text-green-400 text-sm">
+                  <div className="mt-3 flex items-center gap-2 text-zomi-green text-sm bg-zomi-green/10 px-3 py-2 rounded-lg border border-zomi-green/20">
                     <CheckCircle className="w-4 h-4" />
                     Link copied to clipboard!
                   </div>
