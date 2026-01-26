@@ -6,19 +6,13 @@ from typing import Dict, Any, List, Optional
 from uuid import UUID
 from datetime import datetime, timedelta
 import secrets
+import logging
 
 from app.services.database_service import db_service
 from app.routes.auth import get_current_user
 
 router = APIRouter()
-
-
-# ============================================================================
-# FORM CRUD ENDPOINTS
-# ============================================================================
-
-@router.post("", status_code=status.HTTP_201_CREATED)
-async def create_form(
+logger = logging.getLogger(__name__)
     form_data: Dict[str, Any],
     current_user: dict = Depends(get_current_user)
 ) -> Dict[str, Any]:

@@ -74,8 +74,6 @@ export const FormManagementPage: React.FC = () => {
       });
       if (response.ok) {
         const data = await response.json();
-        console.log('Companies API response:', data); // Debug log
-        console.log('Companies array:', Array.isArray(data) ? data : []);
         setCompanies(Array.isArray(data) ? data : []);
       } else {
         const errorText = await response.text();
