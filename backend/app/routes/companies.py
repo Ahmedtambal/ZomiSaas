@@ -4,7 +4,7 @@ Handles company (Master Rulebook) operations
 """
 from fastapi import APIRouter, Depends, HTTPException, status
 from typing import Optional
-from app.services.db_service import get_supabase_client
+from app.services.database_service import db_service
 from app.routes.auth import get_current_user
 
 router = APIRouter()
@@ -18,7 +18,6 @@ async def get_companies(
     Get all companies (Master Rulebook entries) for the organization
     """
     try:
-        supabase = get_supabase_client()
         org_id = organization_id or current_user.get("organization_id")
         
         if not org_id:
@@ -28,7 +27,7 @@ async def get_companies(
             )
         
         # Query companies table with RLS
-        response = supabase.table("companies").select("*").eq("organization_id", org_id).execute()
+        response = db_service.client.table("companies").select("*").eq("organization_id", org_id).execute()
         
         return response.data
     
@@ -47,10 +46,8 @@ async def get_company(
     Get a specific company by ID
     """
     try:
-        supabase = get_supabase_client()
-        
         # Query with RLS
-        response = supabase.table("companies").select("*").eq("id", company_id).execute()
+        response = db_service.client.table("companies").select("*").eq("id", company_id).execute()
         
         if not response.data:
             raise HTTPException(
