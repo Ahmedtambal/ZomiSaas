@@ -94,6 +94,14 @@ export const updateForm = async (formId: string, formData: UpdateFormData): Prom
 };
 
 /**
+ * Refresh form with latest SW Employee template
+ */
+export const refreshFormTemplate = async (formId: string): Promise<FormDefinition> => {
+  const response = await api.put(`/api/forms/${formId}/refresh-template`);
+  return response.data;
+};
+
+/**
  * Delete a form (creator only)
  */
 export const deleteForm = async (formId: string): Promise<void> => {

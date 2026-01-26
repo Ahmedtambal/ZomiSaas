@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, ExternalLink, Copy, Eye, Trash2, Calendar, Users, CheckCircle } from 'lucide-react';
+import { Plus, ExternalLink, Copy, Eye, Trash2, Calendar, Users, CheckCircle, RefreshCw } from 'lucide-react';
 import { FormBuilder } from './FormBuilder';
 import { FormDefinition } from '../../types/forms';
-import { getForms, createForm, deleteForm, generateToken, getTokens } from '../../services/formService';
+import { getForms, createForm, deleteForm, generateToken, getTokens, refreshFormTemplate } from '../../services/formService';
 
 // Pre-defined SW New Employee Form Template
 const SW_NEW_EMPLOYEE_TEMPLATE = {
@@ -113,6 +113,21 @@ export const FormManagementPage: React.FC = () => {
       await loadForms();
     } catch (err) {
       alert('Failed to delete form');
+    }
+  };
+
+  const handleRefreshTemplate = async (formId: string) => {
+    if (!confirm('This will update the form with the latest template (21 fields). Any custom modifications will be lost. Continue?')) return;
+
+    try {
+      setLoading(true);
+      await refreshFormTemplate(formId);
+      await loadForms();
+      alert('Form updated successfully with latest template!');
+    } catch (err: any) {
+      alert(err.response?.data?.detail || 'Failed to refresh form template');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -260,6 +275,15 @@ export const FormManagementPage: React.FC = () => {
                 </div>
 
                 <div className="flex items-center gap-2">
+                  {form.templateType === 'sw_new_employee' && (
+                    <button
+                      onClick={() => handleRefreshTemplate(form.id)}
+                      className="p-2 text-zomi-green hover:bg-zomi-green/10 rounded-lg transition-colors"
+                      title="Update to latest template (21 fields)"
+                    >
+                      <RefreshCw className="w-5 h-5" />
+                    </button>
+                  )}
                   <button
                     onClick={() => handleDeleteForm(form.id)}
                     className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"

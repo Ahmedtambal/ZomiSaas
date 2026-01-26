@@ -40,6 +40,11 @@ async def create_form(
         # Extract form_data structure
         form_definition = form_data.get("form_data", {})
         
+        # Debug logging
+        logger.info(f"Creating form with form_data structure: {form_data}")
+        logger.info(f"Extracted form_definition: {form_definition}")
+        logger.info(f"Fields count: {len(form_definition.get('fields', []))}")
+        
         # Create form in database
         response = db_service.client.table("forms").insert({
             "organization_id": org_id,
@@ -132,6 +137,84 @@ async def get_form(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve form: {str(e)}"
+        )
+
+
+@router.put("/{form_id}/refresh-template")
+async def refresh_form_template(
+    form_id: str,
+    current_user: dict = Depends(get_current_user)
+) -> Dict[str, Any]:
+    """
+    Refresh a form with the latest SW Employee template
+    """
+    try:
+        # Get the form to check it exists
+        form_response = db_service.client.table("forms").select("*").eq("id", form_id).execute()
+        
+        if not form_response.data:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Form not found"
+            )
+        
+        form = form_response.data[0]
+        
+        # Only refresh if it's an SW employee form
+        if form.get("template_type") != "sw_new_employee":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Can only refresh SW Employee forms"
+            )
+        
+        # Latest SW Employee template with all 21 fields
+        updated_template = {
+            "name": "SW New Employee Form",
+            "description": "Complete employee onboarding form with all required information including personal details, address, and employment data",
+            "isActive": True,
+            "fields": [
+                {"name": "title", "label": "Title", "type": "select", "required": True, "options": ["Mr", "Mrs", "Miss", "Ms", "Dr"]},
+                {"name": "forename", "label": "Forename", "type": "text", "required": True},
+                {"name": "surname", "label": "Surname", "type": "text", "required": True},
+                {"name": "nationalInsuranceNumber", "label": "NI Number", "type": "text", "required": True},
+                {"name": "dateOfBirth", "label": "Date of Birth", "type": "date", "required": True},
+                {"name": "gender", "label": "Sex", "type": "select", "required": True, "options": ["Male", "Female", "Other", "Prefer not to say"]},
+                {"name": "maritalStatus", "label": "Marital Status", "type": "select", "required": True, "options": ["Single", "Married", "Divorced", "Widowed", "Civil Partnership"]},
+                {"name": "addressLine1", "label": "Address 1", "type": "text", "required": True},
+                {"name": "addressLine2", "label": "Address 2", "type": "text", "required": False},
+                {"name": "addressLine3", "label": "Address 3", "type": "text", "required": False},
+                {"name": "addressLine4", "label": "Address 4", "type": "text", "required": False},
+                {"name": "postcode", "label": "Postcode", "type": "text", "required": True},
+                {"name": "ukResident", "label": "UK Resident", "type": "select", "required": True, "options": ["Yes", "No"]},
+                {"name": "nationality", "label": "Nationality", "type": "text", "required": True},
+                {"name": "salary", "label": "Salary", "type": "number", "required": True},
+                {"name": "employmentStartDate", "label": "Employment Start Date", "type": "date", "required": True},
+                {"name": "selectedRetirementAge", "label": "Selected Retirement Age", "type": "number", "required": True},
+                {"name": "sectionNumber", "label": "Section Number", "type": "text", "required": False},
+                {"name": "pensionInvestmentApproach", "label": "Pension Investment Approach", "type": "select", "required": True, "options": ["Conservative", "Moderate", "Aggressive"]},
+            ]
+        }
+        
+        # Update the form
+        response = db_service.client.table("forms").update({
+            "form_data": updated_template,
+            "updated_at": datetime.utcnow().isoformat()
+        }).eq("id", form_id).execute()
+        
+        if not response.data:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Failed to update form"
+            )
+        
+        return response.data[0]
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to refresh template: {str(e)}"
         )
 
 
