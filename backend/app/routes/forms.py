@@ -76,7 +76,7 @@ async def list_forms(
     organization_id: Optional[str] = None,
     template_type: Optional[str] = None,
     current_user: dict = Depends(get_current_user)
-) -> Dict[str, Any]:
+) -> List[Dict[str, Any]]:
     """
     List all forms for an organization
     
