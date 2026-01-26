@@ -8,10 +8,9 @@ import { DashboardLayout } from './components/layout/DashboardLayout';
 import { ExecutiveDashboard } from './components/dashboard/ExecutiveDashboard';
 import { DatabaseSelector } from './components/members/DatabaseSelector';
 import { MembersTable } from './components/members/MembersTable';
-import { FormsListPage } from './components/forms/FormsListPage';
+import { FormManagementPage } from './components/forms/FormManagementPage';
 import { DynamicFormRenderer } from './components/forms/DynamicFormRenderer';
 import { PublicFormView } from './components/forms/PublicFormView';
-import { SWNewEmployeeForm } from './components/forms/SWNewEmployeeForm';
 import { SettingsPage } from './components/settings/SettingsPage';
 import { DatabaseType, IO_UPLOAD_COLUMNS, NEW_EMPLOYEE_UPLOAD_COLUMNS } from './types';
 
@@ -82,9 +81,7 @@ function AppContent() {
           />
         );
       case 'forms':
-        return <FormsListPage onCreateNewForm={() => setCurrentPage('sw-new-employee')} />;
-      case 'sw-new-employee':
-        return <SWNewEmployeeForm />;
+        return <FormManagementPage />;
       case 'settings':
         return <SettingsPage />;
       case 'dynamicForm':
