@@ -2,22 +2,23 @@
 Companies API Routes
 Handles company (Master Rulebook) operations
 """
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Depends
 from typing import Optional
 from app.services.database_service import db_service
+from app.routes.auth import get_current_user
 
 router = APIRouter()
 
 @router.get("/")
 async def get_companies(
-    organization_id: Optional[str] = None
+    organization_id: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
 ):
     """
     Get all companies (Master Rulebook entries) for the organization
-    TODO: Add authentication and get organization_id from current user
     """
     try:
-        org_id = organization_id
+        org_id = organization_id or current_user.get("organization_id")
         
         if not org_id:
             raise HTTPException(
@@ -38,11 +39,11 @@ async def get_companies(
 
 @router.get("/{company_id}")
 async def get_company(
-    company_id: str
+    company_id: str,
+    current_user: dict = Depends(get_current_user)
 ):
     """
     Get a specific company by ID
-    TODO: Add authentication check
     """
     try:
         # Query with RLS
