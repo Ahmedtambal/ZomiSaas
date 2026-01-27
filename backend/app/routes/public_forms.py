@@ -146,6 +146,9 @@ async def submit_form(token: str, submission_data: Dict[str, Any], request: Requ
         # Get company for auto-fill
         company = token_record["companies"]
         
+        # Get the user who created the form (for created_by tracking)
+        form_creator_id = token_record["forms"].get("created_by_user_id")
+        
         # Get client IP and user agent
         client_ip = request.client.host if request.client else None
         user_agent = request.headers.get("user-agent", "")
@@ -196,7 +199,7 @@ async def submit_form(token: str, submission_data: Dict[str, Any], request: Requ
             "user_agent": user_agent,
             "service_status": "Active",
             "io_upload_status": False,
-            "created_by_user_id": None  # Public submission - no authenticated user
+            "created_by_user_id": form_creator_id  # Inherit from form creator
         }
         
         # Create employee record
