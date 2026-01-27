@@ -90,6 +90,7 @@ export const employeeService = {
   },
 
   // Create employee
+  // Note: created_by_user_id is automatically set by the backend from the JWT token
   async createEmployee(employee: Partial<Employee>): Promise<Employee> {
     const response = await api.post('/employees', employee);
     return response.data;

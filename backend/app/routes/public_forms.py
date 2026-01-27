@@ -195,7 +195,8 @@ async def submit_form(token: str, submission_data: Dict[str, Any], request: Requ
             "ip_address": client_ip,
             "user_agent": user_agent,
             "service_status": "Active",
-            "io_upload_status": False
+            "io_upload_status": False,
+            "created_by_user_id": None  # Public submission - no authenticated user
         }
         
         # Create employee record

@@ -69,12 +69,16 @@ async def get_employee(employee_id: str, current_user: dict = Depends(get_curren
 async def create_employee(employee_data: Dict[str, Any], current_user: dict = Depends(get_current_user)) -> Dict[str, Any]:
     """
     Create a new employee
+    
+    The created_by_user_id is automatically set from the authenticated user's JWT token.
+    This allows the database trigger to populate audit fields and track who created the record.
     """
     try:
         organization_id = current_user["organization_id"]
         user_id = current_user["id"]
         
-        # Ensure organization_id is set
+        # Set creator and organization from authenticated user
+        # This is CRITICAL for the database trigger to work properly
         employee_data["organization_id"] = organization_id
         employee_data["created_by_user_id"] = user_id
         
