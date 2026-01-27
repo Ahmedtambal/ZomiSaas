@@ -224,7 +224,7 @@ export const FormManagementPage: React.FC = () => {
       {loading ? (
         <div className="glass-panel rounded-xl p-8 text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zomi-green mx-auto mb-4"></div>
-          <p className="text-white/60">Loading forms...</p>
+          <p className="text-gray-600">Loading forms...</p>
         </div>
       ) : forms.length === 0 ? (
         <div className="bg-white rounded-xl p-12 text-center shadow-sm border border-gray-200">
@@ -253,7 +253,16 @@ export const FormManagementPage: React.FC = () => {
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
-                    <h3 className="text-gray-900 font-semibold text-xl">{form.name || 'Untitled Form'}</h3>
+                    <h3 className="text-gray-900 font-semibold text-xl">
+                      {form.templateType === 'new_employee_upload' 
+                        ? `New Employee Upload${form.formData?.submission_data?.forename ? `: ${form.formData.submission_data.forename} ${form.formData.submission_data.surname}` : ''}`
+                        : (form.name || 'Untitled Form')}
+                    </h3>
+                    {form.templateType === 'new_employee_upload' && (
+                      <span className="px-3 py-1 bg-zomi-green/10 text-zomi-green rounded-full text-xs font-medium border border-zomi-green/20">
+                        New Employee Upload
+                      </span>
+                    )}
                     {form.templateType === 'sw_new_employee' && (
                       <span className="px-3 py-1 bg-zomi-green/10 text-zomi-green rounded-full text-xs font-medium border border-zomi-green/20">
                         SW New Employee

@@ -121,7 +121,7 @@ export const FormsListPage: React.FC<FormsListPageProps> = ({ onCreateNewForm })
       {loading ? (
         <div className="bg-white/10 backdrop-blur-lg rounded-xl p-8 text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
-          <p className="text-white/60">Loading forms...</p>
+          <p className="text-gray-600">Loading forms...</p>
         </div>
       ) : forms.length === 0 ? (
         <div className="bg-white/10 backdrop-blur-lg rounded-xl p-8 text-center">

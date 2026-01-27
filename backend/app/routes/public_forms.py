@@ -285,18 +285,26 @@ async def submit_form(token: str, submission_data: Dict[str, Any], request: Requ
         else:
             logger.warning(f"No recipient email found for form creator {form_creator_id}")
         
-        # Update form record with submission data and tracking
-        db_service.client.table("forms").update({
+        # Create NEW form record for this submission (instead of updating the template)
+        new_form_response = db_service.client.table("forms").insert({
+            "organization_id": token_record["organization_id"],
+            "created_by_user_id": form_creator_id,
             "matched_company_id": company["id"],
+            "linked_company_id": company["id"],
+            "template_type": "new_employee_upload",
             "form_data": {
                 "fields": token_record["forms"]["form_data"]["fields"],  # Keep field definitions
-                "submission_data": submission_data,  # Add the actual submitted values
-                "submitted_at": datetime.utcnow().isoformat()
+                "submission_data": submission_data,  # The actual submitted values
+                "submitted_at": datetime.utcnow().isoformat(),
+                "employee_name": f"{submission_data.get('forename', '')} {submission_data.get('surname', '')}".strip()
             },
+            "processing_status": "Completed",
             "submitted_via": "form_link",
             "ip_address": client_ip,
             "user_agent": user_agent
-        }).eq("id", token_record["form_id"]).execute()
+        }).execute()
+        
+        new_form_id = new_form_response.data[0]["id"] if new_form_response.data else None
         
         # Increment token submission count
         db_service.client.table("form_tokens").update({
@@ -312,7 +320,8 @@ async def submit_form(token: str, submission_data: Dict[str, Any], request: Requ
             "resource": "employee",
             "details": {
                 "employee_id": str(employee["id"]),
-                "form_id": token_record["form_id"],
+                "form_id": new_form_id,  # Use the new form record ID
+                "template_form_id": token_record["form_id"],  # Reference to template
                 "company_id": company["id"],
                 "token": token,
                 "submission_method": "public_form"
