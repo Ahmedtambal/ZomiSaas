@@ -5,12 +5,59 @@ from fastapi import APIRouter, HTTPException, status, Depends
 from typing import Dict, Any, List
 from datetime import datetime
 import logging
+import httpx
 
 from app.services.database_service import db_service
 from app.routes.auth import get_current_user
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
+# Edge Function configuration
+EDGE_FUNCTION_URL = "https://dxxteafpanesuicrjqto.supabase.co/functions/v1/notify-new-employee"
+EDGE_FUNCTION_SECRET = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR4eHRlYWZwYW5lc3VpY3JqcXRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU3NTkxNTgsImV4cCI6MjA1MTMzNTE1OH0.XYOAqZVlBDSexr4sNYPXi5B-mQ-TrpHvT8z-P4Ds_5I"  # Replace with your actual secret
+
+
+async def notify_edge_function(employee: Dict[str, Any], company_name: str, recipient_email: str):
+    """
+    Call Edge Function to send email notification for new employee.
+    
+    Args:
+        employee: The inserted employee record
+        company_name: Name of the company
+        recipient_email: Email address to send notification to
+    """
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.post(
+                EDGE_FUNCTION_URL,
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {EDGE_FUNCTION_SECRET}"
+                },
+                json={
+                    "record": {
+                        "first_name": employee.get("first_name"),
+                        "surname": employee.get("surname"),
+                        "company_name": company_name,
+                        "recipient_email": recipient_email,
+                        "job_title": employee.get("job_title"),
+                        "employment_start_date": employee.get("employment_start_date")
+                    }
+                }
+            )
+            
+            if response.status_code == 200:
+                logger.info(f"Email notification sent successfully for employee {employee.get('id')}")
+            else:
+                error_data = response.json() if response.text else {}
+                logger.warning(f"Edge Function returned status {response.status_code}: {error_data}")
+    
+    except httpx.TimeoutException:
+        logger.warning(f"Timeout calling Edge Function for employee {employee.get('id')}")
+    except Exception as e:
+        logger.error(f"Failed to call Edge Function: {str(e)}")
+        # Don't raise - we don't want email failures to break employee creation
 
 
 @router.get("", status_code=status.HTTP_200_OK)
@@ -98,7 +145,28 @@ async def create_employee(employee_data: Dict[str, Any], current_user: dict = De
                 detail="Failed to create employee"
             )
         
-        return response.data[0]
+        employee = response.data[0]
+        
+        # Fetch company name for email notification
+        company_name = "Unknown Company"
+        if employee.get("company_id"):
+            try:
+                company_response = db_service.client.table("companies").select("name").eq(
+                    "id", employee["company_id"]
+                ).execute()
+                if company_response.data:
+                    company_name = company_response.data[0]["name"]
+            except Exception as e:
+                logger.warning(f"Failed to fetch company name: {str(e)}")
+        
+        # Call Edge Function to send email notification (non-blocking)
+        recipient_email = current_user.get("email")
+        if recipient_email:
+            await notify_edge_function(employee, company_name, recipient_email)
+        else:
+            logger.warning(f"No email found for user {user_id}")
+        
+        return employee
         
     except HTTPException:
         raise
