@@ -267,7 +267,7 @@ async def submit_form(token: str, submission_data: Dict[str, Any], request: Requ
         recipient_email = None
         if form_creator_id:
             try:
-                user_response = db_service.client.table("users").select("email").eq(
+                user_response = db_service.client.table("user_profiles").select("email").eq(
                     "id", form_creator_id
                 ).execute()
                 if user_response.data:
