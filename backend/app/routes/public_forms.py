@@ -278,26 +278,33 @@ async def submit_form(token: str, submission_data: Dict[str, Any], request: Requ
         else:
             logger.warning(f"No recipient email found for form creator {form_creator_id}")
         
-        # Create NEW form record for this submission (instead of updating the template)
-        new_form_response = db_service.client.table("forms").insert({
-            "organization_id": token_record["organization_id"],
-            "created_by_user_id": form_creator_id,
-            "matched_company_id": company["id"],
-            "linked_company_id": company["id"],
-            "template_type": "new_employee_upload",
-            "form_data": {
-                "fields": token_record["forms"]["form_data"]["fields"],  # Keep field definitions
-                "submission_data": submission_data,  # The actual submitted values
-                "submitted_at": datetime.utcnow().isoformat(),
-                "employee_name": f"{submission_data.get('forename', '')} {submission_data.get('surname', '')}".strip()
-            },
-            "processing_status": "Completed",
+        # Get current form version
+        form_version = token_record["forms"].get("version", 1)
+        
+        # Create submission record in form_submissions table
+        submission_response = db_service.client.table("form_submissions").insert({
+            "form_id": token_record["form_id"],
+            "form_version": form_version,
+            "submission_data": submission_data,
+            "status": "completed",
             "submitted_via": "form_link",
+            "token_id": token_record["id"],
+            "organization_id": token_record["organization_id"],
+            "company_id": company["id"],
+            "employee_id": employee["id"],
             "ip_address": client_ip,
             "user_agent": user_agent
         }).execute()
         
-        new_form_id = new_form_response.data[0]["id"] if new_form_response.data else None
+        submission_id = submission_response.data[0]["id"] if submission_response.data else None
+        
+        # Update token analytics - track completion
+        token_analytics = token_record.get("analytics", {})
+        token_analytics["last_completed_at"] = datetime.utcnow().isoformat()
+        
+        db_service.client.table("form_tokens").update({
+            "analytics": token_analytics
+        }).eq("id", token_record["id"]).execute()
         
         # Increment token submission count
         db_service.client.table("form_tokens").update({
@@ -313,8 +320,8 @@ async def submit_form(token: str, submission_data: Dict[str, Any], request: Requ
             "resource": "employee",
             "details": {
                 "employee_id": str(employee["id"]),
-                "form_id": new_form_id,  # Use the new form record ID
-                "template_form_id": token_record["form_id"],  # Reference to template
+                "submission_id": submission_id,  # New submission record ID
+                "form_id": token_record["form_id"],  # Template form ID
                 "company_id": company["id"],
                 "token": token,
                 "submission_method": "public_form"
@@ -326,7 +333,7 @@ async def submit_form(token: str, submission_data: Dict[str, Any], request: Requ
         # Return directly without message wrapper
         return {
             "employee_id": employee["id"],
-            "submission_id": employee["id"],
+            "submission_id": submission_id,
             "company_name": company["name"]
         }
         

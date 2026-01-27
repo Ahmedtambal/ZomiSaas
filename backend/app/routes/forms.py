@@ -33,6 +33,11 @@ async def create_form(
     - form_data: Object with fields array
     - template_type: 'custom', 'sw_new_employee', or 'io_upload'
     - linked_company_id: UUID of company (optional)
+    
+    Optional fields:
+    - is_template: Mark as template (default false)
+    - tags: Array of tags for categorization
+    - parent_form_id: Reference to original if duplicated
     """
     try:
         # Get user info from JWT
@@ -41,11 +46,6 @@ async def create_form(
         
         # Extract form_data structure
         form_definition = form_data.get("form_data", {})
-        
-        # Debug logging
-        logger.info(f"Creating form with form_data structure: {form_data}")
-        logger.info(f"Extracted form_definition: {form_definition}")
-        logger.info(f"Fields count: {len(form_definition.get('fields', []))}")
         
         # Create form in database
         response = db_service.client.table("forms").insert({
@@ -59,7 +59,10 @@ async def create_form(
                 "fields": form_definition.get("fields", []),
                 "isActive": True
             },
-            "processing_status": "Active"
+            "processing_status": "Active",
+            "is_template": form_data.get("is_template", False),
+            "tags": form_data.get("tags", []),
+            "parent_form_id": form_data.get("parent_form_id")
         }).execute()
         
         if not response.data:
@@ -230,9 +233,14 @@ async def update_form(
     Update a form (creator only)
     
     RLS policy enforces creator-only edit
+    Note: Version snapshot is automatically created by database trigger
+    
+    Optional fields:
+    - is_template: Mark as template
+    - tags: Array of tags
     """
     try:
-        response = db_service.client.table("forms").update({
+        update_data = {
             "form_data": {
                 "name": form_data.get("name"),
                 "description": form_data.get("description"),
@@ -241,7 +249,16 @@ async def update_form(
             },
             "updated_at": datetime.utcnow().isoformat(),
             "linked_company_id": form_data.get("linked_company_id")
-        }).eq("id", form_id).execute()
+        }
+        
+        # Add optional new fields if provided
+        if "is_template" in form_data:
+            update_data["is_template"] = form_data["is_template"]
+        
+        if "tags" in form_data:
+            update_data["tags"] = form_data["tags"]
+        
+        response = db_service.client.table("forms").update(update_data).eq("id", form_id).execute()
         
         if not response.data:
             raise HTTPException(
