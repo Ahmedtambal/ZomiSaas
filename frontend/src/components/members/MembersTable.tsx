@@ -1,6 +1,7 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { Search, Download, Trash2, Eye, EyeOff, Filter, ArrowUpDown, ArrowUp, ArrowDown, Copy, CheckCircle, GripVertical, ArrowLeft } from 'lucide-react';
 import { ColumnDefinition, DatabaseMember, DatabaseType } from '../../types';
+import { employeeService, Employee } from '../../services/employeeService';
 import {
   DndContext,
   closestCenter,
@@ -94,8 +95,8 @@ export const MembersTable = ({ columns, databaseType, onBack }: MembersTableProp
   const editInputRef = useRef<HTMLInputElement | HTMLSelectElement>(null);
 
   const databaseNames = {
-    ioUpload: 'IO Upload',
-    newEmployeeUpload: 'New Employee Upload'
+    ioUpload: 'Employee Database',
+    newEmployeeUpload: 'Audit Logs'
   };
 
   const rowsPerPage = 10;
@@ -176,9 +177,60 @@ export const MembersTable = ({ columns, databaseType, onBack }: MembersTableProp
     return mockData;
   };
 
-  const [members, setMembers] = useState<DatabaseMember[]>(() => 
-    generateMockData(columns, databaseType === 'ioUpload' ? 50 : 30)
-  );
+  const [members, setMembers] = useState<DatabaseMember[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Load employees from API
+  useEffect(() => {
+    loadEmployees();
+  }, []);
+
+  const loadEmployees = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const employees = await employeeService.getEmployees();
+      
+      // Convert Employee[] to DatabaseMember[] format
+      const memberData: DatabaseMember[] = employees.map((emp: Employee) => ({
+        id: emp.id,
+        createdAt: emp.created_at,
+        updatedAt: emp.updated_at,
+        title: emp.title || '',
+        forename: emp.first_name,
+        surname: emp.surname,
+        niNumber: emp.ni_number || '',
+        dateOfBirth: emp.date_of_birth || '',
+        gender: emp.gender || '',
+        maritalStatus: emp.marital_status || '',
+        addressLine1: emp.address_line_1 || '',
+        addressLine2: emp.address_line_2 || '',
+        addressLine3: emp.address_line_3 || '',
+        addressLine4: emp.address_line_4 || '',
+        postcode: emp.postcode || '',
+        emailAddress: emp.email_address || '',
+        mobileNumber: emp.mobile_number || '',
+        ukResident: emp.uk_resident ? 'Yes' : 'No',
+        nationality: emp.nationality || '',
+        jobTitle: emp.job_title || '',
+        pensionableSalary: emp.pensionable_salary || 0,
+        employmentStartDate: emp.employment_start_date || '',
+        selectedRetirementAge: emp.selected_retirement_age || 0,
+        pensionInvestmentApproach: emp.pension_investment_approach || '',
+        schemeRef: emp.scheme_ref || '',
+        sectionNumber: emp.split_template_group_name || '',
+        serviceStatus: emp.service_status || 'Active',
+      }));
+      
+      setMembers(memberData);
+    } catch (err: any) {
+      console.error('Failed to load employees:', err);
+      setError(err.response?.data?.detail || 'Failed to load employee data');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -238,7 +290,7 @@ export const MembersTable = ({ columns, databaseType, onBack }: MembersTableProp
     return null;
   };
 
-  const updateMemberField = useCallback((memberId: string, field: string, value: string) => {
+  const updateMemberField = useCallback(async (memberId: string, field: string, value: string) => {
     const validationError = validateCellValue(field, value);
     
     if (validationError) {
@@ -253,22 +305,62 @@ export const MembersTable = ({ columns, databaseType, onBack }: MembersTableProp
       prev.filter(err => !(err.rowId === memberId && err.columnId === field))
     );
 
-    setMembers(prev => prev.map(member => {
-      if (member.id === memberId) {
-        const updatedMember = { ...member };
-        if (field === 'pensionableSalary' || field === 'salary') {
-          updatedMember[field] = parseFloat(value);
-        } else if (columns.find(col => col.id === field)?.type === 'checkbox') {
-          updatedMember[field] = value === 'true';
-        } else {
-          (updatedMember as any)[field] = value;
-        }
-        updatedMember.updatedAt = new Date().toISOString();
-        return updatedMember;
+    try {
+      // Map DatabaseMember field names back to Employee API field names
+      const fieldMap: Record<string, string> = {
+        forename: 'first_name',
+        niNumber: 'ni_number',
+        dateOfBirth: 'date_of_birth',
+        maritalStatus: 'marital_status',
+        addressLine1: 'address_line_1',
+        addressLine2: 'address_line_2',
+        addressLine3: 'address_line_3',
+        addressLine4: 'address_line_4',
+        emailAddress: 'email_address',
+        mobileNumber: 'mobile_number',
+        ukResident: 'uk_resident',
+        jobTitle: 'job_title',
+        pensionableSalary: 'pensionable_salary',
+        employmentStartDate: 'employment_start_date',
+        selectedRetirementAge: 'selected_retirement_age',
+        pensionInvestmentApproach: 'pension_investment_approach',
+        schemeRef: 'scheme_ref',
+        sectionNumber: 'split_template_group_name',
+        serviceStatus: 'service_status',
+      };
+
+      const apiField = fieldMap[field] || field;
+      let apiValue: any = value;
+
+      // Convert values based on type
+      const column = columnOrder.find(col => col.id === field);
+      if (field === 'pensionableSalary' || field === 'salary') {
+        apiValue = parseFloat(value);
+      } else if (field === 'ukResident') {
+        apiValue = value === 'Yes';
+      } else if (column?.type === 'checkbox') {
+        apiValue = value === 'true';
       }
-      return member;
-    }));
-    return true;
+
+      // Update via API
+      await employeeService.updateEmployee(memberId, { [apiField]: apiValue });
+
+      // Update local state
+      setMembers(prev => prev.map(member => {
+        if (member.id === memberId) {
+          const updatedMember = { ...member, [field]: apiValue };
+          updatedMember.updatedAt = new Date().toISOString();
+          return updatedMember;
+        }
+        return member;
+      }));
+
+      return true;
+    } catch (err: any) {
+      console.error('Failed to update employee:', err);
+      alert(err.response?.data?.detail || 'Failed to update employee');
+      return false;
+    }
   }, [columns, columnOrder]);
 
   const handleCellEdit = (memberId: string, columnId: string) => {
@@ -296,6 +388,31 @@ export const MembersTable = ({ columns, databaseType, onBack }: MembersTableProp
       column: columnId,
       direction: prev.column === columnId && prev.direction === 'asc' ? 'desc' : 'asc'
     }));
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedRows.size === 0) {
+      alert('Please select rows to delete');
+      return;
+    }
+
+    if (!confirm(`Are you sure you want to delete ${selectedRows.size} employee(s)?`)) {
+      return;
+    }
+
+    try {
+      const idsToDelete = Array.from(selectedRows);
+      await employeeService.bulkDeleteEmployees(idsToDelete);
+      
+      // Remove from local state
+      setMembers(prev => prev.filter(m => !selectedRows.has(m.id)));
+      setSelectedRows(new Set());
+      
+      alert(`Successfully deleted ${idsToDelete.length} employee(s)`);
+    } catch (err: any) {
+      console.error('Failed to delete employees:', err);
+      alert(err.response?.data?.detail || 'Failed to delete employees');
+    }
   };
 
   const sortedAndFilteredMembers = members
@@ -371,10 +488,14 @@ export const MembersTable = ({ columns, databaseType, onBack }: MembersTableProp
     const rows = selectedMembers.map(member => 
       columnOrder.map(col => {
         const value = (member as any)[col.id];
-        if (col.type === 'number' && (col.id.includes('salary') || col.id.includes('Salary'))) {
+        // Hide PII fields in export
+        if (col.type === 'number' && (col.id.includes('salary') || col.id.includes('Salary') || col.id === 'pensionableSalary')) {
           return showSensitiveData ? value : '••••••';
         }
-        if (col.id.includes('niNumber') || col.id.includes('NINumber')) {
+        if (col.id.includes('niNumber') || col.id.includes('NINumber') || col.id === 'niNumber') {
+          return showSensitiveData ? value : '••••••••';
+        }
+        if (col.id === 'schemeRef' || col.id.includes('schemeRef')) {
           return showSensitiveData ? value : '••••••••';
         }
         return value;
@@ -403,11 +524,18 @@ export const MembersTable = ({ columns, databaseType, onBack }: MembersTableProp
   const getCellValue = (member: DatabaseMember, columnId: string) => {
     const value = (member as any)[columnId];
     
-    if (typeof value === 'number' && (columnId.includes('salary') || columnId.includes('Salary'))) {
+    // Hide salary if PII is hidden
+    if (typeof value === 'number' && (columnId.includes('salary') || columnId.includes('Salary') || columnId === 'pensionableSalary')) {
       return showSensitiveData ? `£${value.toLocaleString()}` : '£••••••';
     }
     
-    if (columnId.includes('niNumber') || columnId.includes('NINumber')) {
+    // Hide NI number if PII is hidden
+    if (columnId.includes('niNumber') || columnId.includes('NINumber') || columnId === 'niNumber') {
+      return showSensitiveData ? value : '••••••••';
+    }
+    
+    // Hide scheme ref if PII is hidden
+    if (columnId === 'schemeRef' || columnId.includes('schemeRef')) {
       return showSensitiveData ? value : '••••••••';
     }
     
@@ -534,6 +662,20 @@ export const MembersTable = ({ columns, databaseType, onBack }: MembersTableProp
         <p className="text-slate-600">Manage and export member information with spreadsheet functionality</p>
       </div>
 
+      {loading && (
+        <div className="glass-panel rounded-2xl p-12 text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zomi-green mx-auto mb-4"></div>
+          <p className="text-slate-600">Loading employees...</p>
+        </div>
+      )}
+
+      {error && (
+        <div className="glass-panel rounded-2xl p-6 bg-red-50 border border-red-200">
+          <p className="text-red-600">{error}</p>
+        </div>
+      )}
+
+      {!loading && !error && (
       <div className="glass-panel rounded-2xl p-6">
         <div className="flex flex-col lg:flex-row gap-4 mb-6">
           <div className="flex-1 relative">
@@ -607,9 +749,13 @@ export const MembersTable = ({ columns, databaseType, onBack }: MembersTableProp
                 <Download className="w-4 h-4" />
                 IO Bulk
               </button>
-              <button className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all duration-200">
+              <button 
+                onClick={handleDeleteSelected}
+                disabled={selectedRows.size === 0}
+                className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
                 <Trash2 className="w-4 h-4" />
-                Delete
+                Delete {selectedRows.size > 0 ? `(${selectedRows.size})` : ''}
               </button>
             </div>
           </div>
@@ -699,6 +845,7 @@ export const MembersTable = ({ columns, databaseType, onBack }: MembersTableProp
           </div>
         </div>
       </div>
+      )}
     </div>
   );
 };

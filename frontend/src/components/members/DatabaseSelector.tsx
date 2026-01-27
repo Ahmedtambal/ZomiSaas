@@ -9,7 +9,7 @@ export const DatabaseSelector = ({ onSelectDatabase }: DatabaseSelectorProps) =>
   const databases = [
     {
       id: 'ioUpload' as DatabaseType,
-      name: 'IO Upload',
+      name: 'Employee Database',
       description: 'Comprehensive member data with full address and policy information',
       icon: Database,
       recordCount: 247,
@@ -19,7 +19,7 @@ export const DatabaseSelector = ({ onSelectDatabase }: DatabaseSelectorProps) =>
     },
     {
       id: 'newEmployeeUpload' as DatabaseType,
-      name: 'New Employee Upload',
+      name: 'Audit Logs',
       description: 'New employee onboarding data with employment details',
       icon: Users,
       recordCount: 89,
@@ -95,7 +95,7 @@ export const DatabaseSelector = ({ onSelectDatabase }: DatabaseSelectorProps) =>
         <h3 className="text-lg font-bold text-slate-900 mb-4">Database Information</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <h4 className="font-semibold text-slate-900 mb-2">IO Upload Database</h4>
+            <h4 className="font-semibold text-slate-900 mb-2">Employee Database</h4>
             <ul className="text-sm text-slate-600 space-y-1">
               <li>• Complete member profiles with full address information</li>
               <li>• Policy numbers and adviser assignments</li>
