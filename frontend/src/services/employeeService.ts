@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+const API_URL = import.meta.env.VITE_API_URL || 'https://zomisaasbackend.onrender.com';
 
 const api = axios.create({
   baseURL: API_URL,
@@ -79,42 +79,42 @@ export interface Employee {
 export const employeeService = {
   // Get all employees
   async getEmployees(): Promise<Employee[]> {
-    const response = await api.get('/employees');
+    const response = await api.get('/api/employees');
     return response.data;
   },
 
   // Get employee by ID
   async getEmployee(id: string): Promise<Employee> {
-    const response = await api.get(`/employees/${id}`);
+    const response = await api.get(`/api/employees/${id}`);
     return response.data;
   },
 
   // Create employee
   // Note: created_by_user_id is automatically set by the backend from the JWT token
   async createEmployee(employee: Partial<Employee>): Promise<Employee> {
-    const response = await api.post('/employees', employee);
+    const response = await api.post('/api/employees', employee);
     return response.data;
   },
 
   // Update employee
   async updateEmployee(id: string, employee: Partial<Employee>): Promise<Employee> {
-    const response = await api.put(`/employees/${id}`, employee);
+    const response = await api.put(`/api/employees/${id}`, employee);
     return response.data;
   },
 
   // Delete employee
   async deleteEmployee(id: string): Promise<void> {
-    await api.delete(`/employees/${id}`);
+    await api.delete(`/api/employees/${id}`);
   },
 
   // Bulk delete employees
   async bulkDeleteEmployees(ids: string[]): Promise<void> {
-    await api.post('/employees/bulk-delete', { ids });
+    await api.post('/api/employees/bulk-delete', { ids });
   },
 
   // Export employees to CSV
   async exportEmployees(): Promise<Blob> {
-    const response = await api.get('/employees/export', {
+    const response = await api.get('/api/employees/export', {
       responseType: 'blob',
     });
     return response.data;
@@ -122,7 +122,7 @@ export const employeeService = {
 
   // Search employees
   async searchEmployees(query: string): Promise<Employee[]> {
-    const response = await api.get(`/employees/search?q=${encodeURIComponent(query)}`);
+    const response = await api.get(`/api/employees/search?q=${encodeURIComponent(query)}`);
     return response.data;
   },
 };
