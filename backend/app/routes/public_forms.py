@@ -264,14 +264,18 @@ async def submit_form(token: str, submission_data: Dict[str, Any], request: Requ
         employee = employee_response.data[0]
         
         # Get recipient email (the user who created the form)
+        # Email is stored in Supabase auth.users, accessible via admin API
         recipient_email = None
         if form_creator_id:
             try:
-                user_response = db_service.client.table("user_profiles").select("email").eq(
-                    "id", form_creator_id
+                # Use RPC to get user email from auth.users via a database function
+                # Alternative: query directly if we had admin access
+                user_response = db_service.client.rpc(
+                    'get_user_email_by_id',
+                    {'user_id': form_creator_id}
                 ).execute()
                 if user_response.data:
-                    recipient_email = user_response.data[0]["email"]
+                    recipient_email = user_response.data
             except Exception as e:
                 logger.warning(f"Failed to fetch creator email: {str(e)}")
         
