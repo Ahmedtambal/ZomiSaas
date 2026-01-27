@@ -115,13 +115,6 @@ async def get_form_by_token(token: str, request: Request) -> Dict[str, Any]:
             "last_accessed_at": datetime.utcnow().isoformat()
         }).eq("id", token_record["id"]).execute()
         
-        # Debug logging
-        form_data = token_record["forms"]
-        logger.info(f"Retrieved form for token: {form_data}")
-        logger.info(f"Form data structure: {form_data.get('form_data')}")
-        if form_data.get('form_data'):
-            logger.info(f"Fields in form_data: {len(form_data.get('form_data', {}).get('fields', []))} fields")
-        
         # Return form with company info directly (no wrapper)
         return {
             "form": token_record["forms"],

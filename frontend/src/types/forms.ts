@@ -1,4 +1,4 @@
-export type FormFieldType = 'text' | 'email' | 'number' | 'date' | 'select' | 'textarea' | 'checkbox' | 'radio';
+export type FormFieldType = 'text' | 'email' | 'tel' | 'number' | 'date' | 'date-range' | 'select' | 'searchable-select' | 'multi-select' | 'textarea' | 'checkbox' | 'radio' | 'file';
 
 export interface ValidationRule {
   required?: boolean;
@@ -18,6 +18,18 @@ export interface FormField {
   placeholder?: string;
   validation: ValidationRule;
   order: number;
+  conditionalLogic?: {
+    showIf?: {
+      fieldId: string;
+      operator: 'equals' | 'not_equals' | 'contains' | 'greater_than' | 'less_than';
+      value: string | number;
+    };
+  };
+  fileConfig?: {
+    maxSize?: number; // in MB
+    allowedTypes?: string[]; // e.g., ['image/*', 'application/pdf']
+    multiple?: boolean;
+  };
 }
 
 export interface FormDefinition {

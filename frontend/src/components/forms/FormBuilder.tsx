@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, GripVertical, CreditCard as Edit, Trash2, Save, X, Type, Mail, Hash, Calendar, List, FileText, CheckSquare, Circle } from 'lucide-react';
+import { Plus, GripVertical, CreditCard as Edit, Trash2, Save, X, Type, Mail, Hash, Calendar, List, FileText, CheckSquare, Circle, Phone, Upload, Search, ListChecks, CalendarRange } from 'lucide-react';
 import {
   DndContext,
   closestCenter,
@@ -55,12 +55,17 @@ const SortableFieldItem = ({ field, onEdit, onDelete }: {
     switch (type) {
       case 'text': return <Type className="w-4 h-4" />;
       case 'email': return <Mail className="w-4 h-4" />;
+      case 'tel': return <Phone className="w-4 h-4" />;
       case 'number': return <Hash className="w-4 h-4" />;
       case 'date': return <Calendar className="w-4 h-4" />;
+      case 'date-range': return <CalendarRange className="w-4 h-4" />;
       case 'select': return <List className="w-4 h-4" />;
+      case 'searchable-select': return <Search className="w-4 h-4" />;
+      case 'multi-select': return <ListChecks className="w-4 h-4" />;
       case 'textarea': return <FileText className="w-4 h-4" />;
       case 'checkbox': return <CheckSquare className="w-4 h-4" />;
       case 'radio': return <Circle className="w-4 h-4" />;
+      case 'file': return <Upload className="w-4 h-4" />;
       default: return <Type className="w-4 h-4" />;
     }
   };
@@ -128,9 +133,16 @@ const FieldEditor = ({ field, onSave, onCancel }: FieldEditorProps) => {
       customMessage: field?.validation.customMessage || '',
     },
     order: field?.order || 0,
+    conditionalLogic: field?.conditionalLogic || undefined,
+    fileConfig: field?.fileConfig || {
+      maxSize: 10,
+      allowedTypes: [],
+      multiple: false,
+    },
   });
 
   const [newOption, setNewOption] = useState('');
+  const [showConditionalLogic, setShowConditionalLogic] = useState(!!field?.conditionalLogic);
 
   const handleSave = () => {
     if (!formData.label?.trim()) return;
@@ -207,12 +219,17 @@ const FieldEditor = ({ field, onSave, onCancel }: FieldEditorProps) => {
               >
                 <option value="text">Text</option>
                 <option value="email">Email</option>
+                <option value="tel">Telephone</option>
                 <option value="number">Number</option>
                 <option value="date">Date</option>
+                <option value="date-range">Date Range</option>
                 <option value="select">Select Dropdown</option>
+                <option value="searchable-select">Searchable Select</option>
+                <option value="multi-select">Multi-Select</option>
                 <option value="textarea">Textarea</option>
                 <option value="checkbox">Checkbox</option>
                 <option value="radio">Radio Buttons</option>
+                <option value="file">File Upload</option>
               </select>
             </div>
           </div>
@@ -228,7 +245,7 @@ const FieldEditor = ({ field, onSave, onCancel }: FieldEditorProps) => {
             />
           </div>
 
-          {(formData.type === 'select' || formData.type === 'radio') && (
+          {(formData.type === 'select' || formData.type === 'radio' || formData.type === 'searchable-select' || formData.type === 'multi-select') && (
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">Options</label>
               <div className="flex gap-2 mb-3">
@@ -265,6 +282,154 @@ const FieldEditor = ({ field, onSave, onCancel }: FieldEditorProps) => {
               </div>
             </div>
           )}
+
+          {/* File Upload Configuration */}
+          {formData.type === 'file' && (
+            <div className="border border-slate-200 rounded-xl p-4 bg-blue-50/50 mb-6">
+              <h4 className="text-sm font-semibold text-slate-900 mb-3">File Upload Settings</h4>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Max File Size (MB)</label>
+                  <input
+                    type="number"
+                    value={formData.fileConfig?.maxSize || 10}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      fileConfig: { ...prev.fileConfig!, maxSize: parseInt(e.target.value) }
+                    }))}
+                    className="glass-input w-full px-4 py-3 rounded-xl text-slate-900"
+                    min="1"
+                    max="100"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Allowed File Types</label>
+                  <input
+                    type="text"
+                    value={formData.fileConfig?.allowedTypes?.join(', ') || ''}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      fileConfig: { ...prev.fileConfig!, allowedTypes: e.target.value.split(',').map(t => t.trim()) }
+                    }))}
+                    className="glass-input w-full px-4 py-3 rounded-xl text-slate-900"
+                    placeholder="e.g., image/*, application/pdf, .docx"
+                  />
+                  <p className="text-xs text-slate-500 mt-1">Separate with commas</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="multiple-files"
+                    checked={formData.fileConfig?.multiple || false}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      fileConfig: { ...prev.fileConfig!, multiple: e.target.checked }
+                    }))}
+                    className="w-4 h-4 accent-zomi-green"
+                  />
+                  <label htmlFor="multiple-files" className="text-sm font-medium text-slate-700">
+                    Allow multiple files
+                  </label>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Phone Number Validation Patterns */}
+          {formData.type === 'tel' && (
+            <div className="border border-slate-200 rounded-xl p-4 bg-green-50/50 mb-6">
+              <h4 className="text-sm font-semibold text-slate-900 mb-3">Phone Validation</h4>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Phone Format</label>
+                <select
+                  value={formData.validation!.pattern || ''}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    validation: { ...prev.validation!, pattern: e.target.value }
+                  }))}
+                  className="glass-input w-full px-4 py-3 rounded-xl text-slate-900"
+                >
+                  <option value="">No specific format</option>
+                  <option value="^\\+?[1-9]\\d{1,14}$">International (E.164)</option>
+                  <option value="^0[0-9]{10}$">UK Mobile (11 digits)</option>
+                  <option value="^\\(?\\d{3}\\)?[\\s.-]?\\d{3}[\\s.-]?\\d{4}$">US Format</option>
+                  <option value="^[0-9]{10}$">10 digits</option>
+                </select>
+              </div>
+            </div>
+          )}
+
+          {/* Conditional Logic */}
+          <div className="border border-slate-200 rounded-xl p-4 mb-6">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-sm font-semibold text-slate-900">Conditional Logic</h4>
+              <button
+                type="button"
+                onClick={() => setShowConditionalLogic(!showConditionalLogic)}
+                className="text-sm text-zomi-green hover:text-zomi-green/80"
+              >
+                {showConditionalLogic ? 'Remove' : 'Add Condition'}
+              </button>
+            </div>
+            {showConditionalLogic && (
+              <div className="space-y-3">
+                <p className="text-xs text-slate-600">Show this field only when:</p>
+                <div className="grid grid-cols-3 gap-2">
+                  <input
+                    type="text"
+                    placeholder="Field ID"
+                    value={formData.conditionalLogic?.showIf?.fieldId || ''}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      conditionalLogic: {
+                        showIf: {
+                          ...prev.conditionalLogic?.showIf,
+                          fieldId: e.target.value,
+                          operator: prev.conditionalLogic?.showIf?.operator || 'equals',
+                          value: prev.conditionalLogic?.showIf?.value || ''
+                        }
+                      }
+                    }))}
+                    className="glass-input px-3 py-2 rounded-lg text-sm text-slate-900"
+                  />
+                  <select
+                    value={formData.conditionalLogic?.showIf?.operator || 'equals'}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      conditionalLogic: {
+                        showIf: {
+                          ...prev.conditionalLogic?.showIf!,
+                          operator: e.target.value as any
+                        }
+                      }
+                    }))}
+                    className="glass-input px-3 py-2 rounded-lg text-sm text-slate-900"
+                  >
+                    <option value="equals">Equals</option>
+                    <option value="not_equals">Not Equals</option>
+                    <option value="contains">Contains</option>
+                    <option value="greater_than">&gt;</option>
+                    <option value="less_than">&lt;</option>
+                  </select>
+                  <input
+                    type="text"
+                    placeholder="Value"
+                    value={formData.conditionalLogic?.showIf?.value || ''}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      conditionalLogic: {
+                        showIf: {
+                          ...prev.conditionalLogic?.showIf!,
+                          value: e.target.value
+                        }
+                      }
+                    }))}
+                    className="glass-input px-3 py-2 rounded-lg text-sm text-slate-900"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
 
           <div className="border-t border-slate-200 pt-6">
             <h4 className="text-lg font-semibold text-slate-900 mb-4">Validation Rules</h4>

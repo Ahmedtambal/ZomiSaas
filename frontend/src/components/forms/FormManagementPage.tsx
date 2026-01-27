@@ -254,9 +254,11 @@ export const FormManagementPage: React.FC = () => {
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
                     <h3 className="text-gray-900 font-semibold text-xl">
-                      {form.templateType === 'new_employee_upload' 
-                        ? `New Employee Upload${form.formData?.submission_data?.forename ? `: ${form.formData.submission_data.forename} ${form.formData.submission_data.surname}` : ''}`
-                        : (form.name || 'Untitled Form')}
+                      {form.formData?.submission_data ? (
+                        `New Employee Upload: ${form.formData.submission_data.forename} ${form.formData.submission_data.surname}`
+                      ) : (
+                        form.formData?.name || form.name || 'Untitled Form'
+                      )}
                     </h3>
                     {form.templateType === 'new_employee_upload' && (
                       <span className="px-3 py-1 bg-zomi-green/10 text-zomi-green rounded-full text-xs font-medium border border-zomi-green/20">
