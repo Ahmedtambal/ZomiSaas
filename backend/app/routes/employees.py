@@ -6,6 +6,7 @@ from typing import Dict, Any, List
 from datetime import datetime
 import logging
 import httpx
+import os
 
 from app.services.database_service import db_service
 from app.routes.auth import get_current_user
@@ -13,9 +14,9 @@ from app.routes.auth import get_current_user
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-# Edge Function configuration
-EDGE_FUNCTION_URL = "https://dxxteafpanesuicrjqto.supabase.co/functions/v1/notify-new-employee"
-EDGE_FUNCTION_SECRET = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR4eHRlYWZwYW5lc3VpY3JqcXRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU3NTkxNTgsImV4cCI6MjA1MTMzNTE1OH0.XYOAqZVlBDSexr4sNYPXi5B-mQ-TrpHvT8z-P4Ds_5I"  # Replace with your actual secret
+# Edge Function configuration from environment variables
+EDGE_FUNCTION_URL = os.getenv("EDGE_FUNCTION_URL", "")
+EDGE_FUNCTION_SECRET = os.getenv("EDGE_FUNCTION_SECRET", "")
 
 
 async def notify_edge_function(employee: Dict[str, Any], company_name: str, recipient_email: str):
