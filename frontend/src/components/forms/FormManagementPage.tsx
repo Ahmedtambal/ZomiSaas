@@ -4,13 +4,15 @@ import { FormBuilder } from './FormBuilder';
 import { FormDefinition } from '../../types/forms';
 import { getForms, createForm, deleteForm, generateToken, getTokens, refreshFormTemplate } from '../../services/formService';
 
-// Pre-defined SW New Employee Form Template
-const SW_NEW_EMPLOYEE_TEMPLATE = {
+// Pre-defined New Employee Upload Form Template
+const NEW_EMPLOYEE_TEMPLATE = {
   fields: [
     { name: 'title', label: 'Title', type: 'select', required: true, options: ['Mr', 'Mrs', 'Miss', 'Ms', 'Dr', 'Mx', 'Professor', 'Lady', 'Sir', 'Dame', 'Lord', 'Rabbi', 'Reverend', 'Other'] },
     { name: 'forename', label: 'Forename', type: 'text', required: true },
     { name: 'surname', label: 'Surname', type: 'text', required: true },
     { name: 'nationalInsuranceNumber', label: 'NI Number', type: 'text', required: true },
+    { name: 'emailAddress', label: 'Email Address', type: 'email', required: true },
+    { name: 'contactNumber', label: 'Contact Number', type: 'tel', required: true },
     { name: 'dateOfBirth', label: 'Date of Birth', type: 'date', required: true },
     { name: 'gender', label: 'Sex', type: 'select', required: true, options: ['Male', 'Female'] },
     { name: 'maritalStatus', label: 'Marital Status', type: 'select', required: true, options: ['Single', 'Married', 'Divorced', 'Separated', 'Widowed'] },
@@ -21,7 +23,8 @@ const SW_NEW_EMPLOYEE_TEMPLATE = {
     { name: 'postcode', label: 'Postcode', type: 'text', required: true },
     { name: 'ukResident', label: 'UK Resident', type: 'select', required: true, options: ['Yes', 'No'] },
     { name: 'nationality', label: 'Nationality', type: 'searchable-select', required: true, options: ['British', 'Unknown', 'Afghan', 'Alander', 'Albanian', 'Algerian', 'American', 'American Samoan', 'Andorran', 'Angolan', 'Anguillan', 'Antiguan', 'Argentine', 'Armenian', 'Aruban', 'Australian', 'Austrian', 'Azerbaijani', 'Bahamian', 'Bahraini', 'Bangladeshi', 'Barbadian', 'Basotho', 'Batswana', 'Belarusian', 'Belgian', 'Belizean', 'Beninese', 'Bermudan', 'Bhutanese', 'Bolivian', 'Bosnian', 'Brazilian', 'British Virgin Islan', 'Bruneian', 'Bulgarian', 'Burkinabe', 'Burmese', 'Burundian', 'Cambodian', 'Cameroonian', 'Canadian', 'Cape Verdean', 'Caymanian', 'Central African', 'Chadian', 'Chilean', 'Chinese', 'Christmas Islander', 'Cocos Islander', 'Colombian', 'Comoran', 'Congolese', 'Cook Islander', 'Costa Rican', 'Croatian', 'Cuban', 'Cypriot', 'Czech', 'Danish', 'Djiboutian', 'Dominican', 'Dominican Republican', 'Dutch', 'Dutch Antillean', 'Ecuadorian', 'Egyptian', 'Emirian', 'Equatorial Guinean', 'Eritrean', 'Estonian', 'Ethiopian', 'Falkland Islander', 'Faroese', 'Fijian', 'Filipino', 'Finnish', 'French', 'French Guianese', 'French Polynesian', 'Gabonese', 'Gambian', 'Georgian', 'German', 'Ghanaian', 'Gibraltarian', 'Greek', 'Greenlander', 'Grenadian', 'Guadeloupian', 'Guamanian', 'Guatamalan', 'Guinea-Bissauan', 'Guinean', 'Guyanese', 'Haitian', 'HK Chinese', 'Honduran', 'Hungarian', 'Icelander'] },
-    { name: 'salary', label: 'Salary', type: 'number', required: true },
+    { name: 'jobTitle', label: 'Job Title', type: 'text', required: true },
+    { name: 'salary', label: 'Basic Annual Salary', type: 'number', required: true },
     { name: 'employmentStartDate', label: 'Employment Start Date', type: 'date', required: true },
     { name: 'selectedRetirementAge', label: 'Selected Retirement Age', type: 'number', required: true },
     { name: 'sectionNumber', label: 'Section Number', type: 'text', required: false },
@@ -84,17 +87,17 @@ export const FormManagementPage: React.FC = () => {
     }
   };
 
-  const createSWEmployeeForm = async () => {
+  const createNewEmployeeForm = async () => {
     try {
       setLoading(true);
       const newForm = await createForm({
-        name: 'SW New Employee Form',
-        description: 'Complete employee onboarding form with all required information including personal details, address, and employment data',
-        form_data: SW_NEW_EMPLOYEE_TEMPLATE,
-        template_type: 'sw_new_employee',
+        name: 'New Employee Upload',
+        description: 'Complete employee onboarding form with all required information including personal details, contact info, job title, address, and employment data',
+        form_data: NEW_EMPLOYEE_TEMPLATE,
+        template_type: 'new_employee_upload',
       });
       await loadForms();
-      alert('SW New Employee Form created successfully!');
+      alert('New Employee Upload form created successfully!');
     } catch (err) {
       console.error('Failed to create form:', err);
       alert('Failed to create form');
@@ -115,7 +118,7 @@ export const FormManagementPage: React.FC = () => {
   };
 
   const handleRefreshTemplate = async (formId: string) => {
-    if (!confirm('This will update the form with the latest template (21 fields). Any custom modifications will be lost. Continue?')) return;
+    if (!confirm('This will update the form with the latest template (23 fields). Any custom modifications will be lost. Continue?')) return;
 
     try {
       setLoading(true);
@@ -196,16 +199,16 @@ export const FormManagementPage: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-bold text-white mb-2">Form Management</h2>
-          <p className="text-white/60">Create forms and generate shareable links for companies</p>
+          <h1 className="text-3xl font-bold text-gray-900">Form Generator</h1>
+          <p className="text-gray-700">Create forms and generate shareable links for companies</p>
         </div>
         <div className="flex gap-3">
           <button
-            onClick={createSWEmployeeForm}
+            onClick={createNewEmployeeForm}
             className="px-5 py-2.5 bg-zomi-green text-white rounded-lg hover:bg-emerald-600 transition-colors flex items-center gap-2 font-medium shadow-md"
           >
             <Plus className="w-5 h-5" />
-            Create SW Employee Form
+            New Employee Upload
           </button>
           <button
             onClick={() => setShowBuilder(true)}
@@ -233,11 +236,11 @@ export const FormManagementPage: React.FC = () => {
           <h3 className="text-gray-900 text-xl font-semibold mb-2">No forms yet</h3>
           <p className="text-gray-600 mb-6">Create your first form to get started</p>
           <button
-            onClick={createSWEmployeeForm}
+            onClick={createNewEmployeeForm}
             className="px-6 py-3 bg-zomi-green text-white rounded-lg hover:bg-emerald-600 transition-colors inline-flex items-center gap-2 font-medium shadow-md"
           >
             <Plus className="w-5 h-5" />
-            Create SW Employee Form
+            New Employee Upload
           </button>
         </div>
       ) : (

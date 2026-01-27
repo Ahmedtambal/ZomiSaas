@@ -150,40 +150,43 @@ async def submit_form(token: str, submission_data: Dict[str, Any], request: Requ
         client_ip = request.client.host if request.client else None
         user_agent = request.headers.get("user-agent", "")
         
-        # Map SW Employee form fields to employees table columns
+        # Map form fields to employees table columns
         employee_data = {
             "organization_id": token_record["organization_id"],
             "company_id": company["id"],
             "source_form_id": token_record["form_id"],
             
-            # Personal Information (from SW_NEW_EMPLOYEE_TEMPLATE fields)
+            # Personal Information
             "title": submission_data.get("title"),
-            "first_name": submission_data.get("forename"),  # SW form uses 'forename'
+            "first_name": submission_data.get("forename"),
             "surname": submission_data.get("surname"),
-            "ni_number": submission_data.get("nationalInsuranceNumber"),  # SW form uses camelCase
-            "date_of_birth": submission_data.get("dateOfBirth"),  # SW form uses camelCase
+            "ni_number": submission_data.get("nationalInsuranceNumber"),
+            "email_address": submission_data.get("emailAddress"),  # NEW: Email Address
+            "mobile_number": submission_data.get("contactNumber"),  # NEW: Contact Number
+            "date_of_birth": submission_data.get("dateOfBirth"),
             "gender": submission_data.get("gender"),
-            "marital_status": submission_data.get("maritalStatus"),  # NEW: Marital Status field
+            "marital_status": submission_data.get("maritalStatus"),
             
-            # Address (from SW form fields)
-            "address_line_1": submission_data.get("addressLine1"),  # SW form uses camelCase
+            # Address
+            "address_line_1": submission_data.get("addressLine1"),
             "address_line_2": submission_data.get("addressLine2"),
-            "address_line_3": submission_data.get("addressLine3"),  # NEW: Address 3
-            "address_line_4": submission_data.get("addressLine4"),  # NEW: Address 4
+            "address_line_3": submission_data.get("addressLine3"),
+            "address_line_4": submission_data.get("addressLine4"),
             "postcode": submission_data.get("postcode"),
-            "uk_resident": submission_data.get("ukResident") == "Yes" if submission_data.get("ukResident") else None,  # Convert string to boolean
+            "uk_resident": submission_data.get("ukResident") == "Yes" if submission_data.get("ukResident") else None,
             "nationality": submission_data.get("nationality"),
             
-            # Employment (from SW form fields)
+            # Employment
+            "job_title": submission_data.get("jobTitle"),  # NEW: Job Title
             "pensionable_salary": submission_data.get("salary"),
-            "employment_start_date": submission_data.get("employmentStartDate"),  # SW form uses camelCase
-            "selected_retirement_age": submission_data.get("selectedRetirementAge"),  # SW form uses camelCase
-            "pension_investment_approach": submission_data.get("pensionInvestmentApproach"),  # SW form uses camelCase
+            "employment_start_date": submission_data.get("employmentStartDate"),
+            "selected_retirement_age": submission_data.get("selectedRetirementAge"),
+            "pension_investment_approach": submission_data.get("pensionInvestmentApproach"),
             
-            # Section information (optional SW form field)
-            "split_template_group_name": submission_data.get("sectionNumber"),  # Mapping sectionNumber to split_template_group_name
+            # Section information (optional)
+            "split_template_group_name": submission_data.get("sectionNumber"),
             
-            # Auto-filled from company (Master Rulebook)
+            # Auto-filled from company
             "client_category": company.get("category_name"),
             
             # Tracking
@@ -208,9 +211,17 @@ async def submit_form(token: str, submission_data: Dict[str, Any], request: Requ
         
         employee = employee_response.data[0]
         
-        # Update form's matched_company_id to track which company submitted
+        # Update form record with submission data and tracking
         db_service.client.table("forms").update({
-            "matched_company_id": company["id"]
+            "matched_company_id": company["id"],
+            "form_data": {
+                "fields": token_record["forms"]["form_data"]["fields"],  # Keep field definitions
+                "submission_data": submission_data,  # Add the actual submitted values
+                "submitted_at": datetime.utcnow().isoformat()
+            },
+            "submitted_via": "form_link",
+            "ip_address": client_ip,
+            "user_agent": user_agent
         }).eq("id", token_record["form_id"]).execute()
         
         # Increment token submission count
