@@ -669,9 +669,9 @@ export const MembersTable = ({ databaseType, onBack }: MembersTableProps) => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-white rounded-xl border border-slate-200 shadow-sm" style={{ width: '100%', maxWidth: '100%' }}>
+    <div className="flex flex-col h-full bg-white rounded-xl border border-slate-200 shadow-sm" style={{ minWidth: 0, maxWidth: '100%', width: '100%' }}>
       {/* TOP SECTION - FIXED HEADER */}
-      <div className="flex-shrink-0 bg-white border-b border-slate-200" style={{ width: '100%', overflow: 'hidden' }}>
+      <div className="flex-shrink-0 bg-white border-b border-slate-200" style={{ minWidth: 0, maxWidth: '100%' }}>
         <div className="px-6 py-6">
           <div className="flex items-center gap-4 mb-2">
             <button
@@ -791,13 +791,13 @@ export const MembersTable = ({ databaseType, onBack }: MembersTableProps) => {
       {/* MIDDLE SECTION - SCROLLABLE TABLE */}
       {!loading && !error && (
         <>
-          <div className="flex-1 bg-white" style={{ width: '100%', minHeight: 0, overflow: 'auto' }}>
+          <div className="flex-1 bg-white" style={{ minWidth: 0, maxWidth: '100%', minHeight: 0, overflow: 'auto' }}>
             <DndContext
               sensors={sensors}
               collisionDetection={closestCenter}
               onDragEnd={handleDragEnd}
             >
-              <table className="w-full">
+              <table style={{ minWidth: 'max-content' }}>
                     <thead className="bg-slate-50 border-b border-slate-200">
                       <tr>
                         <th className="text-left p-4 bg-slate-50 sticky left-0 border-r border-slate-200">
@@ -851,7 +851,7 @@ export const MembersTable = ({ databaseType, onBack }: MembersTableProps) => {
           </div>
 
           {/* BOTTOM SECTION - FIXED FOOTER */}
-          <div className="flex-shrink-0 bg-white border-t border-slate-200" style={{ width: '100%', overflow: 'hidden' }}>
+          <div className="flex-shrink-0 bg-white border-t border-slate-200" style={{ minWidth: 0, maxWidth: '100%', overflow: 'hidden' }}>
             <div className="px-6 py-4">
               <div className="flex items-center justify-between">
                 <p className="text-sm text-slate-600">
