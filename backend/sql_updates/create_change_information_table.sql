@@ -63,7 +63,7 @@ CREATE TABLE IF NOT EXISTS public.change_information (
   
   -- Check constraints
   CONSTRAINT change_information_change_type_check 
-    CHECK (change_type = ANY(ARRAY[
+    CHECK (change_type <@ ARRAY[
       'Leaver'::text, 
       'Maternity Leave'::text, 
       'Died'::text, 
@@ -71,7 +71,7 @@ CREATE TABLE IF NOT EXISTS public.change_information (
       'Change of Address'::text, 
       'Change of Salary'::text, 
       'Other'::text
-    ])),
+    ]),
   
   CONSTRAINT change_information_processing_status_check 
     CHECK (processing_status = ANY(ARRAY[

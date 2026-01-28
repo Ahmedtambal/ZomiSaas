@@ -207,6 +207,10 @@ async def submit_form(token: str, submission_data: Dict[str, Any], request: Requ
             else:
                 change_type_array = []
             
+            # Format array as PostgreSQL array literal
+            # Supabase Python client sends lists as JSON strings, need to format for PostgreSQL
+            change_type_pg = "{" + ",".join(f'"{item}"' for item in change_type_array) + "}"
+            
             change_data = {
                 "organization_id": token_record["organization_id"],
                 "company_id": company["id"],
@@ -219,7 +223,7 @@ async def submit_form(token: str, submission_data: Dict[str, Any], request: Requ
                 
                 # Change details
                 "date_of_effect": submission_data.get("dateOfEffect"),
-                "change_type": change_type_array,  # Store as array for multi-select
+                "change_type": change_type_pg,  # PostgreSQL array literal format
                 "other_reason": submission_data.get("otherReason"),
                 
                 # Tracking
