@@ -669,10 +669,10 @@ export const MembersTable = ({ databaseType, onBack }: MembersTableProps) => {
   };
 
   return (
-    <div className="fixed inset-0 lg:left-64 flex flex-col bg-slate-50 overflow-hidden">
+    <div className="fixed inset-0 lg:left-64 flex flex-col bg-white overflow-hidden">
       {/* TOP SECTION - FIXED HEADER */}
-      <div className="flex-shrink-0 bg-white border-b border-slate-200 pb-6 z-40 shadow-md">
-        <div className="mb-4 px-6 pt-6">
+      <div className="flex-shrink-0 bg-white border-b border-slate-200 z-40">
+        <div className="px-6 py-6">
           <div className="flex items-center gap-4 mb-2">
             <button
               onClick={onBack}
@@ -700,7 +700,7 @@ export const MembersTable = ({ databaseType, onBack }: MembersTableProps) => {
         )}
 
         {!loading && !error && (
-          <div className="bg-white rounded-2xl p-6 mx-6 shadow-sm border border-slate-100">
+          <div className="bg-white p-6 border-t border-slate-100">
             <div className="flex flex-col lg:flex-row gap-4 mb-4">
               <div className="flex-1 relative">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
@@ -791,8 +791,8 @@ export const MembersTable = ({ databaseType, onBack }: MembersTableProps) => {
       {/* MIDDLE SECTION - SCROLLABLE TABLE */}
       {!loading && !error && (
         <>
-          <div className="flex-1 overflow-auto px-6 py-6">
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 h-full overflow-auto" style={{ isolation: 'isolate' }}>
+          <div className="flex-1 overflow-auto bg-white">
+            <div className="bg-white h-full overflow-auto" style={{ isolation: 'isolate' }}>
                 <DndContext
                   sensors={sensors}
                   collisionDetection={closestCenter}
@@ -853,9 +853,9 @@ export const MembersTable = ({ databaseType, onBack }: MembersTableProps) => {
           </div>
 
           {/* BOTTOM SECTION - FIXED FOOTER */}
-          <div className="flex-shrink-0 bg-white border-t border-slate-200 z-40 shadow-lg">
-            <div className="bg-white mx-6 my-4">
-              <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
+          <div className="flex-shrink-0 bg-white border-t border-slate-200 z-40">
+            <div className="px-6 py-4">
+              <div className="flex items-center justify-between">
                 <p className="text-sm text-slate-600">
                   Showing {startIndex + 1} to {Math.min(startIndex + rowsPerPage, sortedAndFilteredMembers.length)} of {sortedAndFilteredMembers.length} members
                 </p>
