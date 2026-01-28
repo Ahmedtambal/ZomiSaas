@@ -792,16 +792,16 @@ export const MembersTable = ({ databaseType, onBack }: MembersTableProps) => {
       {!loading && !error && (
         <>
           <div className="pt-[280px] pb-[80px] px-6 relative z-0">
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-x-auto">
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-x-auto relative" style={{ isolation: 'isolate' }}>
                 <DndContext
                   sensors={sensors}
                   collisionDetection={closestCenter}
                   onDragEnd={handleDragEnd}
                 >
-                  <table className="w-full">
+                  <table className="w-full relative" style={{ zIndex: 1 }}>
                     <thead className="bg-slate-50 border-b border-slate-200">
                       <tr>
-                        <th className="text-left p-4 bg-slate-50 sticky left-0 z-5 border-r border-slate-200">
+                        <th className="text-left p-4 bg-slate-50 sticky left-0 border-r border-slate-200">
                           <input
                             type="checkbox"
                             checked={selectedRows.size === paginatedMembers.length && paginatedMembers.length > 0}
@@ -831,7 +831,7 @@ export const MembersTable = ({ databaseType, onBack }: MembersTableProps) => {
                           key={member.id}
                           className="border-b border-slate-100 hover:bg-slate-50 transition-colors"
                         >
-                          <td className="p-4 bg-white sticky left-0 z-1 border-r border-slate-200">
+                          <td className="p-4 bg-white sticky left-0 border-r border-slate-200">
                             <input
                               type="checkbox"
                               checked={selectedRows.has(member.id)}
