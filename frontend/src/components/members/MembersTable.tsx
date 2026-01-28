@@ -669,9 +669,9 @@ export const MembersTable = ({ databaseType, onBack }: MembersTableProps) => {
   };
 
   return (
-    <div className="relative min-h-screen bg-slate-50">
+    <div className="fixed inset-0 lg:left-64 flex flex-col bg-slate-50 overflow-hidden">
       {/* TOP SECTION - FIXED HEADER */}
-      <div className="fixed top-0 left-0 lg:left-64 right-0 bg-white border-b border-slate-200 pb-6 z-40 shadow-md">
+      <div className="flex-shrink-0 bg-white border-b border-slate-200 pb-6 z-40 shadow-md">
         <div className="mb-4 px-6 pt-6">
           <div className="flex items-center gap-4 mb-2">
             <button
@@ -791,8 +791,8 @@ export const MembersTable = ({ databaseType, onBack }: MembersTableProps) => {
       {/* MIDDLE SECTION - SCROLLABLE TABLE */}
       {!loading && !error && (
         <>
-          <div className="pt-[280px] pb-[80px] px-6 relative z-0">
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-x-auto relative" style={{ isolation: 'isolate' }}>
+          <div className="flex-1 overflow-auto px-6 py-6">
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 h-full overflow-auto" style={{ isolation: 'isolate' }}>
                 <DndContext
                   sensors={sensors}
                   collisionDetection={closestCenter}
@@ -853,7 +853,7 @@ export const MembersTable = ({ databaseType, onBack }: MembersTableProps) => {
           </div>
 
           {/* BOTTOM SECTION - FIXED FOOTER */}
-          <div className="fixed bottom-0 left-0 lg:left-64 right-0 bg-white border-t border-slate-200 z-40 shadow-lg">
+          <div className="flex-shrink-0 bg-white border-t border-slate-200 z-40 shadow-lg">
             <div className="bg-white mx-6 my-4">
               <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
                 <p className="text-sm text-slate-600">
