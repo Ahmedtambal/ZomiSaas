@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS public.change_information (
   
   -- Change details
   date_of_effect date NOT NULL,
-  change_type text NOT NULL,
+  change_type text[] NOT NULL, -- Array to store multiple selections
   other_reason text NULL,
   
   -- Form tracking
@@ -100,6 +100,7 @@ CREATE INDEX IF NOT EXISTS idx_change_information_change_type
   ON public.change_information(change_type);
 
 -- Trigger for updated_at
+DROP TRIGGER IF EXISTS update_change_information_updated_at ON change_information;
 CREATE TRIGGER update_change_information_updated_at
   BEFORE UPDATE ON change_information
   FOR EACH ROW
@@ -109,6 +110,7 @@ CREATE TRIGGER update_change_information_updated_at
 ALTER TABLE public.change_information ENABLE ROW LEVEL SECURITY;
 
 -- Policy: Users can only see records from their organization
+DROP POLICY IF EXISTS "Users can view their organization's change requests" ON public.change_information;
 CREATE POLICY "Users can view their organization's change requests"
   ON public.change_information
   FOR SELECT
@@ -121,6 +123,7 @@ CREATE POLICY "Users can view their organization's change requests"
   );
 
 -- Policy: Users can insert records for their organization
+DROP POLICY IF EXISTS "Users can insert change requests for their organization" ON public.change_information;
 CREATE POLICY "Users can insert change requests for their organization"
   ON public.change_information
   FOR INSERT
@@ -133,6 +136,7 @@ CREATE POLICY "Users can insert change requests for their organization"
   );
 
 -- Policy: Users can update records from their organization
+DROP POLICY IF EXISTS "Users can update their organization's change requests" ON public.change_information;
 CREATE POLICY "Users can update their organization's change requests"
   ON public.change_information
   FOR UPDATE
@@ -145,6 +149,7 @@ CREATE POLICY "Users can update their organization's change requests"
   );
 
 -- Policy: Users can delete records from their organization
+DROP POLICY IF EXISTS "Users can delete their organization's change requests" ON public.change_information;
 CREATE POLICY "Users can delete their organization's change requests"
   ON public.change_information
   FOR DELETE

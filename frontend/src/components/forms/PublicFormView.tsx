@@ -205,6 +205,38 @@ export const PublicFormView: React.FC<PublicFormViewProps> = ({ token }) => {
           </div>
         );
 
+      case 'multi-select':
+        return (
+          <div key={field.name} className="space-y-2">
+            <label className="block text-gray-800 font-medium">
+              {field.label} {field.required && <span className="text-red-500">*</span>}
+            </label>
+            <div className="space-y-2 bg-white/60 backdrop-blur-sm border border-gray-300 rounded-lg px-4 py-3">
+              {field.options?.map((option: string) => (
+                <div key={option} className="flex items-center space-x-3">
+                  <input
+                    type="checkbox"
+                    id={`${field.name}-${option}`}
+                    checked={(formData[field.name] || []).includes(option)}
+                    onChange={(e) => {
+                      const currentValues = formData[field.name] || [];
+                      const newValues = e.target.checked
+                        ? [...currentValues, option]
+                        : currentValues.filter((v: string) => v !== option);
+                      handleInputChange(field.name, newValues);
+                    }}
+                    className="w-5 h-5 rounded border-gray-300 text-[#38b000] focus:ring-2 focus:ring-[#38b000]"
+                  />
+                  <label htmlFor={`${field.name}-${option}`} className="text-gray-800 cursor-pointer">
+                    {option}
+                  </label>
+                </div>
+              ))}
+            </div>
+            {hasError && <p className="text-red-600 text-sm flex items-center gap-1"><AlertCircle className="w-4 h-4" />{errors[field.name]}</p>}
+          </div>
+        );
+
 
       default:
         return (
@@ -321,7 +353,16 @@ export const PublicFormView: React.FC<PublicFormViewProps> = ({ token }) => {
           )}
 
           <div className="space-y-6">
-            {((form as any)?.form_data?.fields || form?.formData?.fields)?.map(renderField)}
+            {((form as any)?.form_data?.fields || form?.formData?.fields)?.map((field: any) => {
+              // Hide otherReason field unless "Other" is selected in changeType
+              if (field.name === 'otherReason') {
+                const changeTypeValues = formData['changeType'] || [];
+                if (!changeTypeValues.includes('Other')) {
+                  return null;
+                }
+              }
+              return renderField(field);
+            })}
           </div>
 
           <div className="mt-8 pt-6 border-t border-gray-300">

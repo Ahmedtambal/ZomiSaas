@@ -198,6 +198,15 @@ async def submit_form(token: str, submission_data: Dict[str, Any], request: Requ
         # Handle different form types
         if form_template_type == "change_information_upload":
             # Handle Change Information Form
+            # Handle multi-select changeType (comes as array)
+            change_type = submission_data.get("changeType")
+            if isinstance(change_type, list):
+                change_type_array = change_type
+            elif isinstance(change_type, str):
+                change_type_array = [change_type]
+            else:
+                change_type_array = []
+            
             change_data = {
                 "organization_id": token_record["organization_id"],
                 "company_id": company["id"],
@@ -210,7 +219,7 @@ async def submit_form(token: str, submission_data: Dict[str, Any], request: Requ
                 
                 # Change details
                 "date_of_effect": submission_data.get("dateOfEffect"),
-                "change_type": submission_data.get("changeType"),  # This will be the selected checkbox value
+                "change_type": change_type_array,  # Store as array for multi-select
                 "other_reason": submission_data.get("otherReason"),
                 
                 # Tracking

@@ -39,7 +39,7 @@ const CHANGE_INFORMATION_TEMPLATE = {
     { name: 'surname', label: 'Surname', type: 'text', required: true },
     { name: 'dateOfBirth', label: 'Date of Birth', type: 'date', required: true },
     { name: 'dateOfEffect', label: 'Date of Effect for the Change', type: 'date', required: true },
-    { name: 'changeType', label: 'What is the Change?', type: 'checkbox', required: true, options: ['Leaver', 'Maternity Leave', 'Died', 'Change of Name', 'Change of Address', 'Change of Salary', 'Other'] },
+    { name: 'changeType', label: 'What is the Change?', type: 'multi-select', required: true, options: ['Leaver', 'Maternity Leave', 'Died', 'Change of Name', 'Change of Address', 'Change of Salary', 'Other'] },
     { name: 'otherReason', label: 'Please explain (for Other)', type: 'text', required: false },
   ]
 };
@@ -297,7 +297,7 @@ export const FormManagementPage: React.FC = () => {
                       {form.templateType === 'new_employee_upload' && 'New Employee Form'}
                       {form.templateType === 'change_information_upload' && 'Change Information Form'}
                       {form.templateType === 'sw_new_employee' && 'SW New Employee'}
-                      {!form.templateType && (form.formData?.name || form.name || 'Untitled Form')}
+                      {!form.templateType && (form.formData?.name || (form as any).form_data?.name || form.name || 'Untitled Form')}
                     </h3>
                     {form.templateType === 'new_employee_upload' && (
                       <span className="px-3 py-1 bg-zomi-green/10 text-zomi-green rounded-full text-xs font-medium border border-zomi-green/20">
@@ -325,7 +325,7 @@ export const FormManagementPage: React.FC = () => {
                     </span>
                     <span className="flex items-center gap-1.5">
                       <CheckCircle className="w-4 h-4 text-zomi-green" />
-                      <span className="text-gray-700 font-medium">{form.formData?.fields?.length || 0} fields</span>
+                      <span className="text-gray-700 font-medium">{form.formData?.fields?.length || (form as any).form_data?.fields?.length || 0} fields</span>
                     </span>
                   </div>
                 </div>

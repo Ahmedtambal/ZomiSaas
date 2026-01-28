@@ -36,7 +36,22 @@ export interface FormDefinition {
   id: string;
   name: string;
   description: string;
-  formData: {
+  formData?: {
+    fields: Array<{
+      name: string;
+      label: string;
+      type: string;
+      required: boolean;
+      options?: string[];
+      pattern?: string;
+      min?: number;
+      max?: number;
+      step?: number;
+      placeholder?: string;
+    }>;
+  };
+  // Backend returns snake_case
+  form_data?: {
     fields: Array<{
       name: string;
       label: string;
