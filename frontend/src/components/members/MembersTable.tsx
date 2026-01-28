@@ -671,8 +671,8 @@ export const MembersTable = ({ databaseType, onBack }: MembersTableProps) => {
   return (
     <div className="flex flex-col h-full bg-white overflow-hidden rounded-xl border border-slate-200 shadow-sm">
       {/* TOP SECTION - FIXED HEADER */}
-      <div className="flex-shrink-0 bg-white border-b border-slate-200">
-        <div className="px-6 py-6">
+      <div className="flex-shrink-0 bg-white border-b border-slate-200 overflow-x-hidden">
+        <div className="px-6 py-6 max-w-full">
           <div className="flex items-center gap-4 mb-2">
             <button
               onClick={onBack}
@@ -700,7 +700,7 @@ export const MembersTable = ({ databaseType, onBack }: MembersTableProps) => {
         )}
 
         {!loading && !error && (
-          <div className="bg-white p-6 border-t border-slate-100">
+          <div className="bg-white p-6 border-t border-slate-100 max-w-full overflow-x-hidden">
             <div className="flex flex-col lg:flex-row gap-4 mb-4">
               <div className="flex-1 relative">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
@@ -791,8 +791,8 @@ export const MembersTable = ({ databaseType, onBack }: MembersTableProps) => {
       {/* MIDDLE SECTION - SCROLLABLE TABLE */}
       {!loading && !error && (
         <>
-          <div className="flex-1 overflow-auto bg-white">
-            <div className="bg-white h-full overflow-auto" style={{ isolation: 'isolate' }}>
+          <div className="flex-1 bg-white" style={{ minHeight: 0 }}>
+            <div className="h-full overflow-auto" style={{ isolation: 'isolate' }}>
                 <DndContext
                   sensors={sensors}
                   collisionDetection={closestCenter}
@@ -853,8 +853,8 @@ export const MembersTable = ({ databaseType, onBack }: MembersTableProps) => {
           </div>
 
           {/* BOTTOM SECTION - FIXED FOOTER */}
-          <div className="flex-shrink-0 bg-white border-t border-slate-200">
-            <div className="px-6 py-4">
+          <div className="flex-shrink-0 bg-white border-t border-slate-200 overflow-x-hidden">
+            <div className="px-6 py-4 max-w-full">
               <div className="flex items-center justify-between">
                 <p className="text-sm text-slate-600">
                   Showing {startIndex + 1} to {Math.min(startIndex + rowsPerPage, sortedAndFilteredMembers.length)} of {sortedAndFilteredMembers.length} members
