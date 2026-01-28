@@ -46,10 +46,106 @@ interface ValidationError {
 }
 
 interface MembersTableProps {
-  columns: ColumnDefinition[];
   databaseType: DatabaseType;
   onBack: () => void;
 }
+
+// Helper function to generate columns dynamically from employee data
+const generateColumnsFromData = (employees: Employee[]): ColumnDefinition[] => {
+  if (employees.length === 0) return [];
+  
+  const sampleEmployee = employees[0];
+  const columns: ColumnDefinition[] = [];
+  
+  // Field label mapping
+  const labelMap: Record<string, string> = {
+    id: 'ID',
+    organization_id: 'Organization ID',
+    company_id: 'Company ID',
+    source_form_id: 'Source Form ID',
+    created_at: 'Created At',
+    updated_at: 'Updated At',
+    title: 'Title',
+    first_name: 'First Name',
+    surname: 'Surname',
+    ni_number: 'NI Number',
+    date_of_birth: 'Date of Birth',
+    gender: 'Gender',
+    marital_status: 'Marital Status',
+    address_line_1: 'Address Line 1',
+    address_line_2: 'Address Line 2',
+    address_line_3: 'Address Line 3',
+    address_line_4: 'Address Line 4',
+    city_town: 'City/Town',
+    county: 'County',
+    country: 'Country',
+    postcode: 'Postcode',
+    email_address: 'Email Address',
+    home_number: 'Home Number',
+    mobile_number: 'Mobile Number',
+    uk_resident: 'UK Resident',
+    nationality: 'Nationality',
+    pensionable_salary: 'Pensionable Salary',
+    pensionable_salary_start_date: 'Pensionable Salary Start Date',
+    salary_post_sacrifice: 'Salary Post Sacrifice',
+    employment_start_date: 'Employment Start Date',
+    date_joined_scheme: 'Date Joined Scheme',
+    selected_retirement_age: 'Selected Retirement Age',
+    pension_investment_approach: 'Pension Investment Approach',
+    policy_number: 'Policy Number',
+    split_template_group_name: 'Section Number',
+    split_template_group_source: 'Split Template Source',
+    service_status: 'Service Status',
+    client_category: 'Client Category',
+    pension_start_date: 'Pension Start Date',
+    io_upload_status: 'IO Upload Status',
+    submission_token: 'Submission Token',
+    submitted_via: 'Submitted Via',
+    ip_address: 'IP Address',
+    user_agent: 'User Agent',
+    job_title: 'Job Title',
+    is_pension_active: 'Is Pension Active',
+    is_smart_pension: 'Is Smart Pension',
+    send_pension_pack: 'Send Pension Pack',
+    pension_provider_info: 'Pension Provider Info',
+    scheme_ref: 'Scheme Ref',
+    advice_type: 'Advice Type',
+    selling_adviser_id: 'Selling Adviser ID',
+    has_group_life: 'Has Group Life',
+    has_gci: 'Has GCI',
+    has_gip: 'Has GIP',
+    has_bupa: 'Has Bupa',
+    operational_notes: 'Operational Notes',
+    created_by_user_id: 'Created By User ID'
+  };
+  
+  // Iterate through all keys in the employee object
+  Object.keys(sampleEmployee).forEach(key => {
+    const value = sampleEmployee[key as keyof Employee];
+    let columnType: ColumnDefinition['type'] = 'text';
+    
+    // Determine column type based on value type and field name
+    if (typeof value === 'boolean') {
+      columnType = 'checkbox';
+    } else if (typeof value === 'number') {
+      columnType = 'number';
+    } else if (key.includes('email')) {
+      columnType = 'email';
+    } else if (key.includes('date') || key.includes('_at')) {
+      columnType = 'date';
+    }
+    
+    columns.push({
+      id: key,
+      label: labelMap[key] || key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+      sortable: true,
+      editable: !['id', 'created_at', 'updated_at', 'organization_id', 'company_id', 'source_form_id', 'submission_token', 'ip_address', 'user_agent', 'submitted_via', 'created_by_user_id'].includes(key),
+      type: columnType
+    });
+  });
+  
+  return columns;
+};
 
 const SortableTableHeader = ({ column, children }: { column: ColumnDefinition; children: React.ReactNode }) => {
   const {
@@ -66,7 +162,7 @@ const SortableTableHeader = ({ column, children }: { column: ColumnDefinition; c
   };
 
   return (
-    <th ref={setNodeRef} style={style} className="text-left p-4 text-sm font-semibold text-slate-700 relative">
+    <th ref={setNodeRef} style={style} className="text-left p-4 text-sm font-semibold text-slate-700 relative bg-white">
       <div className="flex items-center gap-2">
         <div {...attributes} {...listeners} className="cursor-grab hover:cursor-grabbing">
           <GripVertical className="w-4 h-4 text-slate-400" />
@@ -77,13 +173,13 @@ const SortableTableHeader = ({ column, children }: { column: ColumnDefinition; c
   );
 };
 
-export const MembersTable = ({ columns, databaseType, onBack }: MembersTableProps) => {
+export const MembersTable = ({ databaseType, onBack }: MembersTableProps) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const [showSensitiveData, setShowSensitiveData] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [editingCell, setEditingCell] = useState<EditingCell | null>(null);
-  const [sortConfig, setSortConfig] = useState<SortConfig>({ column: 'id', direction: 'asc' });
+  const [sortConfig, setSortConfig] = useState<SortConfig>({ column: 'created_at', direction: 'desc' });
   const [filterConfig, setFilterConfig] = useState<FilterConfig>({
     status: '',
     investmentApproach: '',
@@ -93,6 +189,10 @@ export const MembersTable = ({ columns, databaseType, onBack }: MembersTableProp
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
   const [copiedData, setCopiedData] = useState(false);
   const editInputRef = useRef<HTMLInputElement | HTMLSelectElement>(null);
+  const [members, setMembers] = useState<Employee[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [columnOrder, setColumnOrder] = useState<ColumnDefinition[]>([]);
 
   const databaseNames = {
     ioUpload: 'Employee Database',
@@ -100,86 +200,6 @@ export const MembersTable = ({ columns, databaseType, onBack }: MembersTableProp
   };
 
   const rowsPerPage = 10;
-
-  const [columnOrder, setColumnOrder] = useState<ColumnDefinition[]>(columns);
-
-  // Generate mock data based on column definitions
-  const generateMockData = (columns: ColumnDefinition[], count: number): DatabaseMember[] => {
-    const mockData: DatabaseMember[] = [];
-    
-    for (let i = 0; i < count; i++) {
-      const member: DatabaseMember = {
-        id: `MEM-${String(i + 1).padStart(4, '0')}`,
-        createdAt: '2024-01-15T10:30:00Z',
-        updatedAt: '2024-01-15T10:30:00Z',
-      };
-
-      columns.forEach(column => {
-        switch (column.type) {
-          case 'text':
-            if (column.id.includes('name') || column.id.includes('Name') || column.id === 'forename' || column.id === 'surname') {
-              member[column.id] = ['John', 'Jane', 'Michael', 'Sarah', 'David'][i % 5];
-            } else if (column.id.includes('address') || column.id.includes('Address')) {
-              member[column.id] = `${Math.floor(Math.random() * 999) + 1} ${['High Street', 'Main Road', 'Church Lane', 'Victoria Road'][i % 4]}`;
-            } else if (column.id.includes('postcode') || column.id.includes('PostCode')) {
-              member[column.id] = `SW1A ${Math.floor(Math.random() * 9)}AA`;
-            } else if (column.id.includes('niNumber') || column.id.includes('NINumber')) {
-              member[column.id] = `AB123456${String.fromCharCode(65 + (i % 26))}`;
-            } else if (column.id === 'schemeRef') {
-              member[column.id] = `SCH-${String(i + 1).padStart(4, '0')}`;
-            } else if (column.id === 'sellingAdviserId') {
-              member[column.id] = `ADV-${String((i % 10) + 1).padStart(3, '0')}`;
-            } else if (column.id === 'sectionNumber') {
-              member[column.id] = `SEC-${String((i % 5) + 1)}`;
-            } else {
-              member[column.id] = `Sample ${column.label} ${i + 1}`;
-            }
-            break;
-          case 'email':
-            member[column.id] = `member${i + 1}@example.com`;
-            break;
-          case 'number':
-            if (column.id.includes('salary') || column.id.includes('Salary')) {
-              member[column.id] = 35000 + (i * 1000);
-            } else if (column.id.includes('age') || column.id.includes('Age')) {
-              member[column.id] = 65 + (i % 10);
-            } else {
-              member[column.id] = Math.floor(Math.random() * 1000) + 1;
-            }
-            break;
-          case 'date':
-            if (column.id.includes('birth') || column.id.includes('Birth')) {
-              member[column.id] = '1985-03-15';
-            } else if (column.id === 'employmentStartDate') {
-              member[column.id] = '2023-01-15';
-            } else if (column.id === 'pensionStartingDate') {
-              member[column.id] = '2024-02-01';
-            } else {
-              member[column.id] = '2024-01-15';
-            }
-            break;
-          case 'select':
-            if (column.options && column.options.length > 0) {
-              member[column.id] = column.options[i % column.options.length];
-            }
-            break;
-          case 'checkbox':
-            member[column.id] = i % 2 === 0;
-            break;
-          default:
-            member[column.id] = `Value ${i + 1}`;
-        }
-      });
-
-      mockData.push(member);
-    }
-
-    return mockData;
-  };
-
-  const [members, setMembers] = useState<DatabaseMember[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   // Load employees from API
   useEffect(() => {
@@ -192,56 +212,20 @@ export const MembersTable = ({ columns, databaseType, onBack }: MembersTableProp
       setError(null);
       const employees = await employeeService.getEmployees();
       
-      // Convert Employee[] to DatabaseMember[] format
-      const memberData: DatabaseMember[] = employees.map((emp: Employee) => ({
-        id: emp.id,
-        createdAt: emp.created_at,
-        updatedAt: emp.updated_at,
-        title: emp.title || '',
-        forename: emp.first_name,
-        surname: emp.surname,
-        niNumber: emp.ni_number || '',
-        dateOfBirth: emp.date_of_birth || '',
-        gender: emp.gender || '',
-        maritalStatus: emp.marital_status || '',
-        addressLine1: emp.address_line_1 || '',
-        addressLine2: emp.address_line_2 || '',
-        addressLine3: emp.address_line_3 || '',
-        addressLine4: emp.address_line_4 || '',
-        postcode: emp.postcode || '',
-        emailAddress: emp.email_address || '',
-        mobileNumber: emp.mobile_number || '',
-        homeNumber: emp.home_number || '',
-        ukResident: emp.uk_resident ? 'Yes' : 'No',
-        nationality: emp.nationality || '',
-        jobTitle: emp.job_title || '',
-        pensionableSalary: emp.pensionable_salary || 0,
-        salaryPostSacrifice: emp.salary_post_sacrifice || 0,
-        pensionableSalaryStartDate: emp.pensionable_salary_start_date || '',
-        employmentStartDate: emp.employment_start_date || '',
-        dateJoinedScheme: emp.date_joined_scheme || '',
-        pensionStartDate: emp.pension_start_date || '',
-        selectedRetirementAge: emp.selected_retirement_age || 0,
-        pensionInvestmentApproach: emp.pension_investment_approach || '',
-        schemeRef: emp.scheme_ref || '',
-        policyNumber: emp.policy_number || '',
-        sectionNumber: emp.split_template_group_name || '',
-        serviceStatus: emp.service_status || 'Active',
-        clientCategory: emp.client_category || '',
-        isPensionActive: emp.is_pension_active ? 'Yes' : 'No',
-        isSmartPension: emp.is_smart_pension ? 'Yes' : 'No',
-        sendPensionPack: emp.send_pension_pack ? 'Yes' : 'No',
-        pensionProviderInfo: emp.pension_provider_info || '',
-        adviceType: emp.advice_type || '',
-        sellingAdviserId: emp.selling_adviser_id || '',
-        hasGroupLife: emp.has_group_life ? 'Yes' : 'No',
-        hasGci: emp.has_gci ? 'Yes' : 'No',
-        hasGip: emp.has_gip ? 'Yes' : 'No',
-        hasBupa: emp.has_bupa ? 'Yes' : 'No',
-        operationalNotes: emp.operational_notes || '',
-      }));
+      // Sort by created_at DESC (newest first) by default
+      const sortedEmployees = [...employees].sort((a, b) => {
+        const dateA = new Date(a.created_at).getTime();
+        const dateB = new Date(b.created_at).getTime();
+        return dateB - dateA; // DESC order
+      });
       
-      setMembers(memberData);
+      setMembers(sortedEmployees);
+      
+      // Generate columns dynamically from the first employee
+      if (sortedEmployees.length > 0) {
+        const dynamicColumns = generateColumnsFromData(sortedEmployees);
+        setColumnOrder(dynamicColumns);
+      }
     } catch (err: any) {
       console.error('Failed to load employees:', err);
       setError(err.response?.data?.detail || 'Failed to load employee data');
@@ -441,18 +425,21 @@ export const MembersTable = ({ columns, databaseType, onBack }: MembersTableProp
         );
       
       const matchesStatus = !filterConfig.status || 
-        (member.status === filterConfig.status || member.serviceStatus === filterConfig.status);
+        member.service_status === filterConfig.status;
       const matchesApproach = !filterConfig.investmentApproach || 
-        (member.investmentApproach === filterConfig.investmentApproach || 
-         member.pensionInvestmentApproach === filterConfig.investmentApproach);
+        member.pension_investment_approach === filterConfig.investmentApproach;
       const matchesNationality = !filterConfig.nationality || member.nationality === filterConfig.nationality;
-      const matchesMaritalStatus = !filterConfig.maritalStatus || member.maritalStatus === filterConfig.maritalStatus;
+      const matchesMaritalStatus = !filterConfig.maritalStatus || member.marital_status === filterConfig.maritalStatus;
 
       return matchesSearch && matchesStatus && matchesApproach && matchesNationality && matchesMaritalStatus;
     })
     .sort((a, b) => {
       const aValue = (a as any)[sortConfig.column];
       const bValue = (b as any)[sortConfig.column];
+      
+      // Handle null/undefined values
+      if (aValue === null || aValue === undefined) return 1;
+      if (bValue === null || bValue === undefined) return -1;
       
       if (typeof aValue === 'string' && typeof bValue === 'string') {
         return sortConfig.direction === 'asc' 
@@ -462,6 +449,13 @@ export const MembersTable = ({ columns, databaseType, onBack }: MembersTableProp
       
       if (typeof aValue === 'number' && typeof bValue === 'number') {
         return sortConfig.direction === 'asc' ? aValue - bValue : bValue - aValue;
+      }
+      
+      // Handle date strings
+      if (sortConfig.column.includes('date') || sortConfig.column.includes('_at')) {
+        const dateA = new Date(aValue).getTime();
+        const dateB = new Date(bValue).getTime();
+        return sortConfig.direction === 'asc' ? dateA - dateB : dateB - dateA;
       }
       
       return 0;
@@ -539,28 +533,38 @@ export const MembersTable = ({ columns, databaseType, onBack }: MembersTableProp
     }
   };
 
-  const getCellValue = (member: DatabaseMember, columnId: string) => {
+  const getCellValue = (member: Employee, columnId: string) => {
     const value = (member as any)[columnId];
     
+    // Handle boolean values - show as checkbox already rendered
+    if (typeof value === 'boolean') {
+      return value ? 'Yes' : 'No';
+    }
+    
     // Hide salary if PII is hidden
-    if (typeof value === 'number' && (columnId.includes('salary') || columnId.includes('Salary') || columnId === 'pensionableSalary')) {
+    if (typeof value === 'number' && (columnId.includes('salary') || columnId.includes('Salary') || columnId === 'pensionable_salary')) {
       return showSensitiveData ? `£${value.toLocaleString()}` : '£••••••';
     }
     
     // Hide NI number if PII is hidden
-    if (columnId.includes('niNumber') || columnId.includes('NINumber') || columnId === 'niNumber') {
+    if (columnId === 'ni_number') {
       return showSensitiveData ? value : '••••••••';
     }
     
     // Hide scheme ref if PII is hidden
-    if (columnId === 'schemeRef' || columnId.includes('schemeRef')) {
+    if (columnId === 'scheme_ref') {
       return showSensitiveData ? value : '••••••••';
+    }
+    
+    // Handle null/undefined
+    if (value === null || value === undefined) {
+      return '';
     }
     
     return value;
   };
 
-  const renderCell = (member: DatabaseMember, column: ColumnDefinition) => {
+  const renderCell = (member: Employee, column: ColumnDefinition) => {
     const isEditing = editingCell?.rowId === member.id && editingCell?.columnId === column.id;
     const hasError = validationErrors.some(err => err.rowId === member.id && err.columnId === column.id);
     const error = validationErrors.find(err => err.rowId === member.id && err.columnId === column.id);
@@ -665,204 +669,219 @@ export const MembersTable = ({ columns, databaseType, onBack }: MembersTableProp
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <div className="flex items-center gap-4 mb-2">
-          <button
-            onClick={onBack}
-            className="flex items-center gap-2 px-4 py-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-xl transition-all duration-200"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to Databases
-          </button>
-          <h1 className="text-3xl font-bold text-slate-900">{databaseNames[databaseType]}</h1>
-        </div>
-        <p className="text-slate-600">Manage and export member information with spreadsheet functionality</p>
-      </div>
-
-      {loading && (
-        <div className="glass-panel rounded-2xl p-12 text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zomi-green mx-auto mb-4"></div>
-          <p className="text-slate-600">Loading employees...</p>
-        </div>
-      )}
-
-      {error && (
-        <div className="glass-panel rounded-2xl p-6 bg-red-50 border border-red-200">
-          <p className="text-red-600">{error}</p>
-        </div>
-      )}
-
-      {!loading && !error && (
-      <div className="glass-panel rounded-2xl p-6">
-        <div className="flex flex-col lg:flex-row gap-4 mb-6">
-          <div className="flex-1 relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="glass-input w-full pl-12 pr-4 py-3 rounded-xl text-slate-900"
-              placeholder="Search members by name or email..."
-            />
-          </div>
-
-          <div className="flex gap-2 flex-wrap">
-            <select
-              value={filterConfig.status}
-              onChange={(e) => setFilterConfig(prev => ({ ...prev, status: e.target.value }))}
-              className="glass-input px-4 py-3 rounded-xl text-slate-900"
-            >
-              <option value="">All Status</option>
-              <option value="Active">Active</option>
-              <option value="Pending">Pending</option>
-              <option value="Inactive">Inactive</option>
-            </select>
-
-            <select
-              value={filterConfig.investmentApproach}
-              onChange={(e) => setFilterConfig(prev => ({ ...prev, investmentApproach: e.target.value }))}
-              className="glass-input px-4 py-3 rounded-xl text-slate-900"
-            >
-              <option value="">All Approaches</option>
-              <option value="Adventurous">Adventurous</option>
-              <option value="Cautious">Cautious</option>
-            </select>
-
+    <div className="flex flex-col h-[calc(100vh-2rem)] max-h-[calc(100vh-2rem)]">
+      {/* TOP SECTION - FIXED HEADER */}
+      <div className="flex-shrink-0 bg-[#fefae0] border-b border-slate-200 pb-6">
+        <div className="mb-4">
+          <div className="flex items-center gap-4 mb-2">
             <button
-              onClick={() => setShowSensitiveData(!showSensitiveData)}
-              className="flex items-center gap-2 px-4 py-3 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-xl transition-all duration-200"
+              onClick={onBack}
+              className="flex items-center gap-2 px-4 py-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-xl transition-all duration-200"
             >
-              {showSensitiveData ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-              <span className="hidden sm:inline">{showSensitiveData ? 'Hide' : 'Show'} PII</span>
+              <ArrowLeft className="w-4 h-4" />
+              Back to Databases
             </button>
-
-            <button
-              onClick={copySelectedData}
-              className="flex items-center gap-2 px-4 py-3 bg-zomi-green hover:bg-zomi-green/90 text-white rounded-xl transition-all duration-200"
-            >
-              {copiedData ? <CheckCircle className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
-              <span className="hidden sm:inline">{copiedData ? 'Copied!' : 'Copy Data'}</span>
-            </button>
+            <h1 className="text-3xl font-bold text-slate-900">{databaseNames[databaseType]}</h1>
           </div>
+          <p className="text-slate-600">Manage and export member information with spreadsheet functionality</p>
         </div>
 
-        {selectedRows.size > 0 && (
-          <div className="flex items-center justify-between p-4 bg-zomi-mint/50 rounded-xl mb-4">
-            <span className="font-medium text-slate-900">
-              {selectedRows.size} member(s) selected
-            </span>
-            <div className="flex gap-2">
-              <button
-                onClick={() => exportToCSV('scottish')}
-                className="flex items-center gap-2 px-4 py-2 bg-zomi-green hover:bg-zomi-green/90 text-white rounded-lg transition-all duration-200"
-              >
-                <Download className="w-4 h-4" />
-                Scottish Widows
-              </button>
-              <button
-                onClick={() => exportToCSV('io')}
-                className="flex items-center gap-2 px-4 py-2 bg-zomi-green hover:bg-zomi-green/90 text-white rounded-lg transition-all duration-200"
-              >
-                <Download className="w-4 h-4" />
-                IO Bulk
-              </button>
-              <button 
-                onClick={handleDeleteSelected}
-                disabled={selectedRows.size === 0}
-                className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Trash2 className="w-4 h-4" />
-                Delete {selectedRows.size > 0 ? `(${selectedRows.size})` : ''}
-              </button>
-            </div>
+        {loading && (
+          <div className="glass-panel rounded-2xl p-12 text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zomi-green mx-auto mb-4"></div>
+            <p className="text-slate-600">Loading employees...</p>
           </div>
         )}
 
-        <div className="overflow-x-auto">
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragEnd={handleDragEnd}
-          >
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-slate-200">
-                  <th className="text-left p-4">
-                    <input
-                      type="checkbox"
-                      checked={selectedRows.size === paginatedMembers.length && paginatedMembers.length > 0}
-                      onChange={toggleAllRows}
-                      className="w-4 h-4 accent-zomi-green"
-                    />
-                  </th>
-                  <SortableContext items={columnOrder} strategy={verticalListSortingStrategy}>
-                    {columnOrder.map((column) => (
-                      <SortableTableHeader key={column.id} column={column}>
-                        <button
-                          onClick={() => handleSort(column.id)}
-                          className="flex items-center gap-2 hover:text-zomi-green transition-colors"
-                          disabled={!column.sortable}
-                        >
-                          <span>{column.label}</span>
-                          {column.sortable && getSortIcon(column.id)}
-                        </button>
-                      </SortableTableHeader>
-                    ))}
-                  </SortableContext>
-                </tr>
-              </thead>
-              <tbody>
-                {paginatedMembers.map((member) => (
-                  <tr
-                    key={member.id}
-                    className="border-b border-slate-100 hover:bg-white/50 transition-colors"
-                  >
-                    <td className="p-4">
-                      <input
-                        type="checkbox"
-                        checked={selectedRows.has(member.id)}
-                        onChange={() => toggleRowSelection(member.id)}
-                        className="w-4 h-4 accent-zomi-green"
-                      />
-                    </td>
-                    {columnOrder.map((column) => (
-                      <td key={column.id} className="p-4 text-sm text-slate-600 relative">
-                        {renderCell(member, column)}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </DndContext>
-        </div>
-
-        <div className="flex items-center justify-between mt-6 pt-6 border-t border-slate-200">
-          <p className="text-sm text-slate-600">
-            Showing {startIndex + 1} to {Math.min(startIndex + rowsPerPage, sortedAndFilteredMembers.length)} of {sortedAndFilteredMembers.length} members
-          </p>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-              disabled={currentPage === 1}
-              className="px-4 py-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
-            >
-              Previous
-            </button>
-            <span className="px-4 py-2 bg-zomi-green text-white rounded-lg font-medium">
-              {currentPage}
-            </span>
-            <button
-              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-              disabled={currentPage === totalPages}
-              className="px-4 py-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
-            >
-              Next
-            </button>
+        {error && (
+          <div className="glass-panel rounded-2xl p-6 bg-red-50 border border-red-200">
+            <p className="text-red-600">{error}</p>
           </div>
-        </div>
+        )}
+
+        {!loading && !error && (
+          <div className="glass-panel rounded-2xl p-6">
+            <div className="flex flex-col lg:flex-row gap-4 mb-4">
+              <div className="flex-1 relative">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="glass-input w-full pl-12 pr-4 py-3 rounded-xl text-slate-900"
+                  placeholder="Search members by name or email..."
+                />
+              </div>
+
+              <div className="flex gap-2 flex-wrap">
+                <select
+                  value={filterConfig.status}
+                  onChange={(e) => setFilterConfig(prev => ({ ...prev, status: e.target.value }))}
+                  className="glass-input px-4 py-3 rounded-xl text-slate-900"
+                >
+                  <option value="">All Status</option>
+                  <option value="Active">Active</option>
+                  <option value="Pending">Pending</option>
+                  <option value="Inactive">Inactive</option>
+                </select>
+
+                <select
+                  value={filterConfig.investmentApproach}
+                  onChange={(e) => setFilterConfig(prev => ({ ...prev, investmentApproach: e.target.value }))}
+                  className="glass-input px-4 py-3 rounded-xl text-slate-900"
+                >
+                  <option value="">All Approaches</option>
+                  <option value="Adventurous">Adventurous</option>
+                  <option value="Cautious">Cautious</option>
+                </select>
+
+                <button
+                  onClick={() => setShowSensitiveData(!showSensitiveData)}
+                  className="flex items-center gap-2 px-4 py-3 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-xl transition-all duration-200"
+                >
+                  {showSensitiveData ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  <span className="hidden sm:inline">{showSensitiveData ? 'Hide' : 'Show'} PII</span>
+                </button>
+
+                <button
+                  onClick={copySelectedData}
+                  className="flex items-center gap-2 px-4 py-3 bg-zomi-green hover:bg-zomi-green/90 text-white rounded-xl transition-all duration-200"
+                >
+                  {copiedData ? <CheckCircle className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
+                  <span className="hidden sm:inline">{copiedData ? 'Copied!' : 'Copy Data'}</span>
+                </button>
+              </div>
+            </div>
+
+            {selectedRows.size > 0 && (
+              <div className="flex items-center justify-between p-4 bg-zomi-mint/50 rounded-xl">
+                <span className="font-medium text-slate-900">
+                  {selectedRows.size} member(s) selected
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => exportToCSV('scottish')}
+                    className="flex items-center gap-2 px-4 py-2 bg-zomi-green hover:bg-zomi-green/90 text-white rounded-lg transition-all duration-200"
+                  >
+                    <Download className="w-4 h-4" />
+                    Scottish Widows
+                  </button>
+                  <button
+                    onClick={() => exportToCSV('io')}
+                    className="flex items-center gap-2 px-4 py-2 bg-zomi-green hover:bg-zomi-green/90 text-white rounded-lg transition-all duration-200"
+                  >
+                    <Download className="w-4 h-4" />
+                    IO Bulk
+                  </button>
+                  <button 
+                    onClick={handleDeleteSelected}
+                    disabled={selectedRows.size === 0}
+                    className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Delete {selectedRows.size > 0 ? `(${selectedRows.size})` : ''}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
+
+      {/* MIDDLE SECTION - SCROLLABLE TABLE */}
+      {!loading && !error && (
+        <>
+          <div className="flex-1 overflow-auto bg-white">
+            <div className="glass-panel rounded-2xl m-6 mt-0">
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+              >
+                <table className="w-full">
+                  <thead className="sticky top-0 bg-white z-10">
+                    <tr className="border-b border-slate-200">
+                      <th className="text-left p-4 bg-white">
+                        <input
+                          type="checkbox"
+                          checked={selectedRows.size === paginatedMembers.length && paginatedMembers.length > 0}
+                          onChange={toggleAllRows}
+                          className="w-4 h-4 accent-zomi-green"
+                        />
+                      </th>
+                      <SortableContext items={columnOrder} strategy={verticalListSortingStrategy}>
+                        {columnOrder.map((column) => (
+                          <SortableTableHeader key={column.id} column={column}>
+                            <button
+                              onClick={() => handleSort(column.id)}
+                              className="flex items-center gap-2 hover:text-zomi-green transition-colors"
+                              disabled={!column.sortable}
+                            >
+                              <span>{column.label}</span>
+                              {column.sortable && getSortIcon(column.id)}
+                            </button>
+                          </SortableTableHeader>
+                        ))}
+                      </SortableContext>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {paginatedMembers.map((member) => (
+                      <tr
+                        key={member.id}
+                        className="border-b border-slate-100 hover:bg-white/50 transition-colors"
+                      >
+                        <td className="p-4">
+                          <input
+                            type="checkbox"
+                            checked={selectedRows.has(member.id)}
+                            onChange={() => toggleRowSelection(member.id)}
+                            className="w-4 h-4 accent-zomi-green"
+                          />
+                        </td>
+                        {columnOrder.map((column) => (
+                          <td key={column.id} className="p-4 text-sm text-slate-600 relative">
+                            {renderCell(member, column)}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </DndContext>
+            </div>
+          </div>
+
+          {/* BOTTOM SECTION - FIXED FOOTER */}
+          <div className="flex-shrink-0 bg-white border-t border-slate-200">
+            <div className="glass-panel rounded-2xl m-6 mb-6 mt-0">
+              <div className="flex items-center justify-between p-4">
+                <p className="text-sm text-slate-600">
+                  Showing {startIndex + 1} to {Math.min(startIndex + rowsPerPage, sortedAndFilteredMembers.length)} of {sortedAndFilteredMembers.length} members
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1}
+                    className="px-4 py-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                  >
+                    Previous
+                  </button>
+                  <span className="px-4 py-2 bg-zomi-green text-white rounded-lg font-medium">
+                    {currentPage}
+                  </span>
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                    disabled={currentPage === totalPages}
+                    className="px-4 py-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
       )}
     </div>
   );
