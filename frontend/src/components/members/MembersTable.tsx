@@ -669,9 +669,18 @@ export const MembersTable = ({ databaseType, onBack }: MembersTableProps) => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-white rounded-xl border border-slate-200 shadow-sm" style={{ minWidth: 0, maxWidth: '100%', width: '100%' }}>
+    <div
+      className="bg-white rounded-xl border border-slate-200 shadow-sm w-full max-w-full min-h-0 h-full"
+      style={{
+        display: 'grid',
+        gridTemplateRows: 'auto minmax(0, 1fr) auto',
+        minWidth: 0,
+        maxWidth: '100%',
+        overflow: 'hidden'
+      }}
+    >
       {/* TOP SECTION - FIXED HEADER */}
-      <div className="flex-shrink-0 bg-white border-b border-slate-200" style={{ minWidth: 0, maxWidth: '100%' }}>
+      <div className="bg-white border-b border-slate-200" style={{ minWidth: 0, maxWidth: '100%', overflow: 'hidden' }}>
         <div className="px-6 py-6">
           <div className="flex items-center gap-4 mb-2">
             <button
@@ -685,19 +694,6 @@ export const MembersTable = ({ databaseType, onBack }: MembersTableProps) => {
           </div>
           <p className="text-slate-600">Manage and export member information with spreadsheet functionality</p>
         </div>
-
-        {loading && (
-          <div className="bg-white rounded-2xl p-12 text-center mx-6">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zomi-green mx-auto mb-4"></div>
-            <p className="text-slate-600">Loading employees...</p>
-          </div>
-        )}
-
-        {error && (
-          <div className="bg-white rounded-2xl p-6 border border-red-200 mx-6">
-            <p className="text-red-600">{error}</p>
-          </div>
-        )}
 
         {!loading && !error && (
           <div className="bg-white p-6 border-t border-slate-100">
@@ -788,16 +784,33 @@ export const MembersTable = ({ databaseType, onBack }: MembersTableProps) => {
         )}
       </div>
 
-      {/* MIDDLE SECTION - SCROLLABLE TABLE */}
-      {!loading && !error && (
-        <>
-          <div className="flex-1 bg-white" style={{ minWidth: 0, maxWidth: '100%', minHeight: 0, overflow: 'auto' }}>
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={handleDragEnd}
+      {/* MIDDLE SECTION - ONLY THIS AREA SCROLLS */}
+      <div className="bg-white" style={{ minWidth: 0, minHeight: 0, overflow: 'auto' }}>
+        {loading && (
+          <div className="p-12 text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zomi-green mx-auto mb-4"></div>
+            <p className="text-slate-600">Loading employees...</p>
+          </div>
+        )}
+
+        {error && (
+          <div className="p-6">
+            <div className="bg-white rounded-2xl p-6 border border-red-200">
+              <p className="text-red-600">{error}</p>
+            </div>
+          </div>
+        )}
+
+        {!loading && !error && (
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <table
+              className="border-collapse"
+              style={{ width: 'max-content', minWidth: '100%' }}
             >
-              <table style={{ minWidth: 'max-content' }}>
                     <thead className="bg-slate-50 border-b border-slate-200">
                       <tr>
                         <th className="text-left p-4 bg-slate-50 sticky left-0 border-r border-slate-200">
@@ -847,40 +860,43 @@ export const MembersTable = ({ databaseType, onBack }: MembersTableProps) => {
                       ))}
                     </tbody>
                   </table>
-            </DndContext>
-          </div>
+          </DndContext>
+        )}
+      </div>
 
-          {/* BOTTOM SECTION - FIXED FOOTER */}
-          <div className="flex-shrink-0 bg-white border-t border-slate-200" style={{ minWidth: 0, maxWidth: '100%', overflow: 'hidden' }}>
-            <div className="px-6 py-4">
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-slate-600">
-                  Showing {startIndex + 1} to {Math.min(startIndex + rowsPerPage, sortedAndFilteredMembers.length)} of {sortedAndFilteredMembers.length} members
-                </p>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                    disabled={currentPage === 1}
-                    className="px-4 py-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
-                  >
-                    Previous
-                  </button>
-                  <span className="px-4 py-2 bg-zomi-green text-white rounded-lg font-medium">
-                    {currentPage}
-                  </span>
-                  <button
-                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                    disabled={currentPage === totalPages}
-                    className="px-4 py-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
-                  >
-                    Next
-                  </button>
-                </div>
+      {/* BOTTOM SECTION - FIXED FOOTER */}
+      <div className="bg-white border-t border-slate-200" style={{ minWidth: 0, maxWidth: '100%', overflow: 'hidden' }}>
+        <div className="px-6 py-4">
+          {!loading && !error ? (
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-slate-600">
+                Showing {startIndex + 1} to {Math.min(startIndex + rowsPerPage, sortedAndFilteredMembers.length)} of {sortedAndFilteredMembers.length} members
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  className="px-4 py-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                >
+                  Previous
+                </button>
+                <span className="px-4 py-2 bg-zomi-green text-white rounded-lg font-medium">
+                  {currentPage}
+                </span>
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                  className="px-4 py-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                >
+                  Next
+                </button>
               </div>
             </div>
-          </div>
-        </>
-      )}
+          ) : (
+            <div className="text-sm text-slate-500">&nbsp;</div>
+          )}
+        </div>
+      </div>
     </div>
   );
 };

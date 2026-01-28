@@ -142,7 +142,7 @@ export const DashboardLayout = ({ children, currentPage, onNavigate }: Dashboard
           </button>
         </header>
 
-        <main className="flex-1 p-6 lg:p-8 overflow-auto">
+        <main className={`flex-1 p-6 lg:p-8 min-h-0 flex flex-col ${currentPage === 'members' ? 'overflow-hidden' : 'overflow-auto'}`}>
           {children}
         </main>
       </div>
