@@ -669,9 +669,9 @@ export const MembersTable = ({ databaseType, onBack }: MembersTableProps) => {
   };
 
   return (
-    <div className="fixed inset-0 lg:left-64 flex flex-col bg-white overflow-hidden">
+    <div className="flex flex-col h-full bg-white overflow-hidden rounded-xl border border-slate-200 shadow-sm">
       {/* TOP SECTION - FIXED HEADER */}
-      <div className="flex-shrink-0 bg-white border-b border-slate-200 z-40">
+      <div className="flex-shrink-0 bg-white border-b border-slate-200">
         <div className="px-6 py-6">
           <div className="flex items-center gap-4 mb-2">
             <button
@@ -853,7 +853,7 @@ export const MembersTable = ({ databaseType, onBack }: MembersTableProps) => {
           </div>
 
           {/* BOTTOM SECTION - FIXED FOOTER */}
-          <div className="flex-shrink-0 bg-white border-t border-slate-200 z-40">
+          <div className="flex-shrink-0 bg-white border-t border-slate-200">
             <div className="px-6 py-4">
               <div className="flex items-center justify-between">
                 <p className="text-sm text-slate-600">
