@@ -791,8 +791,9 @@ export const MembersTable = ({ databaseType, onBack }: MembersTableProps) => {
       {/* MIDDLE SECTION - SCROLLABLE TABLE */}
       {!loading && !error && (
         <>
-          <div className="flex-1 bg-white" style={{ minHeight: 0 }}>
-            <div className="h-full overflow-auto" style={{ isolation: 'isolate' }}>
+          <div className="flex-1 overflow-hidden" style={{ minHeight: 0 }}>
+            <div className="h-full overflow-auto">
+              <div style={{ minWidth: '100%', width: 'max-content' }}>
                 <DndContext
                   sensors={sensors}
                   collisionDetection={closestCenter}
@@ -849,6 +850,7 @@ export const MembersTable = ({ databaseType, onBack }: MembersTableProps) => {
                     </tbody>
                   </table>
                 </DndContext>
+              </div>
             </div>
           </div>
 
