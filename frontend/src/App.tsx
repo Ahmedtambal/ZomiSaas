@@ -12,7 +12,7 @@ import { FormManagementPage } from './components/forms/FormManagementPage';
 import { DynamicFormRenderer } from './components/forms/DynamicFormRenderer';
 import { PublicFormView } from './components/forms/PublicFormView';
 import { SettingsPage } from './components/settings/SettingsPage';
-import { DatabaseType, IO_UPLOAD_COLUMNS, NEW_EMPLOYEE_UPLOAD_COLUMNS } from './types';
+import { DatabaseType } from './types';
 
 // Wrapper component for public form route
 function PublicFormRoute() {
@@ -72,10 +72,8 @@ function AppContent() {
         if (selectedDatabase === null) {
           return <DatabaseSelector onSelectDatabase={setSelectedDatabase} />;
         }
-        const columns = selectedDatabase === 'ioUpload' ? IO_UPLOAD_COLUMNS : NEW_EMPLOYEE_UPLOAD_COLUMNS;
         return (
           <MembersTable 
-            columns={columns}
             databaseType={selectedDatabase}
             onBack={() => setSelectedDatabase(null)}
           />

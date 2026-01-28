@@ -363,7 +363,7 @@ export const MembersTable = ({ databaseType, onBack }: MembersTableProps) => {
       alert(err.response?.data?.detail || 'Failed to update employee');
       return false;
     }
-  }, [columns, columnOrder]);
+  }, [columnOrder]);
 
   const handleCellEdit = (memberId: string, columnId: string) => {
     const column = columnOrder.find(col => col.id === columnId);
