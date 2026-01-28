@@ -669,14 +669,14 @@ export const MembersTable = ({ databaseType, onBack }: MembersTableProps) => {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-2rem)] max-h-[calc(100vh-2rem)]">
+    <div className="flex flex-col h-screen bg-white">
       {/* TOP SECTION - FIXED HEADER */}
-      <div className="flex-shrink-0 bg-[#fefae0] border-b border-slate-200 pb-6">
-        <div className="mb-4">
+      <div className="flex-shrink-0 bg-white border-b border-slate-200 pb-6 sticky top-0 z-30">
+        <div className="mb-4 px-6 pt-6">
           <div className="flex items-center gap-4 mb-2">
             <button
               onClick={onBack}
-              className="flex items-center gap-2 px-4 py-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-xl transition-all duration-200"
+              className="flex items-center gap-2 px-4 py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-xl transition-all duration-200"
             >
               <ArrowLeft className="w-4 h-4" />
               Back to Databases
@@ -687,20 +687,20 @@ export const MembersTable = ({ databaseType, onBack }: MembersTableProps) => {
         </div>
 
         {loading && (
-          <div className="glass-panel rounded-2xl p-12 text-center">
+          <div className="bg-white rounded-2xl p-12 text-center mx-6">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zomi-green mx-auto mb-4"></div>
             <p className="text-slate-600">Loading employees...</p>
           </div>
         )}
 
         {error && (
-          <div className="glass-panel rounded-2xl p-6 bg-red-50 border border-red-200">
+          <div className="bg-white rounded-2xl p-6 border border-red-200 mx-6">
             <p className="text-red-600">{error}</p>
           </div>
         )}
 
         {!loading && !error && (
-          <div className="glass-panel rounded-2xl p-6">
+          <div className="bg-white rounded-2xl p-6 mx-6 shadow-sm border border-slate-100">
             <div className="flex flex-col lg:flex-row gap-4 mb-4">
               <div className="flex-1 relative">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
@@ -708,7 +708,7 @@ export const MembersTable = ({ databaseType, onBack }: MembersTableProps) => {
                   type="text"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="glass-input w-full pl-12 pr-4 py-3 rounded-xl text-slate-900"
+                  className="w-full pl-12 pr-4 py-3 rounded-xl text-slate-900 border border-slate-200 bg-slate-50 focus:bg-white focus:border-zomi-green focus:outline-none transition-colors"
                   placeholder="Search members by name or email..."
                 />
               </div>
@@ -717,7 +717,7 @@ export const MembersTable = ({ databaseType, onBack }: MembersTableProps) => {
                 <select
                   value={filterConfig.status}
                   onChange={(e) => setFilterConfig(prev => ({ ...prev, status: e.target.value }))}
-                  className="glass-input px-4 py-3 rounded-xl text-slate-900"
+                  className="px-4 py-3 rounded-xl text-slate-900 border border-slate-200 bg-slate-50 focus:bg-white focus:border-zomi-green focus:outline-none transition-colors"
                 >
                   <option value="">All Status</option>
                   <option value="Active">Active</option>
@@ -728,7 +728,7 @@ export const MembersTable = ({ databaseType, onBack }: MembersTableProps) => {
                 <select
                   value={filterConfig.investmentApproach}
                   onChange={(e) => setFilterConfig(prev => ({ ...prev, investmentApproach: e.target.value }))}
-                  className="glass-input px-4 py-3 rounded-xl text-slate-900"
+                  className="px-4 py-3 rounded-xl text-slate-900 border border-slate-200 bg-slate-50 focus:bg-white focus:border-zomi-green focus:outline-none transition-colors"
                 >
                   <option value="">All Approaches</option>
                   <option value="Adventurous">Adventurous</option>
@@ -791,70 +791,70 @@ export const MembersTable = ({ databaseType, onBack }: MembersTableProps) => {
       {/* MIDDLE SECTION - SCROLLABLE TABLE */}
       {!loading && !error && (
         <>
-          <div className="flex-1 overflow-auto bg-white">
-            <div className="glass-panel rounded-2xl m-6 mt-0">
-              <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragEnd={handleDragEnd}
-              >
-                <table className="w-full">
-                  <thead className="sticky top-0 bg-white z-10">
-                    <tr className="border-b border-slate-200">
-                      <th className="text-left p-4 bg-white">
-                        <input
-                          type="checkbox"
-                          checked={selectedRows.size === paginatedMembers.length && paginatedMembers.length > 0}
-                          onChange={toggleAllRows}
-                          className="w-4 h-4 accent-zomi-green"
-                        />
-                      </th>
-                      <SortableContext items={columnOrder} strategy={verticalListSortingStrategy}>
-                        {columnOrder.map((column) => (
-                          <SortableTableHeader key={column.id} column={column}>
-                            <button
-                              onClick={() => handleSort(column.id)}
-                              className="flex items-center gap-2 hover:text-zomi-green transition-colors"
-                              disabled={!column.sortable}
-                            >
-                              <span>{column.label}</span>
-                              {column.sortable && getSortIcon(column.id)}
-                            </button>
-                          </SortableTableHeader>
-                        ))}
-                      </SortableContext>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {paginatedMembers.map((member) => (
-                      <tr
-                        key={member.id}
-                        className="border-b border-slate-100 hover:bg-white/50 transition-colors"
-                      >
-                        <td className="p-4">
+          <div className="flex-1 overflow-y-auto overflow-x-auto bg-white">
+            <div className="bg-white rounded-2xl mx-6 my-6 shadow-sm border border-slate-100">
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleDragEnd}
+                >
+                  <table className="w-full">
+                    <thead className="bg-slate-50 border-b border-slate-200">
+                      <tr>
+                        <th className="text-left p-4 bg-slate-50 sticky left-0 z-10 border-r border-slate-200">
                           <input
                             type="checkbox"
-                            checked={selectedRows.has(member.id)}
-                            onChange={() => toggleRowSelection(member.id)}
+                            checked={selectedRows.size === paginatedMembers.length && paginatedMembers.length > 0}
+                            onChange={toggleAllRows}
                             className="w-4 h-4 accent-zomi-green"
                           />
-                        </td>
-                        {columnOrder.map((column) => (
-                          <td key={column.id} className="p-4 text-sm text-slate-600 relative">
-                            {renderCell(member, column)}
-                          </td>
-                        ))}
+                        </th>
+                        <SortableContext items={columnOrder} strategy={verticalListSortingStrategy}>
+                          {columnOrder.map((column, index) => (
+                            <SortableTableHeader key={column.id} column={column}>
+                              <button
+                                onClick={() => handleSort(column.id)}
+                                className="flex items-center gap-2 hover:text-zomi-green transition-colors w-full text-left"
+                                disabled={!column.sortable}
+                              >
+                                <span className="font-medium text-slate-700">{column.label}</span>
+                                {column.sortable && getSortIcon(column.id)}
+                              </button>
+                            </SortableTableHeader>
+                          ))}
+                        </SortableContext>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </DndContext>
+                    </thead>
+                    <tbody>
+                      {paginatedMembers.map((member) => (
+                        <tr
+                          key={member.id}
+                          className="border-b border-slate-100 hover:bg-slate-50 transition-colors"
+                        >
+                          <td className="p-4 bg-white sticky left-0 z-5 border-r border-slate-200">
+                            <input
+                              type="checkbox"
+                              checked={selectedRows.has(member.id)}
+                              onChange={() => toggleRowSelection(member.id)}
+                              className="w-4 h-4 accent-zomi-green"
+                            />
+                          </td>
+                          {columnOrder.map((column) => (
+                            <td key={column.id} className="p-4 text-sm text-slate-600 relative whitespace-nowrap">
+                              {renderCell(member, column)}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </DndContext>
             </div>
           </div>
 
           {/* BOTTOM SECTION - FIXED FOOTER */}
-          <div className="flex-shrink-0 bg-white border-t border-slate-200">
-            <div className="glass-panel rounded-2xl m-6 mb-6 mt-0">
+          <div className="flex-shrink-0 bg-white border-t border-slate-200 sticky bottom-0 z-30">
+            <div className="bg-white rounded-2xl mx-6 my-4 shadow-sm border border-slate-100">
               <div className="flex items-center justify-between p-4">
                 <p className="text-sm text-slate-600">
                   Showing {startIndex + 1} to {Math.min(startIndex + rowsPerPage, sortedAndFilteredMembers.length)} of {sortedAndFilteredMembers.length} members
