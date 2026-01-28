@@ -189,153 +189,272 @@ async def submit_form(token: str, submission_data: Dict[str, Any], request: Requ
         
         # Get the user who created the form (for created_by tracking)
         form_creator_id = token_record["forms"].get("created_by_user_id")
+        form_template_type = token_record["forms"].get("template_type", "")
         
         # Get client IP and user agent
         client_ip = request.client.host if request.client else None
         user_agent = request.headers.get("user-agent", "")
         
-        # Map form fields to employees table columns
-        employee_data = {
-            "organization_id": token_record["organization_id"],
-            "company_id": company["id"],
-            "source_form_id": token_record["form_id"],
-            
-            # Personal Information
-            "title": submission_data.get("title"),
-            "first_name": submission_data.get("forename"),
-            "surname": submission_data.get("surname"),
-            "ni_number": submission_data.get("nationalInsuranceNumber"),
-            "email_address": submission_data.get("emailAddress"),  # NEW: Email Address
-            "mobile_number": submission_data.get("contactNumber"),  # NEW: Contact Number
-            "date_of_birth": submission_data.get("dateOfBirth"),
-            "gender": submission_data.get("gender"),
-            "marital_status": submission_data.get("maritalStatus"),
-            
-            # Address
-            "address_line_1": submission_data.get("addressLine1"),
-            "address_line_2": submission_data.get("addressLine2"),
-            "address_line_3": submission_data.get("addressLine3"),
-            "address_line_4": submission_data.get("addressLine4"),
-            "postcode": submission_data.get("postcode"),
-            "uk_resident": submission_data.get("ukResident") == "Yes" if submission_data.get("ukResident") else None,
-            "nationality": submission_data.get("nationality"),
-            
-            # Employment
-            "job_title": submission_data.get("jobTitle"),  # NEW: Job Title
-            "pensionable_salary": submission_data.get("salary"),
-            "employment_start_date": submission_data.get("employmentStartDate"),
-            "selected_retirement_age": submission_data.get("selectedRetirementAge"),
-            "pension_investment_approach": submission_data.get("pensionInvestmentApproach"),
-            
-            # Section information (optional)
-            "split_template_group_name": submission_data.get("sectionNumber"),
-            
-            # Auto-filled from company
-            "client_category": company.get("category_name"),
-            
-            # Tracking
-            "submission_token": token,
-            "submitted_via": "form_link",
-            "ip_address": client_ip,
-            "user_agent": user_agent,
-            "service_status": "Active",
-            "io_upload_status": False,
-            "created_by_user_id": form_creator_id  # Inherit from form creator
-        }
-        
-        # Create employee record
-        employee_response = db_service.client.table("employees").insert(
-            employee_data
-        ).execute()
-        
-        if not employee_response.data:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Failed to create employee record"
-            )
-        
-        employee = employee_response.data[0]
-        
-        # Get recipient email (the user who created the form)
-        # Email is stored in Supabase auth.users, accessible via admin API
-        recipient_email = None
-        if form_creator_id:
-            try:
-                # Use RPC to get user email from auth.users via a database function
-                # Alternative: query directly if we had admin access
-                user_response = db_service.client.rpc(
-                    'get_user_email_by_id',
-                    {'user_id': form_creator_id}
-                ).execute()
-                if user_response.data:
-                    recipient_email = user_response.data
-            except Exception as e:
-                logger.warning(f"Failed to fetch creator email: {str(e)}")
-        
-        # Call Edge Function to send email notification (non-blocking)
-        if recipient_email:
-            await notify_edge_function(employee, company["name"], recipient_email)
-        else:
-            logger.warning(f"No recipient email found for form creator {form_creator_id}")
-        
-        # Get current form version
-        form_version = token_record["forms"].get("version", 1)
-        
-        # Create submission record in form_submissions table
-        submission_response = db_service.client.table("form_submissions").insert({
-            "form_id": token_record["form_id"],
-            "form_version": form_version,
-            "submission_data": submission_data,
-            "status": "completed",
-            "submitted_via": "form_link",
-            "token_id": token_record["id"],
-            "organization_id": token_record["organization_id"],
-            "company_id": company["id"],
-            "employee_id": employee["id"],
-            "ip_address": client_ip,
-            "user_agent": user_agent
-        }).execute()
-        
-        submission_id = submission_response.data[0]["id"] if submission_response.data else None
-        
-        # Update token analytics - track completion
-        token_analytics = token_record.get("analytics", {})
-        token_analytics["last_completed_at"] = datetime.utcnow().isoformat()
-        
-        db_service.client.table("form_tokens").update({
-            "analytics": token_analytics
-        }).eq("id", token_record["id"]).execute()
-        
-        # Increment token submission count
-        db_service.client.table("form_tokens").update({
-            "submission_count": token_record["submission_count"] + 1,
-            "last_accessed_at": datetime.utcnow().isoformat()
-        }).eq("id", token_record["id"]).execute()
-        
-        # Create audit log
-        await db_service.create_audit_log({
-            "user_id": None,  # Public submission, no user
-            "organization_id": token_record["organization_id"],
-            "action": "form_submission",
-            "resource": "employee",
-            "details": {
-                "employee_id": str(employee["id"]),
-                "submission_id": submission_id,  # New submission record ID
-                "form_id": token_record["form_id"],  # Template form ID
+        # Handle different form types
+        if form_template_type == "change_information_upload":
+            # Handle Change Information Form
+            change_data = {
+                "organization_id": token_record["organization_id"],
                 "company_id": company["id"],
-                "token": token,
-                "submission_method": "public_form"
-            },
-            "ip_address": client_ip,
-            "user_agent": user_agent
-        })
+                "source_form_id": token_record["form_id"],
+                
+                # Employee identification
+                "first_name": submission_data.get("firstName"),
+                "surname": submission_data.get("surname"),
+                "date_of_birth": submission_data.get("dateOfBirth"),
+                
+                # Change details
+                "date_of_effect": submission_data.get("dateOfEffect"),
+                "change_type": submission_data.get("changeType"),  # This will be the selected checkbox value
+                "other_reason": submission_data.get("otherReason"),
+                
+                # Tracking
+                "submission_token": token,
+                "submitted_via": "form_link",
+                "ip_address": client_ip,
+                "user_agent": user_agent,
+                "created_by_user_id": form_creator_id,
+                "processing_status": "Pending"
+            }
+            
+            # Create change_information record
+            change_response = db_service.client.table("change_information").insert(
+                change_data
+            ).execute()
+            
+            if not change_response.data:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Failed to create change request record"
+                )
+            
+            change_record = change_response.data[0]
+            
+            # Get recipient email (the user who created the form)
+            recipient_email = None
+            if form_creator_id:
+                try:
+                    user_response = db_service.client.rpc(
+                        'get_user_email_by_id',
+                        {'user_id': form_creator_id}
+                    ).execute()
+                    if user_response.data:
+                        recipient_email = user_response.data
+                except Exception as e:
+                    logger.warning(f"Failed to fetch creator email: {str(e)}")
+            
+            # TODO: Add email notification for change requests if needed
+            
+            # Get current form version
+            form_version = token_record["forms"].get("version", 1)
+            
+            # Create submission record in form_submissions table
+            submission_response = db_service.client.table("form_submissions").insert({
+                "form_id": token_record["form_id"],
+                "form_version": form_version,
+                "submission_data": submission_data,
+                "status": "completed",
+                "submitted_via": "form_link",
+                "token_id": token_record["id"],
+                "organization_id": token_record["organization_id"],
+                "company_id": company["id"],
+                "ip_address": client_ip,
+                "user_agent": user_agent
+            }).execute()
+            
+            submission_id = submission_response.data[0]["id"] if submission_response.data else None
+            
+            # Update token analytics - track completion
+            token_analytics = token_record.get("analytics", {})
+            token_analytics["last_completed_at"] = datetime.utcnow().isoformat()
+            
+            db_service.client.table("form_tokens").update({
+                "analytics": token_analytics
+            }).eq("id", token_record["id"]).execute()
+            
+            # Increment token submission count
+            db_service.client.table("form_tokens").update({
+                "submission_count": token_record["submission_count"] + 1,
+                "last_accessed_at": datetime.utcnow().isoformat()
+            }).eq("id", token_record["id"]).execute()
+            
+            # Create audit log
+            await db_service.create_audit_log({
+                "user_id": None,  # Public submission, no user
+                "organization_id": token_record["organization_id"],
+                "action": "form_submission",
+                "resource": "change_information",
+                "details": {
+                    "change_id": str(change_record["id"]),
+                    "submission_id": submission_id,
+                    "form_id": token_record["form_id"],
+                    "company_id": company["id"],
+                    "token": token,
+                    "submission_method": "public_form",
+                    "change_type": submission_data.get("changeType")
+                },
+                "ip_address": client_ip,
+                "user_agent": user_agent
+            })
+            
+            # Return directly without message wrapper
+            return {
+                "change_id": change_record["id"],
+                "submission_id": submission_id,
+                "company_name": company["name"]
+            }
         
-        # Return directly without message wrapper
-        return {
-            "employee_id": employee["id"],
-            "submission_id": submission_id,
-            "company_name": company["name"]
-        }
+        else:
+            # Handle New Employee Form (default/existing logic)
+            # Map form fields to employees table columns
+            employee_data = {
+                "organization_id": token_record["organization_id"],
+                "company_id": company["id"],
+                "source_form_id": token_record["form_id"],
+                
+                # Personal Information
+                "title": submission_data.get("title"),
+                "first_name": submission_data.get("forename"),
+                "surname": submission_data.get("surname"),
+                "ni_number": submission_data.get("nationalInsuranceNumber"),
+                "email_address": submission_data.get("emailAddress"),  # NEW: Email Address
+                "mobile_number": submission_data.get("contactNumber"),  # NEW: Contact Number
+                "date_of_birth": submission_data.get("dateOfBirth"),
+                "gender": submission_data.get("gender"),
+                "marital_status": submission_data.get("maritalStatus"),
+                
+                # Address
+                "address_line_1": submission_data.get("addressLine1"),
+                "address_line_2": submission_data.get("addressLine2"),
+                "address_line_3": submission_data.get("addressLine3"),
+                "address_line_4": submission_data.get("addressLine4"),
+                "postcode": submission_data.get("postcode"),
+                "uk_resident": submission_data.get("ukResident") == "Yes" if submission_data.get("ukResident") else None,
+                "nationality": submission_data.get("nationality"),
+                
+                # Employment
+                "job_title": submission_data.get("jobTitle"),  # NEW: Job Title
+                "pensionable_salary": submission_data.get("salary"),
+                "employment_start_date": submission_data.get("employmentStartDate"),
+                "selected_retirement_age": submission_data.get("selectedRetirementAge"),
+                "pension_investment_approach": submission_data.get("pensionInvestmentApproach"),
+                
+                # Section information (optional)
+                "split_template_group_name": submission_data.get("sectionNumber"),
+                
+                # Auto-filled from company
+                "client_category": company.get("category_name"),
+                
+                # Tracking
+                "submission_token": token,
+                "submitted_via": "form_link",
+                "ip_address": client_ip,
+                "user_agent": user_agent,
+                "service_status": "Active",
+                "io_upload_status": False,
+                "created_by_user_id": form_creator_id  # Inherit from form creator
+            }
+            
+            # Create employee record
+            employee_response = db_service.client.table("employees").insert(
+                employee_data
+            ).execute()
+            
+            if not employee_response.data:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Failed to create employee record"
+                )
+            
+            employee = employee_response.data[0]
+            
+            # Get recipient email (the user who created the form)
+            # Email is stored in Supabase auth.users, accessible via admin API
+            # Get recipient email (the user who created the form)
+            # Email is stored in Supabase auth.users, accessible via admin API
+            recipient_email = None
+            if form_creator_id:
+                try:
+                    # Use RPC to get user email from auth.users via a database function
+                    # Alternative: query directly if we had admin access
+                    user_response = db_service.client.rpc(
+                        'get_user_email_by_id',
+                        {'user_id': form_creator_id}
+                    ).execute()
+                    if user_response.data:
+                        recipient_email = user_response.data
+                except Exception as e:
+                    logger.warning(f"Failed to fetch creator email: {str(e)}")
+            
+            # Call Edge Function to send email notification (non-blocking)
+            if recipient_email:
+                await notify_edge_function(employee, company["name"], recipient_email)
+            else:
+                logger.warning(f"No recipient email found for form creator {form_creator_id}")
+            
+            # Get current form version
+            form_version = token_record["forms"].get("version", 1)
+            
+            # Create submission record in form_submissions table
+            submission_response = db_service.client.table("form_submissions").insert({
+                "form_id": token_record["form_id"],
+                "form_version": form_version,
+                "submission_data": submission_data,
+                "status": "completed",
+                "submitted_via": "form_link",
+                "token_id": token_record["id"],
+                "organization_id": token_record["organization_id"],
+                "company_id": company["id"],
+                "employee_id": employee["id"],
+                "ip_address": client_ip,
+                "user_agent": user_agent
+            }).execute()
+            
+            submission_id = submission_response.data[0]["id"] if submission_response.data else None
+            
+            # Update token analytics - track completion
+            token_analytics = token_record.get("analytics", {})
+            token_analytics["last_completed_at"] = datetime.utcnow().isoformat()
+            
+            db_service.client.table("form_tokens").update({
+                "analytics": token_analytics
+            }).eq("id", token_record["id"]).execute()
+            
+            # Increment token submission count
+            db_service.client.table("form_tokens").update({
+                "submission_count": token_record["submission_count"] + 1,
+                "last_accessed_at": datetime.utcnow().isoformat()
+            }).eq("id", token_record["id"]).execute()
+            
+            # Create audit log
+            await db_service.create_audit_log({
+                "user_id": None,  # Public submission, no user
+                "organization_id": token_record["organization_id"],
+                "action": "form_submission",
+                "resource": "employee",
+                "details": {
+                    "employee_id": str(employee["id"]),
+                    "submission_id": submission_id,  # New submission record ID
+                    "form_id": token_record["form_id"],  # Template form ID
+                    "company_id": company["id"],
+                    "token": token,
+                    "submission_method": "public_form"
+                },
+                "ip_address": client_ip,
+                "user_agent": user_agent
+            })
+            
+            # Return directly without message wrapper
+            return {
+                "employee_id": employee["id"],
+                "submission_id": submission_id,
+                "company_name": company["name"]
+            }
         
     except HTTPException:
         raise

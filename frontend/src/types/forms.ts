@@ -56,7 +56,7 @@ export interface FormDefinition {
   // Database fields
   organizationId?: string;
   createdByUserId?: string;
-  templateType?: 'custom' | 'sw_new_employee' | 'io_upload';
+  templateType?: 'custom' | 'sw_new_employee' | 'io_upload' | 'new_employee_upload' | 'change_information_upload';
   linkedCompanyId?: string;
 }
 

@@ -32,6 +32,18 @@ const NEW_EMPLOYEE_TEMPLATE = {
   ]
 };
 
+// Pre-defined Change Information Form Template
+const CHANGE_INFORMATION_TEMPLATE = {
+  fields: [
+    { name: 'firstName', label: 'First Name', type: 'text', required: true },
+    { name: 'surname', label: 'Surname', type: 'text', required: true },
+    { name: 'dateOfBirth', label: 'Date of Birth', type: 'date', required: true },
+    { name: 'dateOfEffect', label: 'Date of Effect for the Change', type: 'date', required: true },
+    { name: 'changeType', label: 'What is the Change?', type: 'checkbox', required: true, options: ['Leaver', 'Maternity Leave', 'Died', 'Change of Name', 'Change of Address', 'Change of Salary', 'Other'] },
+    { name: 'otherReason', label: 'Please explain (for Other)', type: 'text', required: false },
+  ]
+};
+
 interface Company {
   id: string;
   name: string;
@@ -91,13 +103,32 @@ export const FormManagementPage: React.FC = () => {
     try {
       setLoading(true);
       const newForm = await createForm({
-        name: 'New Employee Upload',
+        name: 'New Employee Form',
         description: 'Complete employee onboarding form with all required information including personal details, contact info, job title, address, and employment data',
         form_data: NEW_EMPLOYEE_TEMPLATE,
         template_type: 'new_employee_upload',
       });
       await loadForms();
-      alert('New Employee Upload form created successfully!');
+      alert('New Employee Form created successfully!');
+    } catch (err) {
+      console.error('Failed to create form:', err);
+      alert('Failed to create form');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const createChangeInformationForm = async () => {
+    try {
+      setLoading(true);
+      const newForm = await createForm({
+        name: 'Change Information Form',
+        description: 'Form for employees to submit change requests such as address changes, salary updates, leaves, and other personnel information changes',
+        form_data: CHANGE_INFORMATION_TEMPLATE,
+        template_type: 'change_information_upload',
+      });
+      await loadForms();
+      alert('Change Information Form created successfully!');
     } catch (err) {
       console.error('Failed to create form:', err);
       alert('Failed to create form');
@@ -208,14 +239,14 @@ export const FormManagementPage: React.FC = () => {
             className="px-5 py-2.5 bg-zomi-green text-white rounded-lg hover:bg-emerald-600 transition-colors flex items-center gap-2 font-medium shadow-md"
           >
             <Plus className="w-5 h-5" />
-            New Employee Upload
+            New Employee Form
           </button>
           <button
-            onClick={() => setShowBuilder(true)}
-            className="px-5 py-2.5 bg-zomi-green text-white rounded-lg hover:bg-emerald-600 transition-colors flex items-center gap-2 font-medium shadow-md"
+            onClick={createChangeInformationForm}
+            className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 font-medium shadow-md"
           >
             <Plus className="w-5 h-5" />
-            Custom Form
+            Change Information Form
           </button>
         </div>
       </div>
@@ -235,13 +266,22 @@ export const FormManagementPage: React.FC = () => {
           </div>
           <h3 className="text-gray-900 text-xl font-semibold mb-2">No forms yet</h3>
           <p className="text-gray-600 mb-6">Create your first form to get started</p>
-          <button
-            onClick={createNewEmployeeForm}
-            className="px-6 py-3 bg-zomi-green text-white rounded-lg hover:bg-emerald-600 transition-colors inline-flex items-center gap-2 font-medium shadow-md"
-          >
-            <Plus className="w-5 h-5" />
-            New Employee Upload
-          </button>
+          <div className="flex gap-3 justify-center">
+            <button
+              onClick={createNewEmployeeForm}
+              className="px-6 py-3 bg-zomi-green text-white rounded-lg hover:bg-emerald-600 transition-colors inline-flex items-center gap-2 font-medium shadow-md"
+            >
+              <Plus className="w-5 h-5" />
+              New Employee Form
+            </button>
+            <button
+              onClick={createChangeInformationForm}
+              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors inline-flex items-center gap-2 font-medium shadow-md"
+            >
+              <Plus className="w-5 h-5" />
+              Change Information Form
+            </button>
+          </div>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-6">
@@ -254,15 +294,19 @@ export const FormManagementPage: React.FC = () => {
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
                     <h3 className="text-gray-900 font-semibold text-xl">
-                      {form.formData?.submission_data ? (
-                        `New Employee Upload: ${form.formData.submission_data.forename} ${form.formData.submission_data.surname}`
-                      ) : (
-                        form.formData?.name || form.name || 'Untitled Form'
-                      )}
+                      {form.templateType === 'new_employee_upload' && 'New Employee Form'}
+                      {form.templateType === 'change_information_upload' && 'Change Information Form'}
+                      {form.templateType === 'sw_new_employee' && 'SW New Employee'}
+                      {!form.templateType && (form.formData?.name || form.name || 'Untitled Form')}
                     </h3>
                     {form.templateType === 'new_employee_upload' && (
                       <span className="px-3 py-1 bg-zomi-green/10 text-zomi-green rounded-full text-xs font-medium border border-zomi-green/20">
-                        New Employee Upload
+                        Employee Onboarding
+                      </span>
+                    )}
+                    {form.templateType === 'change_information_upload' && (
+                      <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium border border-blue-200">
+                        Change Request
                       </span>
                     )}
                     {form.templateType === 'sw_new_employee' && (
