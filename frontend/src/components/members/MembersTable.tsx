@@ -671,7 +671,7 @@ export const MembersTable = ({ databaseType, onBack }: MembersTableProps) => {
   return (
     <div className="relative min-h-screen bg-slate-50">
       {/* TOP SECTION - FIXED HEADER */}
-      <div className="fixed top-0 left-0 lg:left-64 right-0 bg-white border-b border-slate-200 pb-6 z-20">
+      <div className="fixed top-0 left-0 lg:left-64 right-0 bg-white border-b border-slate-200 pb-6 z-40 shadow-md">
         <div className="mb-4 px-6 pt-6">
           <div className="flex items-center gap-4 mb-2">
             <button
@@ -791,7 +791,7 @@ export const MembersTable = ({ databaseType, onBack }: MembersTableProps) => {
       {/* MIDDLE SECTION - SCROLLABLE TABLE */}
       {!loading && !error && (
         <>
-          <div className="pt-[280px] pb-[80px] px-6">
+          <div className="pt-[280px] pb-[80px] px-6 relative z-0">
             <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-x-auto">
                 <DndContext
                   sensors={sensors}
@@ -801,7 +801,7 @@ export const MembersTable = ({ databaseType, onBack }: MembersTableProps) => {
                   <table className="w-full">
                     <thead className="bg-slate-50 border-b border-slate-200">
                       <tr>
-                        <th className="text-left p-4 bg-slate-50 sticky left-0 z-10 border-r border-slate-200">
+                        <th className="text-left p-4 bg-slate-50 sticky left-0 z-5 border-r border-slate-200">
                           <input
                             type="checkbox"
                             checked={selectedRows.size === paginatedMembers.length && paginatedMembers.length > 0}
@@ -831,7 +831,7 @@ export const MembersTable = ({ databaseType, onBack }: MembersTableProps) => {
                           key={member.id}
                           className="border-b border-slate-100 hover:bg-slate-50 transition-colors"
                         >
-                          <td className="p-4 bg-white sticky left-0 z-5 border-r border-slate-200">
+                          <td className="p-4 bg-white sticky left-0 z-1 border-r border-slate-200">
                             <input
                               type="checkbox"
                               checked={selectedRows.has(member.id)}
@@ -853,7 +853,7 @@ export const MembersTable = ({ databaseType, onBack }: MembersTableProps) => {
           </div>
 
           {/* BOTTOM SECTION - FIXED FOOTER */}
-          <div className="fixed bottom-0 left-0 lg:left-64 right-0 bg-white border-t border-slate-200 z-20">
+          <div className="fixed bottom-0 left-0 lg:left-64 right-0 bg-white border-t border-slate-200 z-40 shadow-lg">
             <div className="bg-white mx-6 my-4">
               <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
                 <p className="text-sm text-slate-600">
