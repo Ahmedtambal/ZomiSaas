@@ -669,9 +669,9 @@ export const MembersTable = ({ databaseType, onBack }: MembersTableProps) => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-white overflow-hidden rounded-xl border border-slate-200 shadow-sm min-w-0">
+    <div className="flex flex-col h-full bg-white overflow-hidden rounded-xl border border-slate-200 shadow-sm">
       {/* TOP SECTION - FIXED HEADER */}
-      <div className="flex-shrink-0 bg-white border-b border-slate-200">
+      <div className="flex-shrink-0 bg-white border-b border-slate-200 w-full">
         <div className="px-6 py-6">
           <div className="flex items-center gap-4 mb-2">
             <button
@@ -791,15 +791,13 @@ export const MembersTable = ({ databaseType, onBack }: MembersTableProps) => {
       {/* MIDDLE SECTION - SCROLLABLE TABLE */}
       {!loading && !error && (
         <>
-          <div className="flex-1 overflow-hidden" style={{ minHeight: 0 }}>
-            <div className="h-full overflow-auto">
-              <div style={{ minWidth: '100%', width: 'max-content' }}>
-                <DndContext
-                  sensors={sensors}
-                  collisionDetection={closestCenter}
-                  onDragEnd={handleDragEnd}
-                >
-                  <table className="w-full relative" style={{ zIndex: 1 }}>
+          <div className="flex-1 w-full overflow-x-auto overflow-y-auto" style={{ minHeight: 0 }}>
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <table className="w-full">
                     <thead className="bg-slate-50 border-b border-slate-200">
                       <tr>
                         <th className="text-left p-4 bg-slate-50 sticky left-0 border-r border-slate-200">
@@ -849,13 +847,11 @@ export const MembersTable = ({ databaseType, onBack }: MembersTableProps) => {
                       ))}
                     </tbody>
                   </table>
-                </DndContext>
-              </div>
-            </div>
+            </DndContext>
           </div>
 
           {/* BOTTOM SECTION - FIXED FOOTER */}
-          <div className="flex-shrink-0 bg-white border-t border-slate-200">
+          <div className="flex-shrink-0 bg-white border-t border-slate-200 w-full">
             <div className="px-6 py-4">
               <div className="flex items-center justify-between">
                 <p className="text-sm text-slate-600">
