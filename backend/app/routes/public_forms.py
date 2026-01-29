@@ -377,8 +377,19 @@ async def submit_form(token: str, submission_data: Dict[str, Any], request: Requ
             }
             
             # **ENCRYPT PII BEFORE STORING IN DATABASE**
+            # NOTE: We encrypt ni_number and pensionable_salary only
+            # date_of_birth is kept as-is because the DB column is DATE type, not TEXT
             encryption = get_encryption_service()
+            
+            # Store date_of_birth temporarily (it's a DATE column, can't store encrypted base64)
+            date_of_birth_value = employee_data.get('date_of_birth')
+            
+            # Encrypt PII fields
             employee_data = encryption.encrypt_employee_pii(employee_data)
+            
+            # Restore date_of_birth as plaintext (DATE column requirement)
+            employee_data['date_of_birth'] = date_of_birth_value
+            
             logger.info(f"Encrypted employee PII for public form submission (form: {token_record['form_id']})")
             
             # Create employee record

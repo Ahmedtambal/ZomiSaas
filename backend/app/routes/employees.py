@@ -154,8 +154,18 @@ async def create_employee(employee_data: Dict[str, Any], current_user: dict = De
             employee_data["submitted_via"] = "manual"
         
         # **ENCRYPT PII FIELDS BEFORE DATABASE INSERT**
+        # NOTE: date_of_birth is kept as DATE type, not encrypted
         encryption = get_encryption_service()
+        
+        # Store date_of_birth temporarily (it's a DATE column, can't store encrypted base64)
+        date_of_birth_value = employee_data.get('date_of_birth')
+        
+        # Encrypt PII fields
         employee_data = encryption.encrypt_employee_pii(employee_data)
+        
+        # Restore date_of_birth as plaintext (DATE column requirement)
+        employee_data['date_of_birth'] = date_of_birth_value
+        
         logger.info(f"Encrypted PII for new employee (org: {organization_id})")
         
         response = db_service.client.table("employees").insert(employee_data).execute()
@@ -231,8 +241,19 @@ async def update_employee(
         employee_data.pop("organization_id", None)
         
         # **ENCRYPT PII FIELDS IF PRESENT IN UPDATE**
+        # NOTE: date_of_birth is kept as DATE type, not encrypted
         encryption = get_encryption_service()
+        
+        # Store date_of_birth temporarily (it's a DATE column, can't store encrypted base64)
+        date_of_birth_value = employee_data.get('date_of_birth')
+        
+        # Encrypt PII fields
         employee_data = encryption.encrypt_employee_pii(employee_data)
+        
+        # Restore date_of_birth as plaintext (DATE column requirement)
+        if date_of_birth_value is not None:
+            employee_data['date_of_birth'] = date_of_birth_value
+        
         logger.info(f"Encrypted PII for employee update (id: {employee_id})")
         
         employee_data.pop("created_at", None)
