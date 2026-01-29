@@ -25,6 +25,9 @@ pandas
 numpy
 openpyxl
 
+# Date Utilities
+python-dateutil
+
 # Logging
 loguru
 

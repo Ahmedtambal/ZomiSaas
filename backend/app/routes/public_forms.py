@@ -4,6 +4,7 @@ Public Form Routes - No authentication required, token-based access
 from fastapi import APIRouter, HTTPException, status, Request
 from typing import Dict, Any
 from datetime import datetime
+from dateutil.relativedelta import relativedelta
 import logging
 import httpx
 import os
@@ -363,8 +364,20 @@ async def submit_form(token: str, submission_data: Dict[str, Any], request: Requ
                 "selected_retirement_age": submission_data.get("selectedRetirementAge"),
                 "pension_investment_approach": submission_data.get("pensionInvestmentApproach"),
                 
-                # Auto-filled from company
+                # Auto-filled from company data
                 "client_category": company.get("category_name"),
+                "is_pension_active": company.get("is_pension_active"),
+                "is_smart_pension": company.get("is_smart_pension"),
+                "send_pension_pack": company.get("send_pension_pack"),
+                "pension_provider_info": company.get("pension_provider_info"),
+                "scheme_ref": company.get("scheme_ref"),
+                "advice_type": company.get("advice_type"),
+                "selling_adviser_id": company.get("selling_adviser_id"),
+                "has_group_life": company.get("has_group_life"),
+                "has_gci": company.get("has_gci"),
+                "has_gip": company.get("has_gip"),
+                "has_bupa": company.get("has_bupa"),
+                "operational_notes": company.get("operational_notes"),
                 
                 # Tracking
                 "submission_token": token,
@@ -375,6 +388,19 @@ async def submit_form(token: str, submission_data: Dict[str, Any], request: Requ
                 "io_upload_status": False,
                 "created_by_user_id": form_creator_id  # Inherit from form creator
             }
+            
+            # Calculate pension_start_date based on employment_start_date + postponement_period
+            if submission_data.get("employmentStartDate") and company.get("postponement_period"):
+                try:
+                    employment_date = datetime.strptime(submission_data.get("employmentStartDate"), "%Y-%m-%d")
+                    postponement_months = int(company.get("postponement_period", 0))
+                    # Add postponement months (handles varying month lengths: 28/29/30/31 days)
+                    pension_start = employment_date + relativedelta(months=postponement_months)
+                    employee_data["pension_start_date"] = pension_start.strftime("%Y-%m-%d")
+                    logger.info(f"Calculated pension_start_date: {employee_data['pension_start_date']} (employment: {submission_data.get('employmentStartDate')}, postponement: {postponement_months} months)")
+                except Exception as e:
+                    logger.warning(f"Failed to calculate pension_start_date: {e}")
+                    pass
             
             # **ENCRYPT PII BEFORE STORING IN DATABASE**
             encryption = get_encryption_service()
