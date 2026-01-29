@@ -376,6 +376,11 @@ async def submit_form(token: str, submission_data: Dict[str, Any], request: Requ
                 "created_by_user_id": form_creator_id  # Inherit from form creator
             }
             
+            # **ENCRYPT PII BEFORE STORING IN DATABASE**
+            encryption = get_encryption_service()
+            employee_data = encryption.encrypt_employee_pii(employee_data)
+            logger.info(f"Encrypted employee PII for public form submission (form: {form_id})")
+            
             # Create employee record
             employee_response = db_service.client.table("employees").insert(
                 employee_data
