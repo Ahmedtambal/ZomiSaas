@@ -464,22 +464,26 @@ async def export_employees_io_template(
             }
             io_template_rows.append(row)
         
-        # Generate CSV
+        # Generate CSV - Always include headers
         output = io.StringIO()
+        fieldnames = [
+            'Surname*', 'FirstName*', 'SchemeRef*', 'CategoryName', 'Title',
+            'AddressLine1', 'AddressLine2', 'AddressLine3', 'AddressLine4',
+            'CityTown', 'County', 'Country', 'PostCode', 'AdviceType*',
+            'DateJoinedScheme', 'DateofBirth*', 'EmailAddress', 'Gender',
+            'HomeNumber', 'MobileNumber', 'NINumber', 'PensionableSalary',
+            'PensionableSalaryStartDate', 'SalaryPostSacrifice', 'PolicyNumber',
+            'SellingAdviserId*', 'SplitTemplateGroupName', 'SplitTemplateGroupSource',
+            'ServiceStatus', 'ClientCategory'
+        ]
+        writer = csv.DictWriter(output, fieldnames=fieldnames)
+        writer.writeheader()
+        
+        # Write data rows if any
         if io_template_rows:
-            fieldnames = [
-                'Surname*', 'FirstName*', 'SchemeRef*', 'CategoryName', 'Title',
-                'AddressLine1', 'AddressLine2', 'AddressLine3', 'AddressLine4',
-                'CityTown', 'County', 'Country', 'PostCode', 'AdviceType*',
-                'DateJoinedScheme', 'DateofBirth*', 'EmailAddress', 'Gender',
-                'HomeNumber', 'MobileNumber', 'NINumber', 'PensionableSalary',
-                'PensionableSalaryStartDate', 'SalaryPostSacrifice', 'PolicyNumber',
-                'SellingAdviserId*', 'SplitTemplateGroupName', 'SplitTemplateGroupSource',
-                'ServiceStatus', 'ClientCategory'
-            ]
-            writer = csv.DictWriter(output, fieldnames=fieldnames)
-            writer.writeheader()
             writer.writerows(io_template_rows)
+        
+        logger.info(f"Exporting {len(io_template_rows)} employees to CSV")
         
         # Create response
         output.seek(0)
