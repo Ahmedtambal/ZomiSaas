@@ -27,3 +27,8 @@ openpyxl
 
 # Logging
 loguru
+
+# Security
+slowapi  # Rate limiting
+bleach  # HTML sanitization / XSS protection
+cryptography  # Field-level encryption (Fernet)

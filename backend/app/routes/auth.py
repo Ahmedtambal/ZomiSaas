@@ -4,15 +4,28 @@ Authentication Routes
 from fastapi import APIRouter, HTTPException, status, Depends, Header, Request
 from fastapi.responses import JSONResponse
 from typing import Dict, Any, Optional
-import jwt
-from jwt.exceptions import InvalidTokenError
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+import logging
 
 from app.models.user import UserCreate, UserLogin, TokenRefresh
 from app.viewmodels.auth_viewmodel import auth_viewmodel
 from app.config import settings
-from app.middleware import check_session_activity, update_session_activity, clear_session_activity
+from app.middleware import (
+    check_session_activity, 
+    update_session_activity, 
+    clear_session_activity,
+    check_account_locked,
+    record_failed_login,
+    record_successful_login,
+    sanitize_email
+)
 
 router = APIRouter()
+limiter = Limiter(key_func=get_remote_address)
+
+# Security logger
+security_logger = logging.getLogger('security')
 
 
 # =====================================================
@@ -113,7 +126,8 @@ async def get_current_user(authorization: Optional[str] = Header(None), request:
 
 
 @router.post("/signup/admin", status_code=status.HTTP_201_CREATED)
-async def signup_admin(user_data: UserCreate) -> Dict[str, Any]:
+@limiter.limit("3/hour")  # Limit admin signups to prevent abuse
+async def signup_admin(request: Request, user_data: UserCreate) -> Dict[str, Any]:
     """
     Admin signup endpoint - creates new organization and admin user
     
@@ -124,7 +138,12 @@ async def signup_admin(user_data: UserCreate) -> Dict[str, Any]:
     - job_title
     - organization_name
     - role: "admin"
+    
+    Rate limit: 3 attempts per hour
     """
+    # Sanitize email
+    user_data.email = sanitize_email(user_data.email)
+    
     # Validate role
     if user_data.role != "admin":
         raise HTTPException(
@@ -139,10 +158,24 @@ async def signup_admin(user_data: UserCreate) -> Dict[str, Any]:
             detail="organization_name is required for admin signup"
         )
     
+    # Log signup attempt
+    security_logger.info({
+        'event': 'admin_signup_attempt',
+        'email': user_data.email,
+        'organization': user_data.organization_name,
+        'ip': request.client.host if request.client else 'unknown'
+    })
+    
     # Process signup
     success, token_response, error = await auth_viewmodel.signup_admin(user_data)
     
     if not success:
+        security_logger.warning({
+            'event': 'admin_signup_failed',
+            'email': user_data.email,
+            'error': error,
+            'ip': request.client.host if request.client else 'unknown'
+        })
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=error or "Signup failed"
@@ -150,11 +183,21 @@ async def signup_admin(user_data: UserCreate) -> Dict[str, Any]:
     
     # Check if email confirmation is required
     if error == "EMAIL_CONFIRMATION_REQUIRED":
+        security_logger.info({
+            'event': 'admin_signup_email_confirmation_required',
+            'email': user_data.email
+        })
         return {
             "message": "Account created successfully. Please check your email to verify your account.",
             "email_confirmation_required": True,
             "email": user_data.email
         }
+    
+    security_logger.info({
+        'event': 'admin_signup_success',
+        'email': user_data.email,
+        'user_id': token_response.user.id
+    })
     
     return {
         "message": "Admin account created successfully",
@@ -163,7 +206,8 @@ async def signup_admin(user_data: UserCreate) -> Dict[str, Any]:
 
 
 @router.post("/signup/user", status_code=status.HTTP_201_CREATED)
-async def signup_user(user_data: UserCreate) -> Dict[str, Any]:
+@limiter.limit("5/hour")  # Limit user signups to prevent abuse
+async def signup_user(request: Request, user_data: UserCreate) -> Dict[str, Any]:
     """
     User signup endpoint - validates invite code and creates user
     
@@ -174,7 +218,12 @@ async def signup_user(user_data: UserCreate) -> Dict[str, Any]:
     - job_title
     - invite_code (8-character code, valid for 2 hours)
     - role: "user"
+    
+    Rate limit: 5 attempts per hour
     """
+    # Sanitize email
+    user_data.email = sanitize_email(user_data.email)
+    
     # Validate role
     if user_data.role != "user":
         raise HTTPException(
@@ -189,14 +238,33 @@ async def signup_user(user_data: UserCreate) -> Dict[str, Any]:
             detail="invite_code is required for user signup"
         )
     
+    # Log signup attempt
+    security_logger.info({
+        'event': 'user_signup_attempt',
+        'email': user_data.email,
+        'ip': request.client.host if request.client else 'unknown'
+    })
+    
     # Process signup
     success, token_response, error = await auth_viewmodel.signup_user(user_data)
     
     if not success:
+        security_logger.warning({
+            'event': 'user_signup_failed',
+            'email': user_data.email,
+            'error': error,
+            'ip': request.client.host if request.client else 'unknown'
+        })
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=error or "Signup failed"
         )
+    
+    security_logger.info({
+        'event': 'user_signup_success',
+        'email': user_data.email,
+        'user_id': token_response.user.id
+    })
     
     # Check if email confirmation is required
     if error == "EMAIL_CONFIRMATION_REQUIRED":
@@ -213,7 +281,8 @@ async def signup_user(user_data: UserCreate) -> Dict[str, Any]:
 
 
 @router.post("/login")
-async def login(credentials: UserLogin) -> Dict[str, Any]:
+@limiter.limit("5/minute")  # Maximum 5 login attempts per minute
+async def login(request: Request, credentials: UserLogin) -> Dict[str, Any]:
     """
     Login endpoint - validates credentials and returns JWT tokens
     
@@ -225,20 +294,69 @@ async def login(credentials: UserLogin) -> Dict[str, Any]:
     - access_token (valid for 30 minutes)
     - refresh_token (valid for 7 days)
     - user details
+    
+    Rate limit: 5 attempts per minute
+    Security: Account locked after 5 failed attempts for 15 minutes
     """
+    # Sanitize email
+    email = sanitize_email(credentials.email)
+    
+    # Check if account is locked
+    is_locked, lock_message = check_account_locked(email)
+    if is_locked:
+        security_logger.warning({
+            'event': 'login_blocked_locked_account',
+            'email': email,
+            'ip': request.client.host if request.client else 'unknown'
+        })
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=lock_message
+        )
+    
+    # Log login attempt
+@limiter.limit("10/minute")  # Maximum 10 refresh attempts per minute
+async def refresh_token(request: Request, ({
+        'event': 'login_attempt',
+        'email': email,
+        'ip': request.client.host if request.client else 'unknown',
+        'user_agent': request.headers.get('user-agent', 'unknown')
+    })
+    
+    # Attempt login
     success, token_response, error = await auth_viewmodel.login(
-        credentials.email,
+        email,
         credentials.password
     )
     
     if not success:
+        # Record failed attempt
+        record_failed_login(email)
+        
+        security_logger.warning({
+            'event': 'login_failed',
+            'email': email,
+            'reason': error or 'invalid_credentials',
+            'ip': request.client.host if request.client else 'unknown'
+        })
+        
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=error or "Invalid credentials"
         )
     
+    # Clear failed attempts on successful login
+    record_successful_login(email)
+    
     # Initialize activity tracking for this user
     update_session_activity(token_response.user.id)
+    
+    security_logger.info({
+        'event': 'login_success',
+        'email': email,
+        'user_id': token_response.user.id,
+        'ip': request.client.host if request.client else 'unknown'
+    })
     
     return {
         "message": "Login successful",
@@ -287,38 +405,31 @@ async def logout(token_data: TokenRefresh) -> Dict[str, Any]:
     from app.services.database_service import db_service
     
     # Get user ID from refresh token to clear activity tracking
+    user_id = None
     try:
-        # Decode refresh token to get user_id
-        import jwt
-        decoded = jwt.decode(token_data.refresh_token, settings.SUPABASE_JWT_SECRET, 
-                           algorithms=["HS256"], options={"verify_signature": False})
-        user_id = decoded.get("sub")
-        
-        if user_id:
-            # Clear activity tracking
-            clear_session_activity(user_id)
-    except Exception as e:
-        # Continue with logout even if activity clearing fails
-        pass
-    
-    auth_service = AuthService()
-    
-    # Get access token from refresh token for proper signout
-    try:
+        # Use Supabase to get user info from refresh token
         response = db_service.client.auth.refresh_session(token_data.refresh_token)
         if response and response.session:
+            user_id = response.session.user.id
             access_token = response.session.access_token
-            success = await auth_service.signout(access_token)
-        else:
-            success = False
-    except:
-        success = False
-    
-    if not success:
-        # Even if Supabase signout fails, we cleared activity tracking
-        return {
-            "message": "Logout completed (session may have already expired)"
-        }
+            
+            # Clear activity tracking
+            if user_id:
+                clear_session_activity(user_id)
+                security_logger.info({
+                    'event': 'logout',
+                    'user_id': user_id
+                })
+            
+            # Sign out using Supabase
+            auth_service = AuthService()
+            await auth_service.signout(access_token)
+    except Exception as e:
+        # Continue with logout even if session already expired
+        security_logger.warning({
+            'event': 'logout_failed',
+            'error': str(e)
+        })
     
     return {
         "message": "Logout successful"

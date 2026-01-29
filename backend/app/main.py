@@ -1,15 +1,19 @@
 """
 Main FastAPI application entry point
 """
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
+from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 import logging
 
 from app.config import settings
 from app.routes import auth, forms, public_forms, companies, employees, form_submissions, form_templates, form_analytics
-from app.middleware import ActivityTrackingMiddleware
+from app.middleware import ActivityTrackingMiddleware, SecurityHeadersMiddleware
 
 # Configure logging
 logging.basicConfig(
@@ -17,6 +21,13 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+# Security logger for auth events
+security_logger = logging.getLogger('security')
+security_logger.setLevel(logging.INFO)
+
+# Initialize rate limiter
+limiter = Limiter(key_func=get_remote_address)
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -28,9 +39,17 @@ app = FastAPI(
     redirect_slashes=False,  # Disable automatic slash redirects to prevent CORS issues
 )
 
+# Attach rate limiter to app state
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 # =====================================================
 # Security Middleware
 # =====================================================
+
+# HTTPS Redirect (Production only)
+if settings.ENVIRONMENT == "production":
+    app.add_middleware(HTTPSRedirectMiddleware)
 
 # CORS - Strict configuration
 app.add_middleware(
@@ -46,7 +65,7 @@ app.add_middleware(
         "X-Requested-With",
     ],  # Specific headers only - NO wildcard
     expose_headers=["Content-Length", "X-Total-Count"],
-    max_age=3600,  # Cache preflight requests for 1 hour
+    max_age=600,  # Cache preflight requests for 10 minutes (reduced from 1 hour)
 )
 
 # Trusted Host - Prevent host header attacks
@@ -55,6 +74,9 @@ if settings.ENVIRONMENT == "production":
         TrustedHostMiddleware,
         allowed_hosts=["zomisaasbackend.onrender.com", "*.onrender.com"]
     )
+
+# Security headers (CSP, HSTS, X-Frame-Options, etc.)
+app.add_middleware(SecurityHeadersMiddleware)
 
 # GZip compression
 app.add_middleware(GZipMiddleware, minimum_size=1000)

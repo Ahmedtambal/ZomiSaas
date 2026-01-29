@@ -9,6 +9,7 @@ import httpx
 import os
 
 from app.services.database_service import db_service
+from app.services.encryption_service import get_encryption_service
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -266,11 +267,16 @@ async def submit_form(token: str, submission_data: Dict[str, Any], request: Requ
             # Get current form version
             form_version = token_record["forms"].get("version", 1)
             
+            # **ENCRYPT SUBMISSION_DATA (contains all PII)**
+            encryption = get_encryption_service()
+            encrypted_submission_data = encryption.encrypt_json(submission_data)
+            logger.info(f"Encrypted submission_data for form {token_record['form_id']}")
+            
             # Create submission record in form_submissions table
             submission_response = db_service.client.table("form_submissions").insert({
                 "form_id": token_record["form_id"],
                 "form_version": form_version,
-                "submission_data": submission_data,
+                "submission_data": encrypted_submission_data,  # ENCRYPTED JSONB
                 "status": "completed",
                 "submitted_via": "form_link",
                 "token_id": token_record["id"],
@@ -413,11 +419,16 @@ async def submit_form(token: str, submission_data: Dict[str, Any], request: Requ
             # Get current form version
             form_version = token_record["forms"].get("version", 1)
             
-            # Create submission record in form_submissions table
+            # **ENCRYPT SUBMISSION_DATA (contains all PII)**
+            encryption = get_encryption_service()
+            encrypted_submission_data = encryption.encrypt_json(submission_data)
+            logger.info(f"Encrypted new employee submission_data for form {token_record['form_id']}")
+            
+            # Create submission record
             submission_response = db_service.client.table("form_submissions").insert({
                 "form_id": token_record["form_id"],
                 "form_version": form_version,
-                "submission_data": submission_data,
+                "submission_data": encrypted_submission_data,  # ENCRYPTED JSONB
                 "status": "completed",
                 "submitted_via": "form_link",
                 "token_id": token_record["id"],

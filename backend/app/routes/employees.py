@@ -9,6 +9,7 @@ import httpx
 import os
 
 from app.services.database_service import db_service
+from app.services.encryption_service import get_encryption_service
 from app.routes.auth import get_current_user
 
 router = APIRouter()
@@ -65,6 +66,7 @@ async def notify_edge_function(employee: Dict[str, Any], company_name: str, reci
 async def get_employees(current_user: dict = Depends(get_current_user)) -> List[Dict[str, Any]]:
     """
     Get all employees for the user's organization
+    Decrypts sensitive PII fields before returning
     """
     try:
         organization_id = current_user["organization_id"]
@@ -73,7 +75,14 @@ async def get_employees(current_user: dict = Depends(get_current_user)) -> List[
             "organization_id", organization_id
         ).order("created_at", desc=True).execute()
         
-        return response.data
+        # Decrypt PII fields for all employees
+        encryption = get_encryption_service()
+        decrypted_employees = [
+            encryption.decrypt_employee_pii(employee) 
+            for employee in response.data
+        ]
+        
+        return decrypted_employees
         
     except Exception as e:
         logger.error(f"Failed to fetch employees: {str(e)}")
@@ -87,6 +96,7 @@ async def get_employees(current_user: dict = Depends(get_current_user)) -> List[
 async def get_employee(employee_id: str, current_user: dict = Depends(get_current_user)) -> Dict[str, Any]:
     """
     Get a single employee by ID
+    Decrypts sensitive PII fields before returning
     """
     try:
         organization_id = current_user["organization_id"]
@@ -101,7 +111,11 @@ async def get_employee(employee_id: str, current_user: dict = Depends(get_curren
                 detail="Employee not found"
             )
         
-        return response.data[0]
+        # Decrypt PII fields before returning
+        encryption = get_encryption_service()
+        employee = encryption.decrypt_employee_pii(response.data[0])
+        
+        return employee
         
     except HTTPException:
         raise
@@ -117,6 +131,7 @@ async def get_employee(employee_id: str, current_user: dict = Depends(get_curren
 async def create_employee(employee_data: Dict[str, Any], current_user: dict = Depends(get_current_user)) -> Dict[str, Any]:
     """
     Create a new employee
+    Encrypts sensitive PII fields before storing
     
     The created_by_user_id is automatically set from the authenticated user's JWT token.
     This allows the database trigger to populate audit fields and track who created the record.
@@ -138,6 +153,11 @@ async def create_employee(employee_data: Dict[str, Any], current_user: dict = De
         if "submitted_via" not in employee_data:
             employee_data["submitted_via"] = "manual"
         
+        # **ENCRYPT PII FIELDS BEFORE DATABASE INSERT**
+        encryption = get_encryption_service()
+        employee_data = encryption.encrypt_employee_pii(employee_data)
+        logger.info(f"Encrypted PII for new employee (org: {organization_id})")
+        
         response = db_service.client.table("employees").insert(employee_data).execute()
         
         if not response.data:
@@ -147,6 +167,9 @@ async def create_employee(employee_data: Dict[str, Any], current_user: dict = De
             )
         
         employee = response.data[0]
+        
+        # Decrypt PII for response (user needs to see what they created)
+        employee = encryption.decrypt_employee_pii(employee)
         
         # Fetch company name for email notification
         company_name = "Unknown Company"
@@ -187,6 +210,7 @@ async def update_employee(
 ) -> Dict[str, Any]:
     """
     Update an employee
+    Encrypts sensitive PII fields if they're being updated
     """
     try:
         organization_id = current_user["organization_id"]
@@ -205,6 +229,12 @@ async def update_employee(
         # Remove fields that shouldn't be updated
         employee_data.pop("id", None)
         employee_data.pop("organization_id", None)
+        
+        # **ENCRYPT PII FIELDS IF PRESENT IN UPDATE**
+        encryption = get_encryption_service()
+        employee_data = encryption.encrypt_employee_pii(employee_data)
+        logger.info(f"Encrypted PII for employee update (id: {employee_id})")
+        
         employee_data.pop("created_at", None)
         employee_data.pop("created_by_user_id", None)
         
@@ -214,6 +244,15 @@ async def update_employee(
         ).eq("id", employee_id).execute()
         
         if not response.data:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Failed to update employee"
+            )
+        
+        # Decrypt PII for response
+        updated_employee = encryption.decrypt_employee_pii(response.data[0])
+        
+        return updated_employee
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Failed to update employee"

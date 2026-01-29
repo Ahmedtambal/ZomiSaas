@@ -33,6 +33,9 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     
+    # Encryption (Field-level PII encryption)
+    ENCRYPTION_KEY: str  # Fernet key for AES-256 encryption
+    
     # Password Requirements
     MIN_PASSWORD_LENGTH: int = 8
     REQUIRE_UPPERCASE: bool = True

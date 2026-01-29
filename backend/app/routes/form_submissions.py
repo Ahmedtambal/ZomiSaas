@@ -10,6 +10,7 @@ import csv
 import io
 
 from app.services.database_service import db_service
+from app.services.encryption_service import get_encryption_service
 from app.routes.auth import get_current_user
 
 router = APIRouter()
@@ -117,8 +118,21 @@ async def list_submissions(
         
         response = query.execute()
         
+        # Decrypt submission_data for each submission
+        encryption = get_encryption_service()
+        decrypted_submissions = []
+        for submission in response.data:
+            if submission.get("submission_data"):
+                try:
+                    submission["submission_data"] = encryption.decrypt_json(submission["submission_data"])
+                    logger.debug(f"Decrypted submission_data for submission {submission['id']}")
+                except Exception as e:
+                    logger.warning(f"Failed to decrypt submission_data for {submission['id']}: {str(e)}")
+                    submission["submission_data"] = {"error": "Failed to decrypt"}
+            decrypted_submissions.append(submission)
+        
         return {
-            "data": response.data,
+            "data": decrypted_submissions,
             "count": response.count,
             "limit": limit,
             "offset": offset
@@ -140,7 +154,18 @@ async def get_submission(
     """
     Get a specific submission by ID
     """
-    try:
+    try:# Decrypt submission_data
+        submission = response.data[0]
+        if submission.get("submission_data"):
+            encryption = get_encryption_service()
+            try:
+                submission["submission_data"] = encryption.decrypt_json(submission["submission_data"])
+                logger.debug(f"Decrypted submission_data for submission {submission_id}")
+            except Exception as e:
+                logger.warning(f"Failed to decrypt submission_data for {submission_id}: {str(e)}")
+                submission["submission_data"] = {"error": "Failed to decrypt"}
+        
+        return submission
         org_id = current_user.get("organization_id")
         
         response = db_service.client.table("form_submissions").select("*").eq(

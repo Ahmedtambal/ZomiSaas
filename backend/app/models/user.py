@@ -7,6 +7,7 @@ from typing import Optional
 from datetime import datetime
 from uuid import UUID
 import re
+import bleach
 
 
 class UserBase(BaseModel):
@@ -14,6 +15,14 @@ class UserBase(BaseModel):
     full_name: str = Field(..., min_length=2, max_length=200)
     email: EmailStr
     job_title: Optional[str] = Field(None, max_length=200)
+    
+    @validator('full_name', 'job_title')
+    def sanitize_text_fields(cls, v):
+        """Sanitize text fields to prevent XSS"""
+        if v:
+            # Strip HTML tags and normalize whitespace
+            return bleach.clean(v, tags=[], strip=True).strip()
+        return v
 
 
 class UserCreate(UserBase):
