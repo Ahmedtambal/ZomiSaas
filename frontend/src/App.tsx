@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { BrowserRouter, Routes, Route, useParams, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { NotificationProvider } from './context/NotificationContext';
+import { NotificationContainer } from './components/common/NotificationContainer';
 import { LoginPage } from './components/auth/LoginPage';
 import { RegisterPage } from './components/auth/RegisterPage';
 import { EmailConfirmationPage } from './components/auth/EmailConfirmationPage';
@@ -175,7 +177,10 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <AppContent />
+        <NotificationProvider>
+          <NotificationContainer />
+          <AppContent />
+        </NotificationProvider>
       </AuthProvider>
     </BrowserRouter>
   );

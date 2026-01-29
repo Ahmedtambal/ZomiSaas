@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { UserPlus, Trash2, Key } from 'lucide-react';
 import { User } from '../../types';
+import { useNotification } from '../../context/NotificationContext';
 
 export const TeamTab = () => {
+  const { notify } = useNotification();
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [generatedCode, setGeneratedCode] = useState('');
 
@@ -31,7 +33,11 @@ export const TeamTab = () => {
 
   const copyCode = () => {
     navigator.clipboard.writeText(generatedCode);
-    alert('Invite code copied to clipboard!');
+    notify({
+      type: 'success',
+      title: 'Code copied',
+      description: 'Invite code copied to clipboard',
+    });
   };
 
   return (

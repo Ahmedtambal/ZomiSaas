@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { Lock } from 'lucide-react';
+import { useNotification } from '../../context/NotificationContext';
 
 export const SecurityTab = () => {
+  const { notify } = useNotification();
   const [formData, setFormData] = useState({
     currentPassword: '',
     newPassword: '',
@@ -11,10 +13,18 @@ export const SecurityTab = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (formData.newPassword !== formData.confirmPassword) {
-      alert('New passwords do not match');
+      notify({
+        type: 'error',
+        title: 'Password mismatch',
+        description: 'New passwords do not match',
+      });
       return;
     }
-    alert('Password updated successfully!');
+    notify({
+      type: 'success',
+      title: 'Password updated',
+      description: 'Your password has been updated successfully',
+    });
     setFormData({ currentPassword: '', newPassword: '', confirmPassword: '' });
   };
 

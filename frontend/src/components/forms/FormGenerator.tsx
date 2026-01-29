@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import { Plus, CreditCard as Edit, Eye, Trash2, Copy, CheckCircle, Calendar, Users, ExternalLink } from 'lucide-react';
 import { FormDefinition, GeneratedLink } from '../../types/forms';
 import { FormBuilder } from './FormBuilder';
+import { useNotification } from '../../context/NotificationContext';
 
 export const FormGenerator = () => {
+  const { notify } = useNotification();
   const [forms, setForms] = useState<FormDefinition[]>([]);
   const [activeFormId, setActiveFormId] = useState<string | null>(null);
   const [generatedLinks, setGeneratedLinks] = useState<GeneratedLink[]>([]);
@@ -47,11 +49,31 @@ export const FormGenerator = () => {
   };
 
   const deleteForm = (formId: string) => {
-    if (confirm('Are you sure you want to delete this form? This action cannot be undone.')) {
-      setForms(prev => prev.filter(f => f.id !== formId));
-      // Also remove any generated links for this form
-      setGeneratedLinks(prev => prev.filter(link => link.formId !== formId));
-    }
+    notify({
+      type: 'warning',
+      title: 'Delete form?',
+      description: 'This action cannot be undone',
+      duration: 10000,
+      actions: [
+        {
+          label: 'Confirm Delete',
+          onClick: () => {
+            setForms(prev => prev.filter(f => f.id !== formId));
+            // Also remove any generated links for this form
+            setGeneratedLinks(prev => prev.filter(link => link.formId !== formId));
+            notify({
+              type: 'success',
+              title: 'Form deleted',
+              description: 'Form deleted successfully',
+            });
+          },
+        },
+        {
+          label: 'Cancel',
+          onClick: () => {},
+        },
+      ],
+    });
   };
 
   const generateLink = (formId: string) => {
@@ -76,6 +98,11 @@ export const FormGenerator = () => {
     navigator.clipboard.writeText(link.url);
     setCopiedLinkId(link.id);
     setTimeout(() => setCopiedLinkId(null), 2000);
+    notify({
+      type: 'success',
+      title: 'Link copied',
+      description: 'Form link copied to clipboard',
+    });
   };
 
   const toggleFormStatus = (formId: string) => {

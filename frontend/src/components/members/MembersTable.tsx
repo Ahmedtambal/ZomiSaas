@@ -2,6 +2,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { Search, Download, Trash2, Eye, EyeOff, Filter, ArrowUpDown, ArrowUp, ArrowDown, Copy, CheckCircle, GripVertical, ArrowLeft } from 'lucide-react';
 import { ColumnDefinition, DatabaseMember, DatabaseType } from '../../types';
 import { employeeService, Employee } from '../../services/employeeService';
+import { useNotification } from '../../context/NotificationContext';
 import {
   DndContext,
   closestCenter,
@@ -193,6 +194,7 @@ export const MembersTable = ({ databaseType, onBack }: MembersTableProps) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [columnOrder, setColumnOrder] = useState<ColumnDefinition[]>([]);
+  const { notify, update } = useNotification();
 
   const databaseNames = {
     ioUpload: 'Employee Database',
@@ -360,7 +362,11 @@ export const MembersTable = ({ databaseType, onBack }: MembersTableProps) => {
       return true;
     } catch (err: any) {
       console.error('Failed to update employee:', err);
-      alert(err.response?.data?.detail || 'Failed to update employee');
+      notify({
+        type: 'error',
+        title: 'Update failed',
+        description: err.response?.data?.detail || 'Failed to update employee',
+      });
       return false;
     }
   }, [columnOrder]);
@@ -394,27 +400,62 @@ export const MembersTable = ({ databaseType, onBack }: MembersTableProps) => {
 
   const handleDeleteSelected = async () => {
     if (selectedRows.size === 0) {
-      alert('Please select rows to delete');
+      notify({
+        type: 'warning',
+        title: 'No selection',
+        description: 'Please select rows to delete',
+      });
       return;
     }
 
-    if (!confirm(`Are you sure you want to delete ${selectedRows.size} employee(s)?`)) {
-      return;
-    }
+    notify({
+      type: 'warning',
+      title: `Delete ${selectedRows.size} employee(s)?`,
+      description: 'This action cannot be undone',
+      duration: 10000,
+      actions: [
+        {
+          label: 'Confirm Delete',
+          onClick: async () => {
+            const loadingId = notify({
+              type: 'loading',
+              title: 'Deleting employees...',
+              dismissible: false,
+            });
 
-    try {
-      const idsToDelete = Array.from(selectedRows);
-      await employeeService.bulkDeleteEmployees(idsToDelete);
-      
-      // Remove from local state
-      setMembers(prev => prev.filter(m => !selectedRows.has(m.id)));
-      setSelectedRows(new Set());
-      
-      alert(`Successfully deleted ${idsToDelete.length} employee(s)`);
-    } catch (err: any) {
-      console.error('Failed to delete employees:', err);
-      alert(err.response?.data?.detail || 'Failed to delete employees');
-    }
+            try {
+              const idsToDelete = Array.from(selectedRows);
+              await employeeService.bulkDeleteEmployees(idsToDelete);
+              
+              // Remove from local state
+              setMembers(prev => prev.filter(m => !selectedRows.has(m.id)));
+              setSelectedRows(new Set());
+              
+              update(loadingId, {
+                type: 'success',
+                title: 'Delete successful',
+                description: `Successfully deleted ${idsToDelete.length} employee(s)`,
+                duration: 3000,
+                dismissible: true,
+              });
+            } catch (err: any) {
+              console.error('Failed to delete employees:', err);
+              update(loadingId, {
+                type: 'error',
+                title: 'Delete failed',
+                description: err.response?.data?.detail || 'Failed to delete employees',
+                duration: 6000,
+                dismissible: true,
+              });
+            }
+          },
+        },
+        {
+          label: 'Cancel',
+          onClick: () => {},
+        },
+      ],
+    });
   };
 
   const sortedAndFilteredMembers = members
@@ -488,7 +529,11 @@ export const MembersTable = ({ databaseType, onBack }: MembersTableProps) => {
       ? members.filter(m => selectedRows.has(m.id))
       : sortedAndFilteredMembers;
     
-    alert(`Exporting ${selectedMembers.length} members to ${template === 'scottish' ? 'Scottish Widows' : 'IO Bulk'} template`);
+    notify({
+      type: 'info',
+      title: 'Export started',
+      description: `Exporting ${selectedMembers.length} members to ${template === 'scottish' ? 'Scottish Widows' : 'IO Bulk'} template`,
+    });
   };
 
   const copySelectedData = () => {

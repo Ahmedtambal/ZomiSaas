@@ -3,6 +3,7 @@ import { Plus, ExternalLink, Copy, Eye, Trash2, Calendar, Users, CheckCircle, Re
 import { FormBuilder } from './FormBuilder';
 import { FormDefinition } from '../../types/forms';
 import { getForms, createForm, deleteForm, generateToken, getTokens, refreshFormTemplate } from '../../services/formService';
+import { useNotification } from '../../context/NotificationContext';
 
 // Pre-defined New Employee Upload Form Template
 const NEW_EMPLOYEE_TEMPLATE = {
@@ -50,6 +51,7 @@ interface Company {
 }
 
 export const FormManagementPage: React.FC = () => {
+  const { notify } = useNotification();
   const [forms, setForms] = useState<FormDefinition[]>([]);
   const [loading, setLoading] = useState(true);
   const [showBuilder, setShowBuilder] = useState(false);
@@ -109,10 +111,18 @@ export const FormManagementPage: React.FC = () => {
         template_type: 'new_employee_upload',
       });
       await loadForms();
-      alert('New Employee Form created successfully!');
+      notify({
+        type: 'success',
+        title: 'Form created',
+        description: 'New Employee Form created successfully',
+      });
     } catch (err) {
       console.error('Failed to create form:', err);
-      alert('Failed to create form');
+      notify({
+        type: 'error',
+        title: 'Creation failed',
+        description: 'Failed to create form',
+      });
     } finally {
       setLoading(false);
     }
@@ -128,39 +138,94 @@ export const FormManagementPage: React.FC = () => {
         template_type: 'change_information_upload',
       });
       await loadForms();
-      alert('Change Information Form created successfully!');
+      notify({
+        type: 'success',
+        title: 'Form created',
+        description: 'Change Information Form created successfully',
+      });
     } catch (err) {
       console.error('Failed to create form:', err);
-      alert('Failed to create form');
+      notify({
+        type: 'error',
+        title: 'Creation failed',
+        description: 'Failed to create form',
+      });
     } finally {
       setLoading(false);
     }
   };
 
   const handleDeleteForm = async (formId: string) => {
-    if (!confirm('Are you sure you want to delete this form?')) return;
-
-    try {
-      await deleteForm(formId);
-      await loadForms();
-    } catch (err) {
-      alert('Failed to delete form');
-    }
+    notify({
+      type: 'warning',
+      title: 'Delete form?',
+      description: 'This action cannot be undone',
+      duration: 10000,
+      actions: [
+        {
+          label: 'Confirm Delete',
+          onClick: async () => {
+            try {
+              await deleteForm(formId);
+              await loadForms();
+              notify({
+                type: 'success',
+                title: 'Form deleted',
+                description: 'Form deleted successfully',
+              });
+            } catch (err) {
+              notify({
+                type: 'error',
+                title: 'Delete failed',
+                description: 'Failed to delete form',
+              });
+            }
+          },
+        },
+        {
+          label: 'Cancel',
+          onClick: () => {},
+        },
+      ],
+    });
   };
 
   const handleRefreshTemplate = async (formId: string) => {
-    if (!confirm('This will update the form with the latest template (23 fields). Any custom modifications will be lost. Continue?')) return;
-
-    try {
-      setLoading(true);
-      await refreshFormTemplate(formId);
-      await loadForms();
-      alert('Form updated successfully with latest template!');
-    } catch (err: any) {
-      alert(err.response?.data?.detail || 'Failed to refresh form template');
-    } finally {
-      setLoading(false);
-    }
+    notify({
+      type: 'warning',
+      title: 'Refresh form template?',
+      description: 'This will update the form with the latest template (23 fields). Any custom modifications will be lost.',
+      duration: 15000,
+      actions: [
+        {
+          label: 'Continue',
+          onClick: async () => {
+            try {
+              setLoading(true);
+              await refreshFormTemplate(formId);
+              await loadForms();
+              notify({
+                type: 'success',
+                title: 'Template refreshed',
+                description: 'Form updated successfully with latest template',
+              });
+            } catch (err: any) {
+              notify({
+                type: 'error',
+                title: 'Refresh failed',
+                description: err.response?.data?.detail || 'Failed to refresh form template',
+              });
+            } finally {
+              setLoading(false);
+            }
+          },
+        },
+        {
+          label: 'Cancel',
+          onClick: () => {},
+        },
+      ],
+    });
   };
 
   const handleGenerateLink = async (formId: string, companyId: string) => {
@@ -181,9 +246,18 @@ export const FormManagementPage: React.FC = () => {
       await navigator.clipboard.writeText(publicUrl);
       setCopiedLink(formId);
       setTimeout(() => setCopiedLink(null), 3000);
+      notify({
+        type: 'success',
+        title: 'Link generated',
+        description: 'Public form link copied to clipboard',
+      });
     } catch (err) {
       console.error('Failed to generate link:', err);
-      alert('Failed to generate link');
+      notify({
+        type: 'error',
+        title: 'Generation failed',
+        description: 'Failed to generate link',
+      });
     } finally {
       setGeneratingLink(false);
     }

@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { getForms, deleteForm } from '../../services/formService';
 import { FormDefinition } from '../../types/forms';
 import { FormTokenManager } from './FormTokenManager';
+import { useNotification } from '../../context/NotificationContext';
 
 interface FormsListPageProps {
   onCreateNewForm?: () => void;
 }
 
 export const FormsListPage: React.FC<FormsListPageProps> = ({ onCreateNewForm }) => {
+  const { notify } = useNotification();
   const [forms, setForms] = useState<FormDefinition[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedFormId, setSelectedFormId] = useState<string | null>(null);
@@ -33,18 +35,42 @@ export const FormsListPage: React.FC<FormsListPageProps> = ({ onCreateNewForm })
   };
 
   const handleDelete = async (formId: string) => {
-    if (!confirm('Are you sure you want to delete this form?')) return;
-
-    try {
-      await deleteForm(formId);
-      setForms(prev => prev.filter(f => f.id !== formId));
-      if (selectedFormId === formId) {
-        setSelectedFormId(null);
-      }
-    } catch (err) {
-      alert('Failed to delete form');
-      console.error('Failed to delete form:', err);
-    }
+    notify({
+      type: 'warning',
+      title: 'Delete form?',
+      description: 'This action cannot be undone',
+      duration: 10000,
+      actions: [
+        {
+          label: 'Confirm Delete',
+          onClick: async () => {
+            try {
+              await deleteForm(formId);
+              setForms(prev => prev.filter(f => f.id !== formId));
+              if (selectedFormId === formId) {
+                setSelectedFormId(null);
+              }
+              notify({
+                type: 'success',
+                title: 'Form deleted',
+                description: 'Form deleted successfully',
+              });
+            } catch (err) {
+              notify({
+                type: 'error',
+                title: 'Delete failed',
+                description: 'Failed to delete form',
+              });
+              console.error('Failed to delete form:', err);
+            }
+          },
+        },
+        {
+          label: 'Cancel',
+          onClick: () => {},
+        },
+      ],
+    });
   };
 
   const getTemplateBadge = (templateType: string) => {

@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { AlertTriangle } from 'lucide-react';
+import { useNotification } from '../../context/NotificationContext';
 
 export const ProfileTab = () => {
   const { user } = useAuth();
+  const { notify } = useNotification();
   const [formData, setFormData] = useState({
     fullName: user?.fullName || '',
     email: user?.email || '',
@@ -13,11 +15,20 @@ export const ProfileTab = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    alert('Profile updated successfully!');
+    notify({
+      type: 'success',
+      title: 'Profile updated',
+      description: 'Your profile has been updated successfully',
+    });
   };
 
   const handleDelete = () => {
-    alert('Account deletion initiated. This action cannot be undone.');
+    notify({
+      type: 'error',
+      title: 'Account deletion',
+      description: 'Account deletion initiated. This action cannot be undone.',
+      duration: 8000,
+    });
     setShowDeleteModal(false);
   };
 
