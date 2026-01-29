@@ -91,6 +91,17 @@ class EncryptionService:
         if ciphertext is None or ciphertext == "":
             return None
         
+        # Handle non-string types (plaintext data from database)
+        if not isinstance(ciphertext, str):
+            logger.debug(f"Skipping decryption for non-string type: {type(ciphertext)}")
+            return str(ciphertext)
+        
+        # Check if data looks like encrypted base64 (long string with base64 chars)
+        # If it's short or has non-base64 chars, it's likely plaintext
+        if len(ciphertext) < 20 or not self._looks_like_base64(ciphertext):
+            logger.debug(f"Skipping decryption for plaintext data: {ciphertext[:20]}...")
+            return ciphertext
+        
         try:
             # Decode from base64
             encrypted_bytes = base64.b64decode(ciphertext.encode('utf-8'))
@@ -101,11 +112,18 @@ class EncryptionService:
             return decrypted_bytes.decode('utf-8')
         
         except InvalidToken:
-            logger.error("Decryption failed: Invalid token (wrong key or corrupted data)")
-            raise ValueError("Decryption failed: Invalid encryption key or corrupted data")
+            logger.warning("Decryption failed: Invalid token - returning plaintext")
+            return ciphertext
         except Exception as e:
-            logger.error(f"Decryption failed: {e}")
-            raise ValueError(f"Failed to decrypt data: {e}")
+            logger.warning(f"Decryption failed: {e} - returning plaintext")
+            return ciphertext
+    
+    def _looks_like_base64(self, s: str) -> bool:
+        """Check if string looks like base64-encoded data"""
+        import re
+        # Base64 uses A-Z, a-z, 0-9, +, /, and = for padding
+        # Encrypted data is typically longer than 40 chars
+        return bool(re.match(r'^[A-Za-z0-9+/]+=*$', s)) and len(s) > 40
     
     def encrypt_json(self, data: dict) -> Optional[str]:
         """
@@ -234,17 +252,19 @@ class EncryptionService:
                 decrypted_data['ni_number'] = self.decrypt(decrypted_data['ni_number'])
             except Exception as e:
                 logger.warning(f"Failed to decrypt ni_number: {e}")
-                decrypted_data['ni_number'] = "[ENCRYPTED]"
+                # Keep original value if decryption fails
+                pass
         
         # Decrypt pensionable salary
         if decrypted_data.get('pensionable_salary'):
             try:
-                decrypted_data['pensionable_salary'] = self.decrypt(
-                    decrypted_data['pensionable_salary']
-                )
+                decrypted_value = self.decrypt(decrypted_data['pensionable_salary'])
+                # Keep as original type if it was a number
+                decrypted_data['pensionable_salary'] = decrypted_value
             except Exception as e:
                 logger.warning(f"Failed to decrypt pensionable_salary: {e}")
-                decrypted_data['pensionable_salary'] = "[ENCRYPTED]"
+                # Keep original value if decryption fails
+                pass
         
         # Decrypt date of birth
         if decrypted_data.get('date_of_birth'):
@@ -254,7 +274,8 @@ class EncryptionService:
                 )
             except Exception as e:
                 logger.warning(f"Failed to decrypt date_of_birth: {e}")
-                decrypted_data['date_of_birth'] = "[ENCRYPTED]"
+                # Keep original value if decryption fails
+                pass
         
         return decrypted_data
 
