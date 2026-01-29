@@ -363,9 +363,6 @@ async def submit_form(token: str, submission_data: Dict[str, Any], request: Requ
                 "selected_retirement_age": submission_data.get("selectedRetirementAge"),
                 "pension_investment_approach": submission_data.get("pensionInvestmentApproach"),
                 
-                # Section information (optional)
-                "split_template_group_name": submission_data.get("sectionNumber"),
-                
                 # Auto-filled from company
                 "client_category": company.get("category_name"),
                 
