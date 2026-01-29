@@ -315,8 +315,7 @@ async def login(request: Request, credentials: UserLogin) -> Dict[str, Any]:
         )
     
     # Log login attempt
-@limiter.limit("10/minute")  # Maximum 10 refresh attempts per minute
-async def refresh_token(request: Request, ({
+    security_logger.info({
         'event': 'login_attempt',
         'email': email,
         'ip': request.client.host if request.client else 'unknown',
@@ -365,7 +364,8 @@ async def refresh_token(request: Request, ({
 
 
 @router.post("/refresh")
-async def refresh_token(token_data: TokenRefresh) -> Dict[str, Any]:
+@limiter.limit("10/minute")  # Maximum 10 refresh attempts per minute
+async def refresh_token(request: Request, token_data: TokenRefresh) -> Dict[str, Any]:
     """
     Refresh token endpoint - generates new access token
     
@@ -376,6 +376,8 @@ async def refresh_token(token_data: TokenRefresh) -> Dict[str, Any]:
     - access_token (new)
     - token_type
     - expires_in
+    
+    Rate limit: 10 attempts per minute
     """
     success, token_dict, error = await auth_viewmodel.refresh_token(token_data.refresh_token)
     
