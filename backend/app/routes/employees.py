@@ -253,12 +253,6 @@ async def update_employee(
         updated_employee = encryption.decrypt_employee_pii(response.data[0])
         
         return updated_employee
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Failed to update employee"
-            )
-        
-        return response.data[0]
         
     except HTTPException:
         raise
