@@ -8,6 +8,7 @@ from dateutil.relativedelta import relativedelta
 import logging
 import httpx
 import os
+import re
 
 from app.services.database_service import db_service
 from app.services.encryption_service import get_encryption_service
@@ -398,13 +399,27 @@ async def submit_form(token: str, submission_data: Dict[str, Any], request: Requ
             if submission_data.get("employmentStartDate"):
                 try:
                     employment_date = datetime.strptime(submission_data.get("employmentStartDate"), "%Y-%m-%d")
-                    # Get postponement_period, convert to int, default to 0
+                    # Get postponement_period and parse it (supports "1 Day" or "3 months")
                     postponement_value = company.get("postponement_period")
-                    postponement_months = int(postponement_value) if postponement_value not in (None, "", "None") else 0
-                    # Add postponement months (handles varying month lengths: 28/29/30/31 days)
-                    pension_start = employment_date + relativedelta(months=postponement_months)
+                    postponement_days = 0
+                    postponement_months = 0
+                    
+                    if postponement_value not in (None, "", "None"):
+                        postponement_str = str(postponement_value).lower()
+                        # Extract number from string
+                        match = re.search(r'\d+', postponement_str)
+                        if match:
+                            number = int(match.group())
+                            # Check if it's days or months
+                            if 'day' in postponement_str:
+                                postponement_days = number
+                            elif 'month' in postponement_str:
+                                postponement_months = number
+                    
+                    # Add postponement period (handles varying month lengths: 28/29/30/31 days)
+                    pension_start = employment_date + relativedelta(months=postponement_months, days=postponement_days)
                     employee_data["pension_start_date"] = pension_start.strftime("%Y-%m-%d")
-                    logger.info(f"✓ Calculated pension_start_date: {employee_data['pension_start_date']} (employment: {submission_data.get('employmentStartDate')}, postponement: {postponement_months} months)")
+                    logger.info(f"✓ Calculated pension_start_date: {employee_data['pension_start_date']} (employment: {submission_data.get('employmentStartDate')}, postponement: '{postponement_value}' = {postponement_months}m + {postponement_days}d)")
                 except Exception as e:
                     logger.error(f"✗ Failed to calculate pension_start_date: {e}")
                     logger.exception(e)
