@@ -134,6 +134,12 @@ const generateColumnsFromData = (employees: Employee[]): ColumnDefinition[] => {
     }
     
     const value = sampleEmployee[key as keyof Employee];
+    
+    // Skip nested objects (like companies object from Supabase join)
+    if (value && typeof value === 'object' && !Array.isArray(value) && !(value instanceof Date)) {
+      return;
+    }
+    
     let columnType: ColumnDefinition['type'] = 'text';
     
     // Determine column type based on value type and field name
@@ -564,6 +570,11 @@ export const MembersTable = ({ databaseType, onBack }: MembersTableProps) => {
 
   const getCellValue = (member: Employee, columnId: string) => {
     const value = (member as any)[columnId];
+    
+    // Skip rendering if value is an object (like nested companies object from Supabase join)
+    if (value && typeof value === 'object' && !Array.isArray(value) && !(value instanceof Date)) {
+      return '';
+    }
     
     // Handle boolean values - show as checkbox already rendered
     if (typeof value === 'boolean') {
