@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { Search, Download, Trash2, Eye, EyeOff, Filter, ArrowUpDown, ArrowUp, ArrowDown, Copy, CheckCircle, GripVertical, ArrowLeft } from 'lucide-react';
+import { Search, Download, Trash2, Eye, EyeOff, Filter, ArrowUpDown, ArrowUp, ArrowDown, GripVertical, ArrowLeft } from 'lucide-react';
 import { ColumnDefinition, DatabaseMember, DatabaseType } from '../../types';
 import { employeeService, Employee } from '../../services/employeeService';
 import { useNotification } from '../../context/NotificationContext';
@@ -547,34 +547,7 @@ export const MembersTable = ({ databaseType, onBack }: MembersTableProps) => {
     });
   };
 
-  const copySelectedData = () => {
-    const selectedMembers = selectedRows.size > 0 
-      ? members.filter(m => selectedRows.has(m.id))
-      : sortedAndFilteredMembers;
 
-    const headers = columnOrder.map(col => col.label).join('\t');
-    const rows = selectedMembers.map(member => 
-      columnOrder.map(col => {
-        const value = (member as any)[col.id];
-        // Hide PII fields in export
-        if (col.type === 'number' && (col.id.includes('salary') || col.id.includes('Salary') || col.id === 'pensionableSalary')) {
-          return showSensitiveData ? value : '••••••';
-        }
-        if (col.id.includes('niNumber') || col.id.includes('NINumber') || col.id === 'niNumber') {
-          return showSensitiveData ? value : '••••••••';
-        }
-        if (col.id === 'schemeRef' || col.id.includes('schemeRef')) {
-          return showSensitiveData ? value : '••••••••';
-        }
-        return value;
-      }).join('\t')
-    ).join('\n');
-
-    const csvData = `${headers}\n${rows}`;
-    navigator.clipboard.writeText(csvData);
-    setCopiedData(true);
-    setTimeout(() => setCopiedData(false), 2000);
-  };
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
