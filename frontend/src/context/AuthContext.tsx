@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, AuthState } from '../types';
 import { authService } from '../services/authService';
+import { registerLogoutCallback, clearActivityTimers, scheduleTokenExpiry } from '../services/apiClient';
 
 interface AuthContextType extends AuthState {
   login: (email: string, password: string) => Promise<void>;
@@ -41,6 +42,33 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         isAuthenticated: true,
         isLoading: false,
       });
+      
+      // Register inactivity logout callback
+      registerLogoutCallback(() => {
+        setAuthState({
+          user: null,
+          isAuthenticated: false,
+          isLoading: false,
+        });
+      });
+      
+      // Start activity tracking (mouse/keyboard)
+      const trackActivity = () => {
+        // Activity is tracked by apiClient automatically
+        // This just ensures DOM events keep the session alive
+      };
+      
+      window.addEventListener('mousemove', trackActivity);
+      window.addEventListener('keydown', trackActivity);
+      window.addEventListener('click', trackActivity);
+      window.addEventListener('scroll', trackActivity);
+      
+      return () => {
+        window.removeEventListener('mousemove', trackActivity);
+        window.removeEventListener('keydown', trackActivity);
+        window.removeEventListener('click', trackActivity);
+        window.removeEventListener('scroll', trackActivity);
+      };
     } else {
       setAuthState(prev => ({ ...prev, isLoading: false }));
     }
@@ -63,6 +91,15 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         user,
         isAuthenticated: true,
         isLoading: false,
+      });
+      
+      // Register logout callback for inactivity
+      registerLogoutCallback(() => {
+        setAuthState({
+          user: null,
+          isAuthenticated: false,
+          isLoading: false,
+        });
       });
     } catch (error) {
       console.error('Login error:', error);
@@ -160,6 +197,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
+      // Clear activity timers
+      clearActivityTimers();
+      
       setAuthState({
         user: null,
         isAuthenticated: false,

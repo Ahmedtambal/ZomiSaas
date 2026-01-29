@@ -1,24 +1,6 @@
-import axios from 'axios';
+import apiClient, { API_URL } from './apiClient';
 import { FormDefinition, FormSubmission, FormToken } from '../types/forms';
-
-const API_URL = import.meta.env.VITE_API_URL || 'https://zomisaasbackend.onrender.com';
-
-// Create axios instance with auth
-const api = axios.create({
-  baseURL: API_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-// Add auth token to requests
-api.interceptors.request.use((config: any) => {
-  const token = localStorage.getItem('access_token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
+import axios from 'axios';
 
 // =====================================================
 // Authenticated Form Management
@@ -56,7 +38,7 @@ export interface UpdateTokenData {
  * Create a new form
  */
 export const createForm = async (formData: CreateFormData): Promise<FormDefinition> => {
-  const response = await api.post('/api/forms', formData);
+  const response = await apiClient.post('/api/forms', formData);
   return response.data;
 };
 
@@ -73,7 +55,7 @@ export const getForms = async (filters?: {
   if (filters?.templateType) params.append('template_type', filters.templateType);
   if (filters?.isActive !== undefined) params.append('is_active', String(filters.isActive));
   
-  const response = await api.get(`/api/forms?${params.toString()}`);
+  const response = await apiClient.get(`/api/forms?${params.toString()}`);
   return Array.isArray(response.data) ? response.data : [];
 };
 
@@ -81,7 +63,7 @@ export const getForms = async (filters?: {
  * Get a specific form by ID
  */
 export const getForm = async (formId: string): Promise<FormDefinition> => {
-  const response = await api.get(`/api/forms/${formId}`);
+  const response = await apiClient.get(`/api/forms/${formId}`);
   return response.data;
 };
 
@@ -89,7 +71,7 @@ export const getForm = async (formId: string): Promise<FormDefinition> => {
  * Update a form (creator only)
  */
 export const updateForm = async (formId: string, formData: UpdateFormData): Promise<FormDefinition> => {
-  const response = await api.put(`/api/forms/${formId}`, formData);
+  const response = await apiClient.put(`/api/forms/${formId}`, formData);
   return response.data;
 };
 
@@ -97,7 +79,7 @@ export const updateForm = async (formId: string, formData: UpdateFormData): Prom
  * Refresh form with latest SW Employee template
  */
 export const refreshFormTemplate = async (formId: string): Promise<FormDefinition> => {
-  const response = await api.put(`/api/forms/${formId}/refresh-template`);
+  const response = await apiClient.put(`/api/forms/${formId}/refresh-template`);
   return response.data;
 };
 
@@ -105,14 +87,14 @@ export const refreshFormTemplate = async (formId: string): Promise<FormDefinitio
  * Delete a form (creator only)
  */
 export const deleteForm = async (formId: string): Promise<void> => {
-  await api.delete(`/api/forms/${formId}`);
+  await apiClient.delete(`/api/forms/${formId}`);
 };
 
 /**
  * Generate a new token for a form
  */
 export const generateToken = async (formId: string, tokenData: GenerateTokenData): Promise<FormToken> => {
-  const response = await api.post(`/api/forms/${formId}/tokens`, tokenData);
+  const response = await apiClient.post(`/api/forms/${formId}/tokens`, tokenData);
   return response.data;
 };
 
@@ -127,7 +109,7 @@ export const getTokens = async (formId: string, filters?: {
   if (filters?.isActive !== undefined) params.append('is_active', String(filters.isActive));
   if (filters?.companyId) params.append('company_id', filters.companyId);
   
-  const response = await api.get(`/api/forms/${formId}/tokens?${params.toString()}`);
+  const response = await apiClient.get(`/api/forms/${formId}/tokens?${params.toString()}`);
   return Array.isArray(response.data) ? response.data : [];
 };
 
@@ -135,7 +117,7 @@ export const getTokens = async (formId: string, filters?: {
  * Update a token (deactivate, extend expiry, etc.)
  */
 export const updateToken = async (tokenId: string, updates: UpdateTokenData): Promise<FormToken> => {
-  const response = await api.put(`/api/forms/tokens/${tokenId}`, updates);
+  const response = await apiClient.put(`/api/forms/tokens/${tokenId}`, updates);
   return response.data;
 };
 
@@ -154,7 +136,7 @@ export const getSubmissions = async (formId: string, filters?: {
   if (filters?.startDate) params.append('start_date', filters.startDate);
   if (filters?.endDate) params.append('end_date', filters.endDate);
   
-  const response = await api.get(`/api/forms/${formId}/submissions?${params.toString()}`);
+  const response = await apiClient.get(`/api/forms/${formId}/submissions?${params.toString()}`);
   return Array.isArray(response.data) ? response.data : [];
 };
 

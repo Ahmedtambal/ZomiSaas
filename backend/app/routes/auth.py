@@ -1,7 +1,7 @@
 """
 Authentication Routes
 """
-from fastapi import APIRouter, HTTPException, status, Depends, Header
+from fastapi import APIRouter, HTTPException, status, Depends, Header, Request
 from fastapi.responses import JSONResponse
 from typing import Dict, Any, Optional
 import jwt
@@ -10,6 +10,7 @@ from jwt.exceptions import InvalidTokenError
 from app.models.user import UserCreate, UserLogin, TokenRefresh
 from app.viewmodels.auth_viewmodel import auth_viewmodel
 from app.config import settings
+from app.middleware import check_session_activity, update_session_activity, clear_session_activity
 
 router = APIRouter()
 
@@ -18,9 +19,10 @@ router = APIRouter()
 # JWT Token Validation Dependency
 # =====================================================
 
-async def get_current_user(authorization: Optional[str] = Header(None)) -> Dict[str, Any]:
+async def get_current_user(authorization: Optional[str] = Header(None), request: Request = None) -> Dict[str, Any]:
     """
     Dependency to get current authenticated user from JWT token
+    Also checks session activity and updates activity timestamp
     
     Usage:
         @router.get("/protected")
@@ -66,6 +68,17 @@ async def get_current_user(authorization: Optional[str] = Header(None)) -> Dict[
         
         user_id = response.user.id
         
+        # Check session activity (15 min timeout)
+        if not check_session_activity(user_id):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Session expired due to inactivity",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        
+        # Update activity timestamp
+        update_session_activity(user_id)
+        
         # Get user profile from database to get organization_id and role
         profile = await db_service.get_user_profile_by_id(user_id)
         
@@ -82,6 +95,10 @@ async def get_current_user(authorization: Optional[str] = Header(None)) -> Dict[
             "role": profile.get("role"),
             "organization_id": profile.get("organization_id"),
         }
+        
+        # Store user in request state for middleware
+        if request:
+            request.state.user = user_data
         
         return user_data
         
@@ -220,6 +237,9 @@ async def login(credentials: UserLogin) -> Dict[str, Any]:
             detail=error or "Invalid credentials"
         )
     
+    # Initialize activity tracking for this user
+    update_session_activity(token_response.user.id)
+    
     return {
         "message": "Login successful",
         "data": token_response.model_dump()
@@ -256,7 +276,7 @@ async def refresh_token(token_data: TokenRefresh) -> Dict[str, Any]:
 @router.post("/logout")
 async def logout(token_data: TokenRefresh) -> Dict[str, Any]:
     """
-    Logout endpoint - signs out user via Supabase Auth
+    Logout endpoint - signs out user via Supabase Auth and clears activity tracking
     
     Required fields:
     - refresh_token (used to identify session)
@@ -264,15 +284,41 @@ async def logout(token_data: TokenRefresh) -> Dict[str, Any]:
     Note: Supabase Auth manages session invalidation
     """
     from app.services.auth_service import AuthService
+    from app.services.database_service import db_service
+    
+    # Get user ID from refresh token to clear activity tracking
+    try:
+        # Decode refresh token to get user_id
+        import jwt
+        decoded = jwt.decode(token_data.refresh_token, settings.SUPABASE_JWT_SECRET, 
+                           algorithms=["HS256"], options={"verify_signature": False})
+        user_id = decoded.get("sub")
+        
+        if user_id:
+            # Clear activity tracking
+            clear_session_activity(user_id)
+    except Exception as e:
+        # Continue with logout even if activity clearing fails
+        pass
     
     auth_service = AuthService()
-    success = await auth_service.signout(token_data.refresh_token)
+    
+    # Get access token from refresh token for proper signout
+    try:
+        response = db_service.client.auth.refresh_session(token_data.refresh_token)
+        if response and response.session:
+            access_token = response.session.access_token
+            success = await auth_service.signout(access_token)
+        else:
+            success = False
+    except:
+        success = False
     
     if not success:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Logout failed"
-        )
+        # Even if Supabase signout fails, we cleared activity tracking
+        return {
+            "message": "Logout completed (session may have already expired)"
+        }
     
     return {
         "message": "Logout successful"

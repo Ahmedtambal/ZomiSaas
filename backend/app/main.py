@@ -9,6 +9,7 @@ import logging
 
 from app.config import settings
 from app.routes import auth, forms, public_forms, companies, employees, form_submissions, form_templates, form_analytics
+from app.middleware import ActivityTrackingMiddleware
 
 # Configure logging
 logging.basicConfig(
@@ -57,6 +58,9 @@ if settings.ENVIRONMENT == "production":
 
 # GZip compression
 app.add_middleware(GZipMiddleware, minimum_size=1000)
+
+# Activity tracking - 15 minute inactivity timeout
+app.add_middleware(ActivityTrackingMiddleware)
 
 # =====================================================
 # Routes

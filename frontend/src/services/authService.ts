@@ -3,7 +3,7 @@
  * Handles all authentication-related API calls
  */
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+import apiClient, { API_URL, scheduleTokenExpiry } from './apiClient';
 
 interface LoginRequest {
   email: string;
@@ -60,6 +60,7 @@ interface RefreshTokenResponse {
   message: string;
   data: {
     access_token: string;
+    refresh_token?: string; // Backend may provide new refresh token
     token_type: string;
     expires_in: number;
   };
@@ -79,24 +80,14 @@ class AuthService {
    * Admin signup - creates organization and admin user
    */
   async signupAdmin(data: Omit<AdminSignupRequest, 'role'>): Promise<AuthResponse> {
-    const response = await fetch(`${API_URL}/api/auth/signup/admin`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ ...data, role: 'admin' }),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Admin signup failed');
-    }
-
-    const result: AuthResponse = await response.json();
+    const response = await apiClient.post('/api/auth/signup/admin', { ...data, role: 'admin' });
+    
+    const result: AuthResponse = response.data;
     
     // Only set tokens if they exist (not required for email confirmation)
     if (result.data) {
       this.setTokens(result.data.access_token, result.data.refresh_token);
+      scheduleTokenExpiry(result.data.expires_in);
     }
     
     return result;
@@ -106,24 +97,14 @@ class AuthService {
    * User signup - requires valid invite code
    */
   async signupUser(data: Omit<UserSignupRequest, 'role'>): Promise<AuthResponse> {
-    const response = await fetch(`${API_URL}/api/auth/signup/user`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ ...data, role: 'user' }),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'User signup failed');
-    }
-
-    const result: AuthResponse = await response.json();
+    const response = await apiClient.post('/api/auth/signup/user', { ...data, role: 'user' });
+    
+    const result: AuthResponse = response.data;
     
     // Only set tokens if they exist (not required for email confirmation)
     if (result.data) {
       this.setTokens(result.data.access_token, result.data.refresh_token);
+      scheduleTokenExpiry(result.data.expires_in);
     }
     
     return result;
@@ -133,21 +114,11 @@ class AuthService {
    * Login
    */
   async login(credentials: LoginRequest): Promise<AuthResponse> {
-    const response = await fetch(`${API_URL}/api/auth/login`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(credentials),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Login failed');
-    }
-
-    const result: AuthResponse = await response.json();
+    const response = await apiClient.post('/api/auth/login', credentials);
+    
+    const result: AuthResponse = response.data;
     this.setTokens(result.data.access_token, result.data.refresh_token);
+    scheduleTokenExpiry(result.data.expires_in);
     return result;
   }
 
@@ -159,21 +130,20 @@ class AuthService {
       throw new Error('No refresh token available');
     }
 
-    const response = await fetch(`${API_URL}/api/auth/refresh`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ refresh_token: this.refreshToken }),
+    const response = await apiClient.post('/api/auth/refresh', { 
+      refresh_token: this.refreshToken 
     });
-
-    if (!response.ok) {
-      this.clearTokens();
-      throw new Error('Token refresh failed');
-    }
-
-    const result: RefreshTokenResponse = await response.json();
+    
+    const result: RefreshTokenResponse = response.data;
     this.setAccessToken(result.data.access_token);
+    
+    // Update refresh token if backend provides a new one
+    if (result.data.refresh_token) {
+      this.refreshToken = result.data.refresh_token;
+      localStorage.setItem('refresh_token', result.data.refresh_token);
+    }
+    
+    scheduleTokenExpiry(result.data.expires_in);
     return result.data.access_token;
   }
 
@@ -183,12 +153,8 @@ class AuthService {
   async logout(): Promise<void> {
     if (this.refreshToken) {
       try {
-        await fetch(`${API_URL}/api/auth/logout`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ refresh_token: this.refreshToken }),
+        await apiClient.post('/api/auth/logout', { 
+          refresh_token: this.refreshToken 
         });
       } catch (error) {
         console.error('Logout request failed:', error);

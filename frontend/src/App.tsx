@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BrowserRouter, Routes, Route, useParams } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useParams, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { LoginPage } from './components/auth/LoginPage';
 import { RegisterPage } from './components/auth/RegisterPage';
@@ -20,13 +20,47 @@ function PublicFormRoute() {
   return <PublicFormView token={token || ''} />;
 }
 
+// Protected Route wrapper
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isLoading } = useAuth();
+  
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="glass-panel rounded-2xl p-8">
+          <div className="w-12 h-12 border-4 border-zomi-green border-t-transparent rounded-full animate-spin mx-auto"></div>
+        </div>
+      </div>
+    );
+  }
+  
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  return <>{children}</>;
+}
+
+// Members route with database selection
+function MembersRoute() {
+  const [selectedDatabase, setSelectedDatabase] = useState<DatabaseType | null>(null);
+  
+  if (selectedDatabase === null) {
+    return <DatabaseSelector onSelectDatabase={setSelectedDatabase} />;
+  }
+  
+  return (
+    <MembersTable 
+      databaseType={selectedDatabase}
+      onBack={() => setSelectedDatabase(null)}
+    />
+  );
+}
+
 function AppContent() {
   const { isAuthenticated, isLoading } = useAuth();
   const [authView, setAuthView] = useState<'login' | 'register' | 'email-confirmation'>('login');
   const [registeredEmail, setRegisteredEmail] = useState<string>('');
-  const [currentPage, setCurrentPage] = useState('dashboard');
-  const [dynamicFormId, setDynamicFormId] = useState<string | null>(null);
-  const [selectedDatabase, setSelectedDatabase] = useState<DatabaseType | null>(null);
 
   if (isLoading) {
     return (
@@ -38,72 +72,102 @@ function AppContent() {
     );
   }
 
-  if (!isAuthenticated) {
-    return (
-      <>
-        {authView === 'login' ? (
-          <LoginPage onShowRegister={() => setAuthView('register')} />
-        ) : (
-          <RegisterPage 
-            onShowLogin={() => setAuthView('login')}
-            onRegistrationSuccess={(email) => {
-              setRegisteredEmail(email);
-              setAuthView('email-confirmation');
-            }}
-          />
-        )}
-        
-        {/* Email Confirmation Modal */}
-        {authView === 'email-confirmation' && (
-          <EmailConfirmationPage 
-            email={registeredEmail}
-            onBackToLogin={() => setAuthView('login')}
-          />
-        )}
-      </>
-    );
-  }
-
-  const renderPage = () => {
-    switch (currentPage) {
-      case 'dashboard':
-        return <ExecutiveDashboard />;
-      case 'members':
-        if (selectedDatabase === null) {
-          return <DatabaseSelector onSelectDatabase={setSelectedDatabase} />;
-        }
-        return (
-          <MembersTable 
-            databaseType={selectedDatabase}
-            onBack={() => setSelectedDatabase(null)}
-          />
-        );
-      case 'forms':
-        return <FormManagementPage />;
-      case 'settings':
-        return <SettingsPage />;
-      case 'dynamicForm':
-        return dynamicFormId ? <DynamicFormRenderer formId={dynamicFormId} /> : <ExecutiveDashboard />;
-      default:
-        return <ExecutiveDashboard />;
-    }
-  };
-
   return (
-    <DashboardLayout 
-      currentPage={currentPage} 
-      onNavigate={(page, formId) => {
-        setCurrentPage(page);
-        if (page !== 'members') {
-          setSelectedDatabase(null);
-        }
-        if (formId) {
-          setDynamicFormId(formId);
-        }
-      }}
-    >
-      {renderPage()}
-    </DashboardLayout>
+    <Routes>
+      {/* Public routes */}
+      <Route path="/public/form/:token" element={<PublicFormRoute />} />
+      
+      {/* Auth routes */}
+      <Route 
+        path="/login" 
+        element={
+          isAuthenticated ? (
+            <Navigate to="/dashboard" replace />
+          ) : (
+            <LoginPage onShowRegister={() => setAuthView('register')} />
+          )
+        } 
+      />
+      <Route 
+        path="/register" 
+        element={
+          isAuthenticated ? (
+            <Navigate to="/dashboard" replace />
+          ) : (
+            <>
+              <RegisterPage 
+                onShowLogin={() => setAuthView('login')}
+                onRegistrationSuccess={(email) => {
+                  setRegisteredEmail(email);
+                  setAuthView('email-confirmation');
+                }}
+              />
+              {authView === 'email-confirmation' && (
+                <EmailConfirmationPage 
+                  email={registeredEmail}
+                  onBackToLogin={() => setAuthView('login')}
+                />
+              )}
+            </>
+          )
+        } 
+      />
+      
+      {/* Protected routes */}
+      <Route 
+        path="/dashboard" 
+        element={
+          <ProtectedRoute>
+            <DashboardLayout currentPage="dashboard">
+              <ExecutiveDashboard />
+            </DashboardLayout>
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/members" 
+        element={
+          <ProtectedRoute>
+            <DashboardLayout currentPage="members">
+              <MembersRoute />
+            </DashboardLayout>
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/forms" 
+        element={
+          <ProtectedRoute>
+            <DashboardLayout currentPage="forms">
+              <FormManagementPage />
+            </DashboardLayout>
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/settings" 
+        element={
+          <ProtectedRoute>
+            <DashboardLayout currentPage="settings">
+              <SettingsPage />
+            </DashboardLayout>
+          </ProtectedRoute>
+        } 
+      />
+      
+      {/* Default redirect */}
+      <Route 
+        path="/" 
+        element={
+          isAuthenticated ? (
+            <Navigate to="/dashboard" replace />
+          ) : (
+            <Navigate to="/login" replace />
+          )
+        } 
+      />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 }
 
@@ -111,13 +175,7 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <Routes>
-          {/* Public route - no authentication required */}
-          <Route path="/public/form/:token" element={<PublicFormRoute />} />
-          
-          {/* All other routes require authentication */}
-          <Route path="/*" element={<AppContent />} />
-        </Routes>
+        <AppContent />
       </AuthProvider>
     </BrowserRouter>
   );

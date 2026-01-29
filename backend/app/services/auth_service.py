@@ -1,21 +1,31 @@
 """
-Authentication Service - Supabase Auth Integration
+Authentication Service - Supabase Auth Integration (Stateless Per-Request)
 """
 from typing import Optional, Dict, Any
-from app.services.database_service import db_service
+from supabase import create_client, Client
+from app.config import settings
 
 
 class AuthService:
-    """Supabase Authentication utilities"""
+    """Supabase Authentication utilities with per-request client creation"""
     
-    @staticmethod
-    async def signup_with_email(email: str, password: str, user_metadata: Dict[str, Any]) -> Dict[str, Any]:
+    def __init__(self):
+        """Initialize with config, but don't create persistent client"""
+        self.supabase_url = settings.SUPABASE_URL
+        self.supabase_key = settings.SUPABASE_KEY
+    
+    def _get_client(self) -> Client:
+        """Create a fresh Supabase client for each request"""
+        return create_client(self.supabase_url, self.supabase_key)
+    
+    async def signup_with_email(self, email: str, password: str, user_metadata: Dict[str, Any]) -> Dict[str, Any]:
         """
         Sign up a new user using Supabase Auth
         Returns: Supabase auth response with user and session
         """
         try:
-            response = db_service.client.auth.sign_up({
+            client = self._get_client()
+            response = client.auth.sign_up({
                 "email": email,
                 "password": password,
                 "options": {
@@ -26,14 +36,14 @@ class AuthService:
         except Exception as e:
             raise Exception(f"Signup failed: {str(e)}")
     
-    @staticmethod
-    async def signin_with_email(email: str, password: str) -> Dict[str, Any]:
+    async def signin_with_email(self, email: str, password: str) -> Dict[str, Any]:
         """
         Sign in a user using Supabase Auth
         Returns: Supabase auth response with user and session
         """
         try:
-            response = db_service.client.auth.sign_in_with_password({
+            client = self._get_client()
+            response = client.auth.sign_in_with_password({
                 "email": email,
                 "password": password
             })
@@ -41,29 +51,31 @@ class AuthService:
         except Exception as e:
             raise Exception(f"Login failed: {str(e)}")
     
-    @staticmethod
-    async def signout(access_token: str) -> bool:
-        """Sign out a user"""
+    async def signout(self, access_token: str) -> bool:
+        """Sign out a user with specific token"""
         try:
-            db_service.client.auth.sign_out()
+            client = self._get_client()
+            # Set the session with the access token before signing out
+            client.auth.set_session(access_token, access_token)  # Use access token for both
+            client.auth.sign_out()
             return True
         except Exception as e:
             return False
     
-    @staticmethod
-    async def get_user_from_token(access_token: str) -> Optional[Dict[str, Any]]:
+    async def get_user_from_token(self, access_token: str) -> Optional[Dict[str, Any]]:
         """Get user details from access token"""
         try:
-            response = db_service.client.auth.get_user(access_token)
+            client = self._get_client()
+            response = client.auth.get_user(access_token)
             return response.user if response else None
         except Exception as e:
             return None
     
-    @staticmethod
-    async def refresh_session(refresh_token: str) -> Dict[str, Any]:
+    async def refresh_session(self, refresh_token: str) -> Dict[str, Any]:
         """Refresh access token using refresh token"""
         try:
-            response = db_service.client.auth.refresh_session(refresh_token)
+            client = self._get_client()
+            response = client.auth.refresh_session(refresh_token)
             return response
         except Exception as e:
             raise Exception(f"Token refresh failed: {str(e)}")

@@ -1,4 +1,5 @@
 import { ReactNode, useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
   Table,
@@ -14,20 +15,31 @@ import { useAuth } from '../../context/AuthContext';
 interface DashboardLayoutProps {
   children: ReactNode;
   currentPage: string;
-  onNavigate: (page: string, formId?: string) => void;
 }
 
-export const DashboardLayout = ({ children, currentPage, onNavigate }: DashboardLayoutProps) => {
+export const DashboardLayout = ({ children, currentPage }: DashboardLayoutProps) => {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'members', label: 'Members Data', icon: Table },
-    { id: 'forms', label: 'Form Generator', icon: LinkIcon },
-    { id: 'settings', label: 'Settings', icon: Settings },
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
+    { id: 'members', label: 'Members Data', icon: Table, path: '/members' },
+    { id: 'forms', label: 'Form Generator', icon: LinkIcon, path: '/forms' },
+    { id: 'settings', label: 'Settings', icon: Settings, path: '/settings' },
   ];
+
+  const handleNavigation = (path: string) => {
+    navigate(path);
+    setIsMobileMenuOpen(false);
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
+  };
 
   return (
     <div className="min-h-screen flex">
@@ -80,14 +92,11 @@ export const DashboardLayout = ({ children, currentPage, onNavigate }: Dashboard
           <nav className="flex-1 space-y-2">
             {menuItems.map((item) => {
               const Icon = item.icon;
-              const isActive = currentPage === item.id;
+              const isActive = location.pathname === item.path;
               return (
                 <button
                   key={item.id}
-                  onClick={() => {
-                    onNavigate(item.id);
-                    setIsMobileMenuOpen(false);
-                  }}
+                  onClick={() => handleNavigation(item.path)}
                   className={`
                     w-full flex items-center gap-3 px-4 py-3 rounded-xl
                     transition-all duration-200
@@ -117,7 +126,7 @@ export const DashboardLayout = ({ children, currentPage, onNavigate }: Dashboard
               </div>
             )}
             <button
-              onClick={logout}
+              onClick={handleLogout}
               className={`
                 w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 transition-all duration-200
                 ${isSidebarCollapsed ? 'justify-center' : ''}
