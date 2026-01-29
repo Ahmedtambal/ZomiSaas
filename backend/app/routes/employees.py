@@ -2,11 +2,14 @@
 Employee Routes - CRUD operations for employee management
 """
 from fastapi import APIRouter, HTTPException, status, Depends
-from typing import Dict, Any, List
+from fastapi.responses import StreamingResponse
+from typing import Dict, Any, List, Optional
 from datetime import datetime
 import logging
 import httpx
 import os
+import io
+import csv
 
 from app.services.database_service import db_service
 from app.services.encryption_service import get_encryption_service
@@ -67,20 +70,27 @@ async def get_employees(current_user: dict = Depends(get_current_user)) -> List[
     """
     Get all employees for the user's organization
     Decrypts sensitive PII fields before returning
+    Includes company name from companies table
     """
     try:
         organization_id = current_user["organization_id"]
         
-        response = db_service.client.table("employees").select("*").eq(
+        # Join with companies table to get company name
+        response = db_service.client.table("employees").select(
+            "*, companies(name)"
+        ).eq(
             "organization_id", organization_id
         ).order("created_at", desc=True).execute()
         
         # Decrypt PII fields for all employees
         encryption = get_encryption_service()
-        decrypted_employees = [
-            encryption.decrypt_employee_pii(employee) 
-            for employee in response.data
-        ]
+        decrypted_employees = []
+        for employee in response.data:
+            decrypted = encryption.decrypt_employee_pii(employee)
+            # Extract company name from nested object
+            if employee.get("companies"):
+                decrypted["company_name"] = employee["companies"].get("name")
+            decrypted_employees.append(decrypted)
         
         return decrypted_employees
         
@@ -97,11 +107,15 @@ async def get_employee(employee_id: str, current_user: dict = Depends(get_curren
     """
     Get a single employee by ID
     Decrypts sensitive PII fields before returning
+    Includes company name from companies table
     """
     try:
         organization_id = current_user["organization_id"]
         
-        response = db_service.client.table("employees").select("*").eq(
+        # Join with companies table to get company name
+        response = db_service.client.table("employees").select(
+            "*, companies(name)"
+        ).eq(
             "id", employee_id
         ).eq("organization_id", organization_id).execute()
         
@@ -114,6 +128,10 @@ async def get_employee(employee_id: str, current_user: dict = Depends(get_curren
         # Decrypt PII fields before returning
         encryption = get_encryption_service()
         employee = encryption.decrypt_employee_pii(response.data[0])
+        
+        # Extract company name from nested object
+        if response.data[0].get("companies"):
+            employee["company_name"] = response.data[0]["companies"].get("name")
         
         return employee
         
@@ -355,4 +373,127 @@ async def search_employees(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to search employees"
+        )
+
+
+@router.get("/export/io-template", status_code=status.HTTP_200_OK)
+async def export_employees_io_template(
+    format: str = "csv",
+    company_id: Optional[str] = None,
+    advice_type: Optional[str] = None,
+    pension_provider: Optional[str] = None,
+    service_status: Optional[str] = None,
+    from_date: Optional[str] = None,
+    to_date: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Export employees in IO Bulk Upload Template format
+    
+    Supports filtering by:
+    - company_id: Filter by specific company
+    - advice_type: Filter by advice type (e.g., "Migrated Plans", "Pre-Existing Plan")
+    - pension_provider: Filter by pension provider (partial match in pension_provider_info)
+    - service_status: Filter by service status (e.g., "Active", "Inactive")
+    - from_date/to_date: Filter by created_at date range
+    
+    Returns CSV file with IO Bulk Upload Template headers (30 columns)
+    """
+    try:
+        organization_id = current_user["organization_id"]
+        
+        # Build query with filters
+        query = db_service.client.table("employees").select("*").eq(
+            "organization_id", organization_id
+        )
+        
+        # Apply filters
+        if company_id:
+            query = query.eq("company_id", company_id)
+        if advice_type:
+            query = query.eq("advice_type", advice_type)
+        if pension_provider:
+            query = query.ilike("pension_provider_info", f"%{pension_provider}%")
+        if service_status:
+            query = query.eq("service_status", service_status)
+        if from_date:
+            query = query.gte("created_at", from_date)
+        if to_date:
+            query = query.lte("created_at", to_date)
+        
+        response = query.order("created_at", desc=True).execute()
+        
+        # Decrypt PII fields
+        encryption = get_encryption_service()
+        employees = [encryption.decrypt_employee_pii(emp) for emp in response.data]
+        
+        # Transform to IO Bulk Upload Template format
+        io_template_rows = []
+        for emp in employees:
+            row = {
+                'Surname*': emp.get('surname', ''),
+                'FirstName*': emp.get('first_name', ''),
+                'SchemeRef*': emp.get('scheme_ref', ''),
+                'CategoryName': emp.get('client_category', ''),
+                'Title': emp.get('title', ''),
+                'AddressLine1': emp.get('address_line_1', ''),
+                'AddressLine2': emp.get('address_line_2', ''),
+                'AddressLine3': emp.get('address_line_3', ''),
+                'AddressLine4': emp.get('address_line_4', ''),
+                'CityTown': emp.get('city_town', ''),
+                'County': emp.get('county', ''),
+                'Country': emp.get('country', ''),
+                'PostCode': emp.get('postcode', ''),
+                'AdviceType*': emp.get('advice_type', ''),
+                'DateJoinedScheme': emp.get('date_joined_scheme', ''),
+                'DateofBirth*': emp.get('date_of_birth', ''),
+                'EmailAddress': emp.get('email_address', ''),
+                'Gender': emp.get('gender', ''),
+                'HomeNumber': emp.get('home_number', ''),
+                'MobileNumber': emp.get('mobile_number', ''),
+                'NINumber': emp.get('ni_number', ''),
+                'PensionableSalary': str(emp.get('pensionable_salary', '')) if emp.get('pensionable_salary') else '',
+                'PensionableSalaryStartDate': emp.get('pensionable_salary_start_date', ''),
+                'SalaryPostSacrifice': str(emp.get('salary_post_sacrifice', '')) if emp.get('salary_post_sacrifice') else '',
+                'PolicyNumber': emp.get('policy_number', ''),
+                'SellingAdviserId*': emp.get('selling_adviser_id', ''),
+                'SplitTemplateGroupName': emp.get('split_template_group_name', ''),
+                'SplitTemplateGroupSource': emp.get('split_template_group_source', ''),
+                'ServiceStatus': emp.get('service_status', ''),
+                'ClientCategory': emp.get('client_category', '')
+            }
+            io_template_rows.append(row)
+        
+        # Generate CSV
+        output = io.StringIO()
+        if io_template_rows:
+            fieldnames = [
+                'Surname*', 'FirstName*', 'SchemeRef*', 'CategoryName', 'Title',
+                'AddressLine1', 'AddressLine2', 'AddressLine3', 'AddressLine4',
+                'CityTown', 'County', 'Country', 'PostCode', 'AdviceType*',
+                'DateJoinedScheme', 'DateofBirth*', 'EmailAddress', 'Gender',
+                'HomeNumber', 'MobileNumber', 'NINumber', 'PensionableSalary',
+                'PensionableSalaryStartDate', 'SalaryPostSacrifice', 'PolicyNumber',
+                'SellingAdviserId*', 'SplitTemplateGroupName', 'SplitTemplateGroupSource',
+                'ServiceStatus', 'ClientCategory'
+            ]
+            writer = csv.DictWriter(output, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(io_template_rows)
+        
+        # Create response
+        output.seek(0)
+        filename = f"employee_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+        
+        return StreamingResponse(
+            io.BytesIO(output.getvalue().encode('utf-8')),
+            media_type='text/csv',
+            headers={'Content-Disposition': f'attachment; filename="{filename}"'}
+        )
+        
+    except Exception as e:
+        logger.error(f"Failed to export employees: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to export employees: {str(e)}"
         )

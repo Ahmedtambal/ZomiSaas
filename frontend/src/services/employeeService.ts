@@ -4,6 +4,7 @@ export interface Employee {
   id: string;
   organization_id: string;
   company_id: string;
+  company_name?: string; // NEW: Fetched from companies table
   source_form_id?: string;
   created_at: string;
   updated_at: string;

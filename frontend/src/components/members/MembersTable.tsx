@@ -3,6 +3,7 @@ import { Search, Download, Trash2, Eye, EyeOff, Filter, ArrowUpDown, ArrowUp, Ar
 import { ColumnDefinition, DatabaseMember, DatabaseType } from '../../types';
 import { employeeService, Employee } from '../../services/employeeService';
 import { useNotification } from '../../context/NotificationContext';
+import ExportModal from './ExportModal';
 import {
   DndContext,
   closestCenter,
@@ -34,8 +35,8 @@ interface SortConfig {
 }
 
 interface FilterConfig {
-  status: string;
-  investmentApproach: string;
+  adviceType: string;
+  pensionProvider: string;
   nationality: string;
   maritalStatus: string;
 }
@@ -58,12 +59,22 @@ const generateColumnsFromData = (employees: Employee[]): ColumnDefinition[] => {
   const sampleEmployee = employees[0];
   const columns: ColumnDefinition[] = [];
   
+  // Backend columns to HIDE from UI (remain in database only)
+  const hiddenColumns = new Set([
+    'id',
+    'organization_id',
+    'company_id', // Replaced by company_name
+    'source_form_id',
+    'submission_token',
+    'submitted_via',
+    'ip_address',
+    'user_agent',
+    'created_by_user_id'
+  ]);
+  
   // Field label mapping
   const labelMap: Record<string, string> = {
-    id: 'ID',
-    organization_id: 'Organization ID',
-    company_id: 'Company ID',
-    source_form_id: 'Source Form ID',
+    company_name: 'Company Name', // NEW: Display instead of company_id
     created_at: 'Created At',
     updated_at: 'Updated At',
     title: 'Title',
@@ -100,15 +111,11 @@ const generateColumnsFromData = (employees: Employee[]): ColumnDefinition[] => {
     client_category: 'Client Category',
     pension_start_date: 'Pension Start Date',
     io_upload_status: 'IO Upload Status',
-    submission_token: 'Submission Token',
-    submitted_via: 'Submitted Via',
-    ip_address: 'IP Address',
-    user_agent: 'User Agent',
     job_title: 'Job Title',
     is_pension_active: 'Is Pension Active',
     is_smart_pension: 'Is Smart Pension',
     send_pension_pack: 'Send Pension Pack',
-    pension_provider_info: 'Pension Provider Info',
+    pension_provider_info: 'Pension Provider',
     scheme_ref: 'Scheme Ref',
     advice_type: 'Advice Type',
     selling_adviser_id: 'Selling Adviser ID',
@@ -116,12 +123,16 @@ const generateColumnsFromData = (employees: Employee[]): ColumnDefinition[] => {
     has_gci: 'Has GCI',
     has_gip: 'Has GIP',
     has_bupa: 'Has Bupa',
-    operational_notes: 'Operational Notes',
-    created_by_user_id: 'Created By User ID'
+    operational_notes: 'Operational Notes'
   };
   
   // Iterate through all keys in the employee object
   Object.keys(sampleEmployee).forEach(key => {
+    // Skip hidden backend columns
+    if (hiddenColumns.has(key)) {
+      return;
+    }
+    
     const value = sampleEmployee[key as keyof Employee];
     let columnType: ColumnDefinition['type'] = 'text';
     
@@ -140,7 +151,7 @@ const generateColumnsFromData = (employees: Employee[]): ColumnDefinition[] => {
       id: key,
       label: labelMap[key] || key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
       sortable: true,
-      editable: !['id', 'created_at', 'updated_at', 'organization_id', 'company_id', 'source_form_id', 'submission_token', 'ip_address', 'user_agent', 'submitted_via', 'created_by_user_id'].includes(key),
+      editable: !['created_at', 'updated_at', 'company_name'].includes(key), // company_name is read-only
       type: columnType
     });
   });
@@ -182,13 +193,13 @@ export const MembersTable = ({ databaseType, onBack }: MembersTableProps) => {
   const [editingCell, setEditingCell] = useState<EditingCell | null>(null);
   const [sortConfig, setSortConfig] = useState<SortConfig>({ column: 'created_at', direction: 'desc' });
   const [filterConfig, setFilterConfig] = useState<FilterConfig>({
-    status: '',
-    investmentApproach: '',
+    adviceType: '',
+    pensionProvider: '',
     nationality: '',
     maritalStatus: '',
   });
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
-  const [copiedData, setCopiedData] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
   const editInputRef = useRef<HTMLInputElement | HTMLSelectElement>(null);
   const [members, setMembers] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
@@ -465,14 +476,14 @@ export const MembersTable = ({ databaseType, onBack }: MembersTableProps) => {
           value && value.toString().toLowerCase().includes(searchTerm.toLowerCase())
         );
       
-      const matchesStatus = !filterConfig.status || 
-        member.service_status === filterConfig.status;
-      const matchesApproach = !filterConfig.investmentApproach || 
-        member.pension_investment_approach === filterConfig.investmentApproach;
+      const matchesAdviceType = !filterConfig.adviceType || 
+        member.advice_type === filterConfig.adviceType;
+      const matchesPensionProvider = !filterConfig.pensionProvider || 
+        (member.pension_provider_info && member.pension_provider_info.includes(filterConfig.pensionProvider));
       const matchesNationality = !filterConfig.nationality || member.nationality === filterConfig.nationality;
       const matchesMaritalStatus = !filterConfig.maritalStatus || member.marital_status === filterConfig.maritalStatus;
 
-      return matchesSearch && matchesStatus && matchesApproach && matchesNationality && matchesMaritalStatus;
+      return matchesSearch && matchesAdviceType && matchesPensionProvider && matchesNationality && matchesMaritalStatus;
     })
     .sort((a, b) => {
       const aValue = (a as any)[sortConfig.column];
@@ -756,24 +767,26 @@ export const MembersTable = ({ databaseType, onBack }: MembersTableProps) => {
 
               <div className="flex gap-2 flex-wrap">
                 <select
-                  value={filterConfig.status}
-                  onChange={(e) => setFilterConfig(prev => ({ ...prev, status: e.target.value }))}
+                  value={filterConfig.adviceType}
+                  onChange={(e) => setFilterConfig(prev => ({ ...prev, adviceType: e.target.value }))}
                   className="px-4 py-3 rounded-xl text-slate-900 border border-slate-200 bg-slate-50 focus:bg-white focus:border-zomi-green focus:outline-none transition-colors"
                 >
-                  <option value="">All Status</option>
-                  <option value="Active">Active</option>
-                  <option value="Pending">Pending</option>
-                  <option value="Inactive">Inactive</option>
+                  <option value="">All Advice Types</option>
+                  <option value="Migrated Plans">Migrated Plans</option>
+                  <option value="Pre-Existing Plan">Pre-Existing Plan</option>
                 </select>
 
                 <select
-                  value={filterConfig.investmentApproach}
-                  onChange={(e) => setFilterConfig(prev => ({ ...prev, investmentApproach: e.target.value }))}
+                  value={filterConfig.pensionProvider}
+                  onChange={(e) => setFilterConfig(prev => ({ ...prev, pensionProvider: e.target.value }))}
                   className="px-4 py-3 rounded-xl text-slate-900 border border-slate-200 bg-slate-50 focus:bg-white focus:border-zomi-green focus:outline-none transition-colors"
                 >
-                  <option value="">All Approaches</option>
-                  <option value="Adventurous">Adventurous</option>
-                  <option value="Cautious">Cautious</option>
+                  <option value="">All Providers</option>
+                  <option value="Royal London">Royal London</option>
+                  <option value="Scottish Widows">Scottish Widows</option>
+                  <option value="Aegon">Aegon</option>
+                  <option value="Aviva">Aviva</option>
+                  <option value="Opt Enrol">Opt Enrol</option>
                 </select>
 
                 <button
@@ -785,11 +798,11 @@ export const MembersTable = ({ databaseType, onBack }: MembersTableProps) => {
                 </button>
 
                 <button
-                  onClick={copySelectedData}
+                  onClick={() => setShowExportModal(true)}
                   className="flex items-center gap-2 px-4 py-3 bg-zomi-green hover:bg-zomi-green/90 text-white rounded-xl transition-all duration-200"
                 >
-                  {copiedData ? <CheckCircle className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
-                  <span className="hidden sm:inline">{copiedData ? 'Copied!' : 'Copy Data'}</span>
+                  <Download className="w-5 h-5" />
+                  <span className="hidden sm:inline">Export</span>
                 </button>
               </div>
             </div>
@@ -942,6 +955,12 @@ export const MembersTable = ({ databaseType, onBack }: MembersTableProps) => {
           )}
         </div>
       </div>
+
+      {/* Export Modal */}
+      <ExportModal 
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+      />
     </div>
   );
 };
