@@ -13,6 +13,7 @@ import csv
 
 from app.services.database_service import db_service
 from app.services.encryption_service import get_encryption_service
+from app.services.audit_service import audit_service
 from app.routes.auth import get_current_user
 
 router = APIRouter()
@@ -186,6 +187,14 @@ async def create_employee(employee_data: Dict[str, Any], current_user: dict = De
         
         employee = response.data[0]
         
+        # Audit log - employee created
+        await audit_service.log_employee_create(
+            employee_id=employee["id"],
+            employee_data=employee_data,
+            user_id=user_id,
+            organization_id=organization_id
+        )
+        
         # Decrypt PII for response (user needs to see what they created)
         employee = encryption.decrypt_employee_pii(employee)
         
@@ -243,8 +252,12 @@ async def update_employee(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Employee not found"
             )
-        
-        # Remove fields that shouldn't be updated
+                # Fetch existing employee data for audit log
+        existing_employee = db_service.client.table("employees").select("*").eq(
+            "id", employee_id
+        ).execute()
+        old_employee_data = existing_employee.data[0] if existing_employee.data else {}
+                # Remove fields that shouldn't be updated
         employee_data.pop("id", None)
         employee_data.pop("organization_id", None)
         
@@ -267,8 +280,19 @@ async def update_employee(
                 detail="Failed to update employee"
             )
         
+        employee = response.data[0]
+        
+        # Audit log - employee updated
+        await audit_service.log_employee_update(
+            employee_id=employee_id,
+            old_data=old_employee_data,
+            new_data=employee,
+            user_id=current_user["id"],
+            organization_id=organization_id
+        )
+        
         # Decrypt PII for response
-        updated_employee = encryption.decrypt_employee_pii(response.data[0])
+        updated_employee = encryption.decrypt_employee_pii(employee)
         
         return updated_employee
         
@@ -290,8 +314,8 @@ async def delete_employee(employee_id: str, current_user: dict = Depends(get_cur
     try:
         organization_id = current_user["organization_id"]
         
-        # Verify employee exists and belongs to user's organization
-        existing = db_service.client.table("employees").select("id").eq(
+        # Fetch employee data before deletion for audit log
+        existing = db_service.client.table("employees").select("*").eq(
             "id", employee_id
         ).eq("organization_id", organization_id).execute()
         
@@ -301,7 +325,18 @@ async def delete_employee(employee_id: str, current_user: dict = Depends(get_cur
                 detail="Employee not found"
             )
         
+        employee_data = existing.data[0]
+        
+        # Delete the employee
         db_service.client.table("employees").delete().eq("id", employee_id).execute()
+        
+        # Audit log - employee deleted
+        await audit_service.log_employee_delete(
+            employee_id=employee_id,
+            employee_data=employee_data,
+            user_id=current_user["id"],
+            organization_id=organization_id
+        )
         
     except HTTPException:
         raise
@@ -335,6 +370,14 @@ async def bulk_delete_employees(
         db_service.client.table("employees").delete().in_(
             "id", employee_ids
         ).eq("organization_id", organization_id).execute()
+        
+        # Audit log - bulk delete
+        await audit_service.log_bulk_delete(
+            table_name="employees",
+            record_ids=employee_ids,
+            user_id=current_user["id"],
+            organization_id=organization_id
+        )
         
         return {"deleted_count": len(employee_ids)}
         
@@ -491,6 +534,22 @@ async def export_employees_io_template(
             writer.writerows(io_template_rows)
         
         logger.info(f"Exporting {len(io_template_rows)} employees to CSV")
+        
+        # Audit log - data export
+        await audit_service.log_export(
+            table_name="employees",
+            user_id=current_user["id"],
+            organization_id=organization_id,
+            filters={
+                "company_id": company_id,
+                "advice_type": advice_type,
+                "pension_provider": pension_provider,
+                "service_status": service_status,
+                "from_date": from_date,
+                "to_date": to_date
+            },
+            record_count=len(io_template_rows)
+        )
         
         # Create response
         output.seek(0)
