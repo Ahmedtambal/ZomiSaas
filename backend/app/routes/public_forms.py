@@ -390,17 +390,26 @@ async def submit_form(token: str, submission_data: Dict[str, Any], request: Requ
             }
             
             # Calculate pension_start_date based on employment_start_date + postponement_period
-            if submission_data.get("employmentStartDate") and company.get("postponement_period"):
+            # Log full company data for debugging
+            logger.info(f"Company data keys: {list(company.keys())}")
+            logger.info(f"Company ID: {company.get('id')}, Name: {company.get('client_name')}")
+            logger.info(f"postponement_period value: '{company.get('postponement_period')}' (type: {type(company.get('postponement_period'))})")
+            
+            if submission_data.get("employmentStartDate"):
                 try:
                     employment_date = datetime.strptime(submission_data.get("employmentStartDate"), "%Y-%m-%d")
-                    postponement_months = int(company.get("postponement_period", 0))
+                    # Get postponement_period, convert to int, default to 0
+                    postponement_value = company.get("postponement_period")
+                    postponement_months = int(postponement_value) if postponement_value not in (None, "", "None") else 0
                     # Add postponement months (handles varying month lengths: 28/29/30/31 days)
                     pension_start = employment_date + relativedelta(months=postponement_months)
                     employee_data["pension_start_date"] = pension_start.strftime("%Y-%m-%d")
-                    logger.info(f"Calculated pension_start_date: {employee_data['pension_start_date']} (employment: {submission_data.get('employmentStartDate')}, postponement: {postponement_months} months)")
+                    logger.info(f"✓ Calculated pension_start_date: {employee_data['pension_start_date']} (employment: {submission_data.get('employmentStartDate')}, postponement: {postponement_months} months)")
                 except Exception as e:
-                    logger.warning(f"Failed to calculate pension_start_date: {e}")
-                    pass
+                    logger.error(f"✗ Failed to calculate pension_start_date: {e}")
+                    logger.exception(e)
+            else:
+                logger.warning(f"✗ Cannot calculate pension_start_date - missing employmentStartDate")
             
             # **ENCRYPT PII BEFORE STORING IN DATABASE**
             encryption = get_encryption_service()
