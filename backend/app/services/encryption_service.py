@@ -200,10 +200,19 @@ class EncryptionService:
         """
         Encrypt all high-risk PII fields in employee data
         
-        Encrypts:
-        - ni_number
-        - pensionable_salary
-        - date_of_birth
+        HYBRID STRATEGY (2026-01-29):
+        - TEXT columns: Encrypt IN-PLACE (direct encryption)
+        - Non-TEXT columns: Use *_encrypted columns
+        
+        Direct encryption (TEXT columns):
+        - ni_number (TEXT) → encrypted in place
+        - email_address (TEXT) → encrypted in place
+        - mobile_number (TEXT) → encrypted in place
+        - home_number (TEXT) → encrypted in place
+        
+        Separate encrypted columns (Non-TEXT):
+        - date_of_birth (DATE) → date_of_birth_encrypted (TEXT)
+        - pensionable_salary (NUMERIC) → pensionable_salary_encrypted (TEXT)
         
         Args:
             employee_data: Employee dictionary with plaintext PII
@@ -213,30 +222,55 @@ class EncryptionService:
         """
         encrypted_data = employee_data.copy()
         
-        # Encrypt National Insurance Number (CRITICAL)
+        # ===== DIRECT ENCRYPTION (TEXT columns) =====
+        
+        # Encrypt NI Number IN-PLACE (TEXT column)
         if encrypted_data.get('ni_number'):
             encrypted_data['ni_number'] = self.encrypt(encrypted_data['ni_number'])
-            logger.debug("Encrypted ni_number")
+            logger.debug("Encrypted ni_number in place")
         
-        # Encrypt pensionable salary (Financial data)
-        if encrypted_data.get('pensionable_salary'):
-            encrypted_data['pensionable_salary'] = self.encrypt(
-                str(encrypted_data['pensionable_salary'])
-            )
-            logger.debug("Encrypted pensionable_salary")
+        # Encrypt Email Address IN-PLACE (TEXT column)
+        if encrypted_data.get('email_address'):
+            encrypted_data['email_address'] = self.encrypt(encrypted_data['email_address'])
+            logger.debug("Encrypted email_address in place")
         
-        # Encrypt date of birth (Identity verification)
+        # Encrypt Mobile Number IN-PLACE (TEXT column)
+        if encrypted_data.get('mobile_number'):
+            encrypted_data['mobile_number'] = self.encrypt(encrypted_data['mobile_number'])
+            logger.debug("Encrypted mobile_number in place")
+        
+        # Encrypt Home Number IN-PLACE (TEXT column)
+        if encrypted_data.get('home_number'):
+            encrypted_data['home_number'] = self.encrypt(encrypted_data['home_number'])
+            logger.debug("Encrypted home_number in place")
+        
+        # ===== SEPARATE ENCRYPTED COLUMNS (Non-TEXT columns) =====
+        
+        # Encrypt Date of Birth to date_of_birth_encrypted (DATE column → TEXT encrypted column)
         if encrypted_data.get('date_of_birth'):
-            encrypted_data['date_of_birth'] = self.encrypt(
+            encrypted_data['date_of_birth_encrypted'] = self.encrypt(
                 str(encrypted_data['date_of_birth'])
             )
-            logger.debug("Encrypted date_of_birth")
+            # Keep original DATE column as-is for DB compatibility
+            logger.debug("Encrypted date_of_birth to date_of_birth_encrypted")
+        
+        # Encrypt Pensionable Salary to pensionable_salary_encrypted (NUMERIC → TEXT encrypted column)
+        if encrypted_data.get('pensionable_salary'):
+            encrypted_data['pensionable_salary_encrypted'] = self.encrypt(
+                str(encrypted_data['pensionable_salary'])
+            )
+            # Keep original NUMERIC column as-is for DB compatibility
+            logger.debug("Encrypted pensionable_salary to pensionable_salary_encrypted")
         
         return encrypted_data
     
     def decrypt_employee_pii(self, employee_data: dict) -> dict:
         """
         Decrypt all high-risk PII fields in employee data
+        
+        HYBRID STRATEGY (2026-01-29):
+        - TEXT columns: Decrypt IN-PLACE (were encrypted directly)
+        - Non-TEXT columns: Read from *_encrypted columns
         
         Args:
             employee_data: Employee dictionary with encrypted PII
@@ -246,35 +280,67 @@ class EncryptionService:
         """
         decrypted_data = employee_data.copy()
         
-        # Decrypt National Insurance Number
+        # ===== DIRECT DECRYPTION (TEXT columns) =====
+        
+        # Decrypt NI Number IN-PLACE (was encrypted directly in TEXT column)
         if decrypted_data.get('ni_number'):
             try:
                 decrypted_data['ni_number'] = self.decrypt(decrypted_data['ni_number'])
             except Exception as e:
                 logger.warning(f"Failed to decrypt ni_number: {e}")
-                # Keep original value if decryption fails
+                # Keep as-is if already plaintext
                 pass
         
-        # Decrypt pensionable salary
-        if decrypted_data.get('pensionable_salary'):
+        # Decrypt Email Address IN-PLACE (was encrypted directly in TEXT column)
+        if decrypted_data.get('email_address'):
             try:
-                decrypted_value = self.decrypt(decrypted_data['pensionable_salary'])
-                # Keep as original type if it was a number
-                decrypted_data['pensionable_salary'] = decrypted_value
+                decrypted_data['email_address'] = self.decrypt(decrypted_data['email_address'])
             except Exception as e:
-                logger.warning(f"Failed to decrypt pensionable_salary: {e}")
-                # Keep original value if decryption fails
+                logger.warning(f"Failed to decrypt email_address: {e}")
+                # Keep as-is if already plaintext
                 pass
         
-        # Decrypt date of birth
-        if decrypted_data.get('date_of_birth'):
+        # Decrypt Mobile Number IN-PLACE (was encrypted directly in TEXT column)
+        if decrypted_data.get('mobile_number'):
             try:
-                decrypted_data['date_of_birth'] = self.decrypt(
-                    decrypted_data['date_of_birth']
-                )
+                decrypted_data['mobile_number'] = self.decrypt(decrypted_data['mobile_number'])
             except Exception as e:
-                logger.warning(f"Failed to decrypt date_of_birth: {e}")
-                # Keep original value if decryption fails
+                logger.warning(f"Failed to decrypt mobile_number: {e}")
+                # Keep as-is if already plaintext
+                pass
+        
+        # Decrypt Home Number IN-PLACE (was encrypted directly in TEXT column)
+        if decrypted_data.get('home_number'):
+            try:
+                decrypted_data['home_number'] = self.decrypt(decrypted_data['home_number'])
+            except Exception as e:
+                logger.warning(f"Failed to decrypt home_number: {e}")
+                # Keep as-is if already plaintext
+                pass
+        
+        # ===== SEPARATE ENCRYPTED COLUMNS (Non-TEXT columns) =====
+        
+        # Decrypt Date of Birth from date_of_birth_encrypted
+        if decrypted_data.get('date_of_birth_encrypted'):
+            try:
+                decrypted_data['date_of_birth'] = self.decrypt(decrypted_data['date_of_birth_encrypted'])
+            except Exception as e:
+                logger.warning(f"Failed to decrypt date_of_birth_encrypted: {e}")
+                # Fallback to original DATE column if decryption fails
+                pass
+        
+        # Decrypt Pensionable Salary from pensionable_salary_encrypted
+        if decrypted_data.get('pensionable_salary_encrypted'):
+            try:
+                decrypted_value = self.decrypt(decrypted_data['pensionable_salary_encrypted'])
+                # Convert back to number if possible
+                try:
+                    decrypted_data['pensionable_salary'] = float(decrypted_value)
+                except:
+                    decrypted_data['pensionable_salary'] = decrypted_value
+            except Exception as e:
+                logger.warning(f"Failed to decrypt pensionable_salary_encrypted: {e}")
+                # Fallback to original NUMERIC column if decryption fails
                 pass
         
         return decrypted_data
