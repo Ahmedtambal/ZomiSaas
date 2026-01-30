@@ -60,12 +60,29 @@ async def get_audit_logs(
         user_profiles = {}
         
         if user_ids:
+            # Fetch user profiles (has full_name)
             profiles_response = db_service.client.table("user_profiles").select(
-                "id, full_name, email"
+                "id, full_name"
             ).in_("id", user_ids).execute()
             
             for profile in profiles_response.data:
                 user_profiles[profile["id"]] = profile
+            
+            # Fetch emails from auth.users
+            try:
+                # Use admin API to fetch user emails from auth.users
+                for user_id in user_ids:
+                    try:
+                        auth_response = db_service.client.auth.admin.get_user_by_id(user_id)
+                        if auth_response and auth_response.user:
+                            if user_id in user_profiles:
+                                user_profiles[user_id]["email"] = auth_response.user.email
+                    except:
+                        # If admin API fails, just skip email for this user
+                        pass
+            except:
+                # If we can't fetch emails, continue without them
+                pass
         
         # Decrypt details field and process logs
         encryption = get_encryption_service()
