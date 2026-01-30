@@ -1,5 +1,6 @@
 import { Users, TrendingUp, Activity, Link as LinkIcon, BarChart3, PieChart, TrendingDown } from 'lucide-react';
 import { KPICard } from './KPICard';
+import { WorkforceDashboard } from './WorkforceDashboard';
 
 export const ExecutiveDashboard = () => {
   const mockMembers = 247;
@@ -40,6 +41,10 @@ export const ExecutiveDashboard = () => {
         <p className="text-slate-600">Real-time insights for Zomi Wealth Group</p>
       </div>
 
+      {/* Section 1: Workforce KPIs */}
+      <WorkforceDashboard />
+
+      {/* Original Mock KPIs - These will be replaced with real data sections later */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <KPICard
           title="Total Members"

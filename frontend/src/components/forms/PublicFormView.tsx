@@ -44,7 +44,7 @@ export const PublicFormView: React.FC<PublicFormViewProps> = ({ token }) => {
         
         // Check if token is still valid (30-minute expiry)
         if (data.token_info.expires_at && new Date(data.token_info.expires_at) < new Date()) {
-          setError('This form link has expired (30 minute time limit). Please request a new link from your administrator.');
+          setError('This form link has expired. Please request a new link from Zomi Wealth Team.');
           return;
         }
         

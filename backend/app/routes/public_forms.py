@@ -101,7 +101,7 @@ async def get_form_by_token(token: str, request: Request) -> Dict[str, Any]:
             if datetime.utcnow() > expires_at.replace(tzinfo=None):
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
-                    detail="This form link has expired (30 minute limit). Please request a new link from your administrator."
+                    detail="This form link has expired. Please request a new link from Zomi Wealth Team."
                 )
         
         # Check max submissions
