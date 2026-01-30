@@ -8,7 +8,8 @@ import {
   LogOut,
   Leaf,
   Menu,
-  X
+  X,
+  FileText
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -28,6 +29,7 @@ export const DashboardLayout = ({ children, currentPage }: DashboardLayoutProps)
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
     { id: 'members', label: 'Members Data', icon: Table, path: '/members' },
     { id: 'forms', label: 'Form Generator', icon: LinkIcon, path: '/forms' },
+    { id: 'audit-logs', label: 'Activity Log', icon: FileText, path: '/audit-logs' },
     { id: 'settings', label: 'Settings', icon: Settings, path: '/settings' },
   ];
 

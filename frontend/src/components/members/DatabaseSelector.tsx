@@ -1,31 +1,53 @@
-import { Database, Users, ArrowRight } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Database, ArrowRight } from 'lucide-react';
 import { DatabaseType } from '../../types';
+import apiClient from '../../services/apiClient';
 
 interface DatabaseSelectorProps {
   onSelectDatabase: (databaseType: DatabaseType) => void;
 }
 
 export const DatabaseSelector = ({ onSelectDatabase }: DatabaseSelectorProps) => {
+  const [employeeCount, setEmployeeCount] = useState(0);
+  const [lastUpdated, setLastUpdated] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchEmployeeStats();
+  }, []);
+
+  const fetchEmployeeStats = async () => {
+    try {
+      const response = await apiClient.get('/api/employees');
+      const employees = response.data;
+      setEmployeeCount(employees.length);
+      
+      // Get most recent updated_at timestamp
+      if (employees.length > 0) {
+        const mostRecent = employees.reduce((latest: any, emp: any) => {
+          const empDate = new Date(emp.updated_at || emp.created_at);
+          const latestDate = new Date(latest.updated_at || latest.created_at);
+          return empDate > latestDate ? emp : latest;
+        });
+        setLastUpdated(new Date(mostRecent.updated_at || mostRecent.created_at).toISOString().split('T')[0]);
+      }
+    } catch (error) {
+      console.error('Failed to fetch employee stats:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const databases = [
     {
       id: 'ioUpload' as DatabaseType,
       name: 'Employee Database',
       description: 'Comprehensive member data with full address and policy information',
       icon: Database,
-      recordCount: 247,
-      lastUpdated: '2024-01-15',
+      recordCount: loading ? '...' : employeeCount,
+      lastUpdated: loading ? '...' : lastUpdated,
       color: 'bg-blue-500',
       features: ['Employee Details', 'Pension Setup', 'Provider Routes', 'Team Tracking', 'Financial Status']
-    },
-    {
-      id: 'newEmployeeUpload' as DatabaseType,
-      name: 'Audit Logs',
-      description: 'New employee onboarding data with employment details',
-      icon: Users,
-      recordCount: 89,
-      lastUpdated: '2024-01-20',
-      color: 'bg-zomi-green',
-      features: ['Employment Details', 'Personal Information', 'Pension Approach', 'UK Residency']
     }
   ];
 
@@ -93,25 +115,16 @@ export const DatabaseSelector = ({ onSelectDatabase }: DatabaseSelectorProps) =>
 
       <div className="glass-panel rounded-2xl p-6">
         <h3 className="text-lg font-bold text-slate-900 mb-4">Database Information</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <h4 className="font-semibold text-slate-900 mb-2">Employee Database</h4>
-            <ul className="text-sm text-slate-600 space-y-1">
-              <li>• Complete member profiles with full address information</li>
-              <li>• Policy numbers and adviser assignments</li>
-              <li>• Service status and client categorization</li>
-              <li>• Salary information with post-sacrifice details</li>
-            </ul>
-          </div>
-          <div>
-            <h4 className="font-semibold text-slate-900 mb-2">New Employee Upload Database</h4>
-            <ul className="text-sm text-slate-600 space-y-1">
-              <li>• New employee onboarding information</li>
-              <li>• Employment start dates and retirement planning</li>
-              <li>• UK residency status and nationality</li>
-              <li>• Pension investment approach preferences</li>
-            </ul>
-          </div>
+        <div>
+          <h4 className="font-semibold text-slate-900 mb-2">Employee Database</h4>
+          <ul className="text-sm text-slate-600 space-y-1">
+            <li>• Complete member profiles with full address information</li>
+            <li>• Policy numbers and adviser assignments</li>
+            <li>• Service status and client categorization</li>
+            <li>• Salary information with post-sacrifice details</li>
+            <li>• Real-time employee count: <span className="font-semibold text-slate-900">{loading ? 'Loading...' : employeeCount}</span></li>
+            <li>• Last updated: <span className="font-semibold text-slate-900">{loading ? 'Loading...' : lastUpdated}</span></li>
+          </ul>
         </div>
       </div>
     </div>

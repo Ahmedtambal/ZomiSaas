@@ -14,6 +14,7 @@ import { FormManagementPage } from './components/forms/FormManagementPage';
 import { DynamicFormRenderer } from './components/forms/DynamicFormRenderer';
 import { PublicFormView } from './components/forms/PublicFormView';
 import { SettingsPage } from './components/settings/SettingsPage';
+import AuditLogsPage from './components/audit/AuditLogsPage';
 import { DatabaseType } from './types';
 
 // Wrapper component for public form route
@@ -142,6 +143,16 @@ function AppContent() {
           <ProtectedRoute>
             <DashboardLayout currentPage="forms">
               <FormManagementPage />
+            </DashboardLayout>
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/audit-logs" 
+        element={
+          <ProtectedRoute>
+            <DashboardLayout currentPage="audit-logs">
+              <AuditLogsPage />
             </DashboardLayout>
           </ProtectedRoute>
         } 
