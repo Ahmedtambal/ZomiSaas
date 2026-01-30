@@ -40,16 +40,24 @@ class AuditService:
             metadata: Additional context (e.g., filter params, bulk IDs)
         """
         try:
+            # Combine old_data, new_data, and metadata into details field
+            details = {}
+            if old_data:
+                details['old_data'] = old_data
+            if new_data:
+                details['new_data'] = new_data
+            if metadata:
+                details['metadata'] = metadata
+            if record_id:
+                details['record_id'] = record_id
+            
             log_entry = {
                 "action": action,
-                "table_name": table_name,
-                "record_id": record_id,
+                "resource": table_name,
                 "user_id": user_id,
                 "organization_id": organization_id,
-                "old_data": old_data,
-                "new_data": new_data,
+                "details": details if details else None,
                 "ip_address": ip_address,
-                "metadata": metadata,
                 "created_at": datetime.utcnow().isoformat()
             }
             
