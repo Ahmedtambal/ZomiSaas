@@ -127,6 +127,88 @@ async def get_workforce_kpis(
         )
 
 
+@router.get("/time-series")
+async def get_time_series_data(
+    current_user: Dict = Depends(get_current_user)
+) -> Dict[str, Any]:
+    """
+    Get time series data for charts:
+    - New Hires (Weekly): Last 16 weeks of hiring data
+    - Employee Growth Rate (Monthly): Last 12 months of growth percentage
+    """
+    try:
+        org_id = current_user.get("organization_id")
+        if not org_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Organization ID not found"
+            )
+        
+        today = date.today()
+        
+        # Calculate new hires per week for last 16 weeks
+        weeks_data = []
+        for i in range(15, -1, -1):  # 16 weeks back to now
+            week_end = today - timedelta(weeks=i)
+            week_start = week_end - timedelta(days=6)
+            
+            # Query employees created in this week
+            response = db_service.client.table("employees")\
+                .select("id", count="exact")\
+                .eq("organization_id", org_id)\
+                .gte("created_at", week_start.isoformat())\
+                .lte("created_at", week_end.isoformat())\
+                .execute()
+            
+            weeks_data.append({
+                "week": week_end.strftime("%b %d"),
+                "new_hires": response.count or 0
+            })
+        
+        # Calculate monthly growth rate for last 12 months
+        months_data = []
+        for i in range(11, -1, -1):  # 12 months back to now
+            current_month = today - timedelta(days=30*i)
+            previous_month = current_month - timedelta(days=30)
+            
+            # Get snapshots for these months (or closest available)
+            current_snapshots = kpi_snapshot_service.get_snapshots_range(
+                org_id, 
+                current_month - timedelta(days=5),
+                current_month + timedelta(days=5)
+            )
+            previous_snapshots = kpi_snapshot_service.get_snapshots_range(
+                org_id,
+                previous_month - timedelta(days=5),
+                previous_month + timedelta(days=5)
+            )
+            
+            growth_rate = 0.0
+            if current_snapshots and previous_snapshots:
+                current_count = current_snapshots[-1]["total_active_employees"]
+                previous_count = previous_snapshots[-1]["total_active_employees"]
+                
+                if previous_count > 0:
+                    growth_rate = ((current_count - previous_count) / previous_count) * 100
+            
+            months_data.append({
+                "month": current_month.strftime("%b %Y"),
+                "growth_rate": round(growth_rate, 2)
+            })
+        
+        return {
+            "new_hires_weekly": weeks_data,
+            "growth_rate_monthly": months_data
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to fetch time series data: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch time series data: {str(e)}"
+        )
+
+
 @router.post("/snapshot/generate")
 async def generate_snapshot(
     current_user: Dict = Depends(get_current_user)
