@@ -33,10 +33,8 @@ async def get_audit_logs(
     try:
         organization_id = current_user["organization_id"]
         
-        # Build query
-        query = db_service.client.table("audit_logs").select(
-            "*, user_profiles!audit_logs_user_id_fkey(first_name, last_name, email)"
-        ).eq("organization_id", organization_id)
+        # Build query - fetch audit logs only (user_profiles join doesn't work as FK points to auth.users)
+        query = db_service.client.table("audit_logs").select("*").eq("organization_id", organization_id)
         
         # Apply filters
         if action:
@@ -57,6 +55,18 @@ async def get_audit_logs(
         response = query.execute()
         logs = response.data
         
+        # Fetch user profiles separately for all user_ids
+        user_ids = list(set([log.get("user_id") for log in logs if log.get("user_id")]))
+        user_profiles = {}
+        
+        if user_ids:
+            profiles_response = db_service.client.table("user_profiles").select(
+                "id, first_name, last_name, email"
+            ).in_("id", user_ids).execute()
+            
+            for profile in profiles_response.data:
+                user_profiles[profile["id"]] = profile
+        
         # Decrypt details field and process logs
         encryption = get_encryption_service()
         processed_logs = []
@@ -71,9 +81,10 @@ async def get_audit_logs(
                     logger.warning(f"Failed to decrypt audit log details: {str(e)}")
                     log["details"] = None
             
-            # Extract user info from join
-            user_info = log.pop("user_profiles", None)
-            if user_info:
+            # Get user info from profiles map
+            user_id = log.get("user_id")
+            if user_id and user_id in user_profiles:
+                user_info = user_profiles[user_id]
                 log["user_name"] = f"{user_info.get('first_name', '')} {user_info.get('last_name', '')}".strip()
                 log["user_email"] = user_info.get("email", "")
             else:
