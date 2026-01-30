@@ -450,6 +450,14 @@ async def export_employees_io_template(
             "organization_id", organization_id
         )
         
+        # First, get total count without date filters for debugging
+        total_query = db_service.client.table("employees").select("id", count="exact").eq(
+            "organization_id", organization_id
+        )
+        total_response = total_query.execute()
+        total_count = total_response.count if hasattr(total_response, 'count') else len(total_response.data)
+        logger.info(f"Total employees in organization before filters: {total_count}")
+        
         # Apply filters
         if company_id:
             query = query.eq("company_id", company_id)
@@ -460,15 +468,22 @@ async def export_employees_io_template(
         if service_status:
             query = query.eq("service_status", service_status)
         
-        # Date filtering - use created_at if employment_start_date is not commonly used
-        # This way the filter is more useful for actual data exports
+        # Date filtering using created_at (timestamp with timezone)
+        # Need to ensure date format is compatible with timestamp comparison
         if from_date and to_date:
-            # Try employment_start_date first, fall back to created_at in post-processing
-            query = query.gte("created_at", from_date).lte("created_at", to_date)
+            # Add time to make it inclusive of the full day
+            from_datetime = f"{from_date}T00:00:00"
+            to_datetime = f"{to_date}T23:59:59"
+            query = query.gte("created_at", from_datetime).lte("created_at", to_datetime)
+            logger.info(f"Applying date range filter: {from_datetime} to {to_datetime}")
         elif from_date:
-            query = query.gte("created_at", from_date)
+            from_datetime = f"{from_date}T00:00:00"
+            query = query.gte("created_at", from_datetime)
+            logger.info(f"Applying from_date filter: {from_datetime}")
         elif to_date:
-            query = query.lte("created_at", to_date)
+            to_datetime = f"{to_date}T23:59:59"
+            query = query.lte("created_at", to_datetime)
+            logger.info(f"Applying to_date filter: {to_datetime}")
         
         logger.info(f"Export filters: company_id={company_id}, advice_type={advice_type}, pension_provider={pension_provider}, service_status={service_status}, from_date={from_date}, to_date={to_date}")
         
