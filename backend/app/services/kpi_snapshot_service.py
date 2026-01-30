@@ -6,7 +6,7 @@ from datetime import datetime, date, timedelta
 from typing import Dict, Any, Optional, List
 import logging
 
-from app.services.database_service import database_service
+from app.services.database_service import db_service
 from app.services.encryption_service import encryption_service
 
 logger = logging.getLogger(__name__)
@@ -16,7 +16,7 @@ class KPISnapshotService:
     """Service for managing KPI snapshots"""
     
     def __init__(self):
-        self.db = database_service.get_client()
+        self.db = db_service.client
     
     async def calculate_and_store_snapshot(self, organization_id: str, snapshot_date: Optional[date] = None) -> Dict[str, Any]:
         """

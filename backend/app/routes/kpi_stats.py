@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, date
 from typing import Dict, Any, Optional
 import logging
 
-from app.services.database_service import database_service
+from app.services.database_service import db_service
 from app.services.kpi_snapshot_service import kpi_snapshot_service
 from app.middleware.auth import get_current_user
 
