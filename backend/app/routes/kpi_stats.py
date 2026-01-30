@@ -82,8 +82,7 @@ async def get_workforce_kpis(
             pending_trend = {"value": 0.0, "is_positive": True}
         
         # Get nearest upcoming pension start date (requires live query)
-        db_service = database_service.get_client()
-        pending_response = db_service.table("employees")\
+        pending_response = db_service.client.table("employees")\
             .select("pension_start_date")\
             .eq("organization_id", org_id)\
             .eq("service_status", "Active")\
