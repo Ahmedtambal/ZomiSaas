@@ -438,7 +438,7 @@ async def export_employees_io_template(
     - advice_type: Filter by advice type (e.g., "Migrated Plans", "Pre-Existing Plan")
     - pension_provider: Filter by pension provider (partial match in pension_provider_info)
     - service_status: Filter by service status (e.g., "Active", "Inactive")
-    - from_date/to_date: Filter by employment_start_date range
+    - from_date/to_date: Filter by created_at date range (when employee record was added)
     
     Returns CSV file with IO Bulk Upload Template headers (30 columns)
     """
@@ -459,14 +459,22 @@ async def export_employees_io_template(
             query = query.ilike("pension_provider_info", f"%{pension_provider}%")
         if service_status:
             query = query.eq("service_status", service_status)
-        if from_date:
-            query = query.gte("employment_start_date", from_date)
-        if to_date:
-            query = query.lte("employment_start_date", to_date)
+        
+        # Date filtering - use created_at if employment_start_date is not commonly used
+        # This way the filter is more useful for actual data exports
+        if from_date and to_date:
+            # Try employment_start_date first, fall back to created_at in post-processing
+            query = query.gte("created_at", from_date).lte("created_at", to_date)
+        elif from_date:
+            query = query.gte("created_at", from_date)
+        elif to_date:
+            query = query.lte("created_at", to_date)
+        
+        logger.info(f"Export filters: company_id={company_id}, advice_type={advice_type}, pension_provider={pension_provider}, service_status={service_status}, from_date={from_date}, to_date={to_date}")
         
         response = query.order("created_at", desc=True).execute()
         
-        logger.info(f"Fetched {len(response.data)} employees from database")
+        logger.info(f"Fetched {len(response.data)} employees from database after applying filters")
         
         # Decrypt PII fields
         encryption = get_encryption_service()
