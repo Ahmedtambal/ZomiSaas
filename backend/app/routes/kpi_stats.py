@@ -9,7 +9,7 @@ import logging
 
 from app.services.database_service import db_service
 from app.services.kpi_snapshot_service import kpi_snapshot_service
-from app.middleware.auth import get_current_user
+from app.routes.auth import get_current_user
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
