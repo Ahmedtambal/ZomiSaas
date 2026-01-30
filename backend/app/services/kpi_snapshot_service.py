@@ -7,7 +7,7 @@ from typing import Dict, Any, Optional, List
 import logging
 
 from app.services.database_service import db_service
-from app.services.encryption_service import encryption_service
+from app.services.encryption_service import get_encryption_service
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +58,7 @@ class KPISnapshotService:
                     salary_str = emp.get("pensionable_salary", "0")
                     # Decrypt if encrypted
                     if salary_str and isinstance(salary_str, str) and salary_str.startswith("Z0FBQUFB"):
-                        decrypted_salary = encryption_service.decrypt(salary_str)
+                        decrypted_salary = get_encryption_service().decrypt(salary_str)
                         salaries.append(float(decrypted_salary))
                     elif isinstance(salary_str, (int, float)):
                         salaries.append(float(salary_str))
