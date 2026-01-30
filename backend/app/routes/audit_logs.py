@@ -61,7 +61,7 @@ async def get_audit_logs(
         
         if user_ids:
             profiles_response = db_service.client.table("user_profiles").select(
-                "id, first_name, last_name, email"
+                "id, full_name, email"
             ).in_("id", user_ids).execute()
             
             for profile in profiles_response.data:
@@ -85,7 +85,7 @@ async def get_audit_logs(
             user_id = log.get("user_id")
             if user_id and user_id in user_profiles:
                 user_info = user_profiles[user_id]
-                log["user_name"] = f"{user_info.get('first_name', '')} {user_info.get('last_name', '')}".strip()
+                log["user_name"] = user_info.get("full_name", "Unknown User")
                 log["user_email"] = user_info.get("email", "")
             else:
                 log["user_name"] = "Unknown User"
