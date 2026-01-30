@@ -438,7 +438,7 @@ async def export_employees_io_template(
     - advice_type: Filter by advice type (e.g., "Migrated Plans", "Pre-Existing Plan")
     - pension_provider: Filter by pension provider (partial match in pension_provider_info)
     - service_status: Filter by service status (e.g., "Active", "Inactive")
-    - from_date/to_date: Filter by created_at date range
+    - from_date/to_date: Filter by employment_start_date range
     
     Returns CSV file with IO Bulk Upload Template headers (30 columns)
     """
@@ -460,9 +460,9 @@ async def export_employees_io_template(
         if service_status:
             query = query.eq("service_status", service_status)
         if from_date:
-            query = query.gte("created_at", from_date)
+            query = query.gte("employment_start_date", from_date)
         if to_date:
-            query = query.lte("created_at", to_date)
+            query = query.lte("employment_start_date", to_date)
         
         response = query.order("created_at", desc=True).execute()
         
