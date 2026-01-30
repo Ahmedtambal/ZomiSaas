@@ -279,22 +279,6 @@ const AuditLogsPage: React.FC = () => {
                           Record ID: <span className="font-mono text-gray-900">{log.record_id}</span>
                         </p>
                       )}
-
-                      {/* Activity Details */}
-                      {log.details && Object.keys(log.details).length > 0 && (
-                        <div className="mt-2 text-sm">
-                          <details className="cursor-pointer">
-                            <summary className="text-indigo-600 hover:text-indigo-700 font-medium">
-                              View Details
-                            </summary>
-                            <div className="mt-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                              <pre className="text-xs text-gray-700 overflow-x-auto whitespace-pre-wrap">
-                                {JSON.stringify(log.details, null, 2)}
-                              </pre>
-                            </div>
-                          </details>
-                        </div>
-                      )}
                     </div>
                   </div>
 

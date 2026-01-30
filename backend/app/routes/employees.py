@@ -495,11 +495,6 @@ async def export_employees_io_template(
         encryption = get_encryption_service()
         employees = [encryption.decrypt_employee_pii(emp) for emp in response.data]
         
-        # Log first employee to see structure (if any)
-        if employees:
-            logger.info(f"Sample employee keys: {list(employees[0].keys())}")
-            logger.info(f"Sample employee data: surname={employees[0].get('surname')}, first_name={employees[0].get('first_name')}, scheme_ref={employees[0].get('scheme_ref')}")
-        
         # Transform to IO Bulk Upload Template format
         io_template_rows = []
         for emp in employees:
