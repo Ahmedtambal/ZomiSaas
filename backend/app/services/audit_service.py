@@ -6,6 +6,7 @@ from typing import Dict, Any, Optional
 from datetime import datetime
 import logging
 from app.services.database_service import db_service
+from app.services.encryption_service import get_encryption_service
 
 logger = logging.getLogger(__name__)
 
@@ -51,12 +52,18 @@ class AuditService:
             if record_id:
                 details['record_id'] = record_id
             
+            # Encrypt the details field for security
+            encryption = get_encryption_service()
+            encrypted_details = None
+            if details:
+                encrypted_details = encryption.encrypt_json(details)
+            
             log_entry = {
                 "action": action,
                 "resource": table_name,
                 "user_id": user_id,
                 "organization_id": organization_id,
-                "details": details if details else None,
+                "details": encrypted_details,
                 "ip_address": ip_address,
                 "created_at": datetime.utcnow().isoformat()
             }
