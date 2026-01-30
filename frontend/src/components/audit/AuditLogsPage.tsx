@@ -262,7 +262,11 @@ const AuditLogsPage: React.FC = () => {
                     {/* Activity Details */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <p className="text-gray-900 font-semibold">{log.user_name || log.user_email}</p>
+                        <p className="text-gray-900 font-semibold">
+                          {log.action === 'form_submission' && log.details?.company_name
+                            ? log.details.company_name
+                            : (log.user_name || log.user_email)}
+                        </p>
                         <span
                           className={`px-2 py-1 rounded-md text-xs font-medium border ${getActionBadgeColor(
                             log.action

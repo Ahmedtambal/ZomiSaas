@@ -315,6 +315,7 @@ async def submit_form(token: str, submission_data: Dict[str, Any], request: Requ
                     "submission_id": submission_id,
                     "form_id": token_record["form_id"],
                     "company_id": company["id"],
+                    "company_name": company["name"],  # Add company name for display
                     "token": token,
                     "submission_method": "public_form",
                     "change_type": submission_data.get("changeType")
@@ -518,6 +519,7 @@ async def submit_form(token: str, submission_data: Dict[str, Any], request: Requ
                     "submission_id": submission_id,  # New submission record ID
                     "form_id": token_record["form_id"],  # Template form ID
                     "company_id": company["id"],
+                    "company_name": company["name"],  # Add company name for display
                     "token": token,
                     "submission_method": "public_form"
                 },
