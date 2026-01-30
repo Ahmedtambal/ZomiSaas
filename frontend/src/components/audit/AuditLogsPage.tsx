@@ -283,6 +283,23 @@ const AuditLogsPage: React.FC = () => {
                           Record ID: <span className="font-mono text-gray-900">{log.record_id}</span>
                         </p>
                       )}
+
+                      {/* Bulk Delete IDs */}
+                      {log.action === 'BULK_DELETE' && log.details?.deleted_ids && (
+                        <div className="text-gray-600 text-sm mt-1">
+                          <span>Deleted IDs ({log.details.count}):</span>
+                          <div className="font-mono text-xs text-gray-900 mt-1 bg-gray-50 p-2 rounded border border-gray-200 max-h-20 overflow-y-auto">
+                            {log.details.deleted_ids.slice(0, 5).map((id: string, idx: number) => (
+                              <div key={idx}>{id}</div>
+                            ))}
+                            {log.details.deleted_ids.length > 5 && (
+                              <div className="text-gray-500 mt-1">
+                                + {log.details.deleted_ids.length - 5} more...
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
 

@@ -1,6 +1,6 @@
 # Supabase Security Fixes
 
-## Database Function Search Path Security
+## 1. Database Function Search Path Security
 
 **Issue**: Four database functions have mutable search_path, which is a security risk.
 
@@ -14,7 +14,22 @@ This adds `SET search_path = ''` to all functions to prevent SQL injection via s
 - `increment_duplicate_count`
 - `get_user_email_by_id`
 
-## Auth Leaked Password Protection
+## 2. RLS Enabled but No Policies
+
+**Issue**: Three tables have RLS enabled but no policies exist, making them inaccessible.
+
+**Fix**: Run the SQL migration `backend/sql_updates/fix_rls_no_policies.sql` in your Supabase SQL Editor.
+
+This disables RLS on backend-only tables since authorization is handled by the FastAPI backend.
+
+**Tables Fixed**:
+- `form_sections`
+- `form_submissions`
+- `form_versions`
+
+**Note**: These tables are accessed exclusively through the backend API using service role key. The backend implements authorization by checking `organization_id` on every query.
+
+## 3. Auth Leaked Password Protection
 
 **Issue**: Leaked password protection is currently disabled.
 
