@@ -95,13 +95,13 @@ async def get_form_by_token(token: str, request: Request) -> Dict[str, Any]:
                 detail="This link has been deactivated"
             )
         
-        # Check expiry
+        # Check expiry (forms expire after 30 minutes)
         if token_record["expires_at"]:
             expires_at = datetime.fromisoformat(token_record["expires_at"].replace("Z", "+00:00"))
             if datetime.utcnow() > expires_at.replace(tzinfo=None):
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
-                    detail="This link has expired"
+                    detail="This form link has expired (30 minute limit). Please request a new link from your administrator."
                 )
         
         # Check max submissions

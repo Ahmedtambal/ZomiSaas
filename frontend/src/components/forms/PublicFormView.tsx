@@ -42,19 +42,20 @@ export const PublicFormView: React.FC<PublicFormViewProps> = ({ token }) => {
         setCompany(data.company);
         setTokenInfo(data.token_info);
         
-        // Check if token is still valid
+        // Check if token is still valid (30-minute expiry)
         if (data.token_info.expires_at && new Date(data.token_info.expires_at) < new Date()) {
-          setError('This form link has expired');
+          setError('This form link has expired (30 minute time limit). Please request a new link from your administrator.');
           return;
         }
         
         if (data.token_info.max_submissions && 
             data.token_info.submission_count >= data.token_info.max_submissions) {
-          setError('This form has reached its submission limit');
+          setError('This form has reached its submission limit. Please request a new link from your administrator.');
           return;
         }
       } catch (err: any) {
-        setError(err.response?.data?.detail || 'Failed to load form');
+        const errorMessage = err.response?.data?.detail || 'Failed to load form';
+        setError(errorMessage);
       } finally {
         setLoading(false);
       }

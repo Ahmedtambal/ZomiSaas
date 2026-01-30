@@ -47,12 +47,11 @@ async def create_form(
         # Extract form_data structure
         form_definition = form_data.get("form_data", {})
         
-        # Create form in database
-        response = db_service.client.table("forms").insert({
+        # Prepare insert data
+        insert_data = {
             "organization_id": org_id,
             "created_by_user_id": user_id,
             "template_type": form_data.get("template_type", "custom"),
-            "linked_company_id": form_data.get("linked_company_id"),
             "form_data": {
                 "name": form_data.get("name"),
                 "description": form_data.get("description", ""),
@@ -61,9 +60,19 @@ async def create_form(
             },
             "processing_status": "Active",
             "is_template": form_data.get("is_template", False),
-            "tags": form_data.get("tags", []),
-            "parent_form_id": form_data.get("parent_form_id")
-        }).execute()
+            "tags": form_data.get("tags", [])
+        }
+        
+        # Add optional fields only if provided
+        if form_data.get("linked_company_id"):
+            insert_data["linked_company_id"] = form_data["linked_company_id"]
+        if form_data.get("parent_form_id"):
+            insert_data["parent_form_id"] = form_data["parent_form_id"]
+        
+        logger.info(f"Creating form with template_type: {insert_data['template_type']}")
+        
+        # Create form in database
+        response = db_service.client.table("forms").insert(insert_data).execute()
         
         if not response.data:
             raise HTTPException(
@@ -74,7 +83,11 @@ async def create_form(
         # Return form object directly for frontend compatibility
         return response.data[0]
         
+    except HTTPException:
+        raise
     except Exception as e:
+        logger.error(f"Form creation failed: {str(e)}")
+        logger.error(f"Error type: {type(e).__name__}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Form creation failed: {str(e)}"
@@ -338,11 +351,9 @@ async def generate_token(
         # Generate secure 32-character token
         secure_token = secrets.token_urlsafe(32)
         
-        # Calculate expiry date
-        expiry_days = token_data.get("expiry_days", 30)
-        expires_at = None
-        if expiry_days:
-            expires_at = (datetime.utcnow() + timedelta(days=expiry_days)).isoformat()
+        # Calculate expiry date - 30 minutes from now
+        expiry_minutes = 30
+        expires_at = (datetime.utcnow() + timedelta(minutes=expiry_minutes)).isoformat()
         
         # Create token record
         response = db_service.client.table("form_tokens").insert({
@@ -366,12 +377,19 @@ async def generate_token(
         
         token_record = response.data[0]
         
-        # Update form's linked_company_id if not already set
-        db_service.client.table("forms").update({
-            "linked_company_id": token_data["company_id"]
-        }).eq("id", form_id).execute()
+        # Update form's linked_company_id only if not already set
+        try:
+            form_check = db_service.client.table("forms").select("linked_company_id").eq("id", form_id).execute()
+            if form_check.data and not form_check.data[0].get("linked_company_id"):
+                db_service.client.table("forms").update({
+                    "linked_company_id": token_data["company_id"]
+                }).eq("id", form_id).execute()
+        except Exception as e:
+            logger.warning(f"Failed to update linked_company_id: {str(e)}")
+            # Don't fail token generation if update fails
         
         # Return token info
+        logger.info(f"Generated form token with 30-minute expiry: {secure_token[:8]}... for form {form_id}")
         return {
             "id": token_record["id"],
             "token": secure_token,
