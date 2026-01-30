@@ -115,6 +115,16 @@ class KPISnapshotService:
             uk_resident = sum(1 for emp in demo_response.data if emp.get("uk_resident") is True)
             non_uk_resident = sum(1 for emp in demo_response.data if emp.get("uk_resident") is False)
             
+            # 6. IO Upload Status and Send Pension Pack counts
+            status_response = self.db.table("employees")\
+                .select("io_upload_status, send_pension_pack")\
+                .eq("organization_id", organization_id)\
+                .eq("service_status", "Active")\
+                .execute()
+            
+            io_uploads_completed = sum(1 for emp in status_response.data if emp.get("io_upload_status") is True)
+            pension_packs_sent = sum(1 for emp in status_response.data if emp.get("send_pension_pack") is True)
+            
             # Prepare snapshot data
             snapshot_data = {
                 "organization_id": organization_id,
@@ -132,7 +142,9 @@ class KPISnapshotService:
                 "gender_female_count": gender_female,
                 "gender_other_count": gender_other,
                 "uk_resident_count": uk_resident,
-                "non_uk_resident_count": non_uk_resident
+                "non_uk_resident_count": non_uk_resident,
+                "io_uploads_completed": io_uploads_completed,
+                "pension_packs_sent": pension_packs_sent
             }
             
             # Store snapshot (upsert to handle re-runs)

@@ -73,6 +73,16 @@ async def get_workforce_kpis(
             )
             # For pending items, decrease is positive
             pending_trend["is_positive"] = pending_trend["value"] <= 0
+            
+            # Calculate trends for IO uploads and pension packs
+            io_uploads_trend = kpi_snapshot_service.calculate_trend(
+                today_snapshot["io_uploads_completed"],
+                week_ago_snapshot["io_uploads_completed"]
+            )
+            pension_packs_trend = kpi_snapshot_service.calculate_trend(
+                today_snapshot["pension_packs_sent"],
+                week_ago_snapshot["pension_packs_sent"]
+            )
         else:
             # No historical data, show 0% trend
             logger.warning(f"No historical snapshot found for org {org_id}, showing 0% trends")
@@ -80,6 +90,8 @@ async def get_workforce_kpis(
             avg_salary_trend = {"value": 0.0, "is_positive": True}
             total_salary_trend = {"value": 0.0, "is_positive": True}
             pending_trend = {"value": 0.0, "is_positive": True}
+            io_uploads_trend = {"value": 0.0, "is_positive": True}
+            pension_packs_trend = {"value": 0.0, "is_positive": True}
         
         # Get nearest upcoming pension start date (requires live query)
         pending_response = db_service.client.table("employees")\
@@ -116,6 +128,16 @@ async def get_workforce_kpis(
                 "trend": pending_trend["value"],
                 "is_positive": pending_trend["is_positive"],
                 "nearest_date": nearest_date
+            },
+            "io_uploads_completed": {
+                "value": today_snapshot["io_uploads_completed"],
+                "trend": io_uploads_trend["value"],
+                "is_positive": io_uploads_trend["is_positive"]
+            },
+            "pension_packs_sent": {
+                "value": today_snapshot["pension_packs_sent"],
+                "trend": pension_packs_trend["value"],
+                "is_positive": pension_packs_trend["is_positive"]
             }
         }
         

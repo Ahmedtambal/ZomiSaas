@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Users, TrendingUp, TrendingDown, DollarSign, PoundSterling, Clock, RefreshCw } from 'lucide-react';
+import { Users, TrendingUp, TrendingDown, DollarSign, PoundSterling, Clock, RefreshCw, Upload, Send } from 'lucide-react';
 import apiClient from '../../services/apiClient';
 
 interface KPIData {
@@ -14,6 +14,8 @@ interface WorkforceKPIs {
   average_pensionable_salary: KPIData;
   total_salary_under_management: KPIData;
   pending_pension_activations: KPIData;
+  io_uploads_completed: KPIData;
+  pension_packs_sent: KPIData;
 }
 
 export const WorkforceDashboard = () => {
@@ -101,6 +103,19 @@ export const WorkforceDashboard = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {[1, 2, 3, 4].map((i) => (
             <div key={i} className="glass-panel rounded-2xl p-6 animate-pulse">
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-12 h-12 bg-zomi-mint/50 rounded-xl"></div>
+                <div className="h-5 w-16 bg-slate-200 rounded"></div>
+              </div>
+              <div className="h-4 w-32 bg-slate-200 rounded mb-2"></div>
+              <div className="h-8 w-24 bg-slate-200 rounded mb-1"></div>
+              <div className="h-4 w-20 bg-slate-200 rounded"></div>
+            </div>
+          ))}
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6">
+          {[1, 2].map((i) => (
+            <div key={`second-${i}`} className="glass-panel rounded-2xl p-6 animate-pulse">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 bg-zomi-mint/50 rounded-xl"></div>
                 <div className="h-5 w-16 bg-slate-200 rounded"></div>
@@ -264,6 +279,57 @@ export const WorkforceDashboard = () => {
           <p className="text-sm text-slate-500">
             Next: {formatDate(kpiData.pending_pension_activations.nearest_date)}
           </p>
+        </div>
+      </div>
+
+      {/* Second Row - Additional KPIs */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6">
+        {/* IO Uploads Completed */}
+        <div className="glass-panel rounded-2xl p-6 hover:shadow-xl transition-all duration-300">
+          <div className="flex items-start justify-between mb-4">
+            <div className="w-12 h-12 bg-zomi-mint rounded-xl flex items-center justify-center">
+              <Upload className="w-6 h-6 text-zomi-green" />
+            </div>
+            <div className={`flex items-center gap-1 text-sm font-semibold ${
+              kpiData.io_uploads_completed.is_positive ? 'text-green-600' : 'text-red-600'
+            }`}>
+              {kpiData.io_uploads_completed.is_positive ? (
+                <TrendingUp className="w-4 h-4" />
+              ) : (
+                <TrendingDown className="w-4 h-4" />
+              )}
+              <span>{kpiData.io_uploads_completed.is_positive ? '+' : ''}{kpiData.io_uploads_completed.trend}%</span>
+            </div>
+          </div>
+          <h3 className="text-slate-600 text-sm font-medium mb-2">IO Uploads Completed</h3>
+          <p className="text-3xl font-bold text-slate-900 mb-1">
+            {kpiData.io_uploads_completed.value}
+          </p>
+          <p className="text-sm text-slate-500">Upload status complete</p>
+        </div>
+
+        {/* Pension Packs Sent */}
+        <div className="glass-panel rounded-2xl p-6 hover:shadow-xl transition-all duration-300">
+          <div className="flex items-start justify-between mb-4">
+            <div className="w-12 h-12 bg-zomi-mint rounded-xl flex items-center justify-center">
+              <Send className="w-6 h-6 text-zomi-green" />
+            </div>
+            <div className={`flex items-center gap-1 text-sm font-semibold ${
+              kpiData.pension_packs_sent.is_positive ? 'text-green-600' : 'text-red-600'
+            }`}>
+              {kpiData.pension_packs_sent.is_positive ? (
+                <TrendingUp className="w-4 h-4" />
+              ) : (
+                <TrendingDown className="w-4 h-4" />
+              )}
+              <span>{kpiData.pension_packs_sent.is_positive ? '+' : ''}{kpiData.pension_packs_sent.trend}%</span>
+            </div>
+          </div>
+          <h3 className="text-slate-600 text-sm font-medium mb-2">Pension Packs Sent</h3>
+          <p className="text-3xl font-bold text-slate-900 mb-1">
+            {kpiData.pension_packs_sent.value}
+          </p>
+          <p className="text-sm text-slate-500">Sent to members</p>
         </div>
       </div>
     </div>
