@@ -231,6 +231,176 @@ async def get_time_series_data(
         )
 
 
+@router.get("/analytics")
+async def get_analytics_data(
+    current_user: Dict = Depends(get_current_user)
+) -> Dict[str, Any]:
+    """
+    Get comprehensive analytics data for dashboard charts:
+    - Employees by Company
+    - Nationality Breakdown
+    - Age Distribution
+    - Pension Investment Approach
+    - Coverage Rates (Pension, Group Life, GCI, GIP, BUPA)
+    - Gender Distribution
+    - UK Resident vs Non-Resident
+    - IO Upload Status
+    - Geographic Distribution
+    """
+    try:
+        org_id = current_user.get("organization_id")
+        if not org_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Organization ID not found"
+            )
+        
+        # Fetch all active employees with company name
+        response = db_service.client.table("employees")\
+            .select("*, companies(name)")\
+            .eq("organization_id", org_id)\
+            .eq("service_status", "Active")\
+            .execute()
+        
+        employees = response.data
+        total = len(employees)
+        
+        # 1. Employees by Company (top 15)
+        company_counts = {}
+        for emp in employees:
+            company_name = emp.get("companies", {}).get("name", "Unknown") if emp.get("companies") else "Unknown"
+            company_counts[company_name] = company_counts.get(company_name, 0) + 1
+        
+        employees_by_company = [
+            {"name": name, "count": count}
+            for name, count in sorted(company_counts.items(), key=lambda x: x[1], reverse=True)[:15]
+        ]
+        
+        # 2. Nationality Breakdown (top 10)
+        nationality_counts = {}
+        for emp in employees:
+            nationality = emp.get("nationality", "Unknown") or "Unknown"
+            nationality_counts[nationality] = nationality_counts.get(nationality, 0) + 1
+        
+        nationality_breakdown = [
+            {"name": name, "count": count}
+            for name, count in sorted(nationality_counts.items(), key=lambda x: x[1], reverse=True)[:10]
+        ]
+        
+        # 3. Age Distribution (calculate from date_of_birth)
+        from datetime import date
+        age_brackets = {"18-25": 0, "26-35": 0, "36-45": 0, "46-55": 0, "56-65": 0, "65+": 0}
+        for emp in employees:
+            dob = emp.get("date_of_birth")
+            if dob:
+                try:
+                    birth_date = date.fromisoformat(dob) if isinstance(dob, str) else dob
+                    age = (date.today() - birth_date).days // 365
+                    if age <= 25:
+                        age_brackets["18-25"] += 1
+                    elif age <= 35:
+                        age_brackets["26-35"] += 1
+                    elif age <= 45:
+                        age_brackets["36-45"] += 1
+                    elif age <= 55:
+                        age_brackets["46-55"] += 1
+                    elif age <= 65:
+                        age_brackets["56-65"] += 1
+                    else:
+                        age_brackets["65+"] += 1
+                except:
+                    pass
+        
+        age_distribution = [{"bracket": k, "count": v} for k, v in age_brackets.items()]
+        
+        # 4. Pension Investment Approach
+        approach_counts = {}
+        for emp in employees:
+            approach = emp.get("pension_investment_approach", "Not Set") or "Not Set"
+            approach_counts[approach] = approach_counts.get(approach, 0) + 1
+        
+        pension_approaches = [
+            {"name": name, "count": count}
+            for name, count in sorted(approach_counts.items(), key=lambda x: x[1], reverse=True)
+        ]
+        
+        # 5. Coverage Rates
+        pension_active = sum(1 for emp in employees if emp.get("is_pension_active"))
+        group_life = sum(1 for emp in employees if emp.get("has_group_life"))
+        gci = sum(1 for emp in employees if emp.get("has_gci"))
+        gip = sum(1 for emp in employees if emp.get("has_gip"))
+        bupa = sum(1 for emp in employees if emp.get("has_bupa"))
+        
+        coverage_rates = {
+            "pension": {"active": pension_active, "inactive": total - pension_active, "rate": round((pension_active / total) * 100, 1) if total > 0 else 0},
+            "group_life": {"has": group_life, "no": total - group_life, "rate": round((group_life / total) * 100, 1) if total > 0 else 0},
+            "gci": {"has": gci, "no": total - gci, "rate": round((gci / total) * 100, 1) if total > 0 else 0},
+            "gip": {"has": gip, "no": total - gip, "rate": round((gip / total) * 100, 1) if total > 0 else 0},
+            "bupa": {"has": bupa, "no": total - bupa, "rate": round((bupa / total) * 100, 1) if total > 0 else 0}
+        }
+        
+        # 6. Gender Distribution
+        gender_counts = {}
+        for emp in employees:
+            gender = emp.get("gender", "Not Specified") or "Not Specified"
+            gender_counts[gender] = gender_counts.get(gender, 0) + 1
+        
+        gender_distribution = [{"name": name, "count": count} for name, count in gender_counts.items()]
+        
+        # 7. UK Resident vs Non-Resident
+        uk_residents = sum(1 for emp in employees if emp.get("uk_resident") is True)
+        non_uk_residents = total - uk_residents
+        
+        residency = {
+            "uk_resident": uk_residents,
+            "non_uk_resident": non_uk_residents
+        }
+        
+        # 8. IO Upload Status
+        io_completed = sum(1 for emp in employees if emp.get("io_upload_status") is True)
+        io_pending = total - io_completed
+        
+        io_status = {
+            "completed": io_completed,
+            "pending": io_pending
+        }
+        
+        # 9. Geographic Distribution (postcode areas)
+        postcode_counts = {}
+        for emp in employees:
+            postcode = emp.get("postcode", "")
+            if postcode:
+                # Extract postcode area (first 1-2 letters)
+                area = ''.join(filter(str.isalpha, postcode.split()[0][:2])).upper() if postcode else "Unknown"
+                if area:
+                    postcode_counts[area] = postcode_counts.get(area, 0) + 1
+        
+        geographic_distribution = [
+            {"area": area, "count": count}
+            for area, count in sorted(postcode_counts.items(), key=lambda x: x[1], reverse=True)
+        ]
+        
+        return {
+            "employees_by_company": employees_by_company,
+            "nationality_breakdown": nationality_breakdown,
+            "age_distribution": age_distribution,
+            "pension_approaches": pension_approaches,
+            "coverage_rates": coverage_rates,
+            "gender_distribution": gender_distribution,
+            "residency": residency,
+            "io_status": io_status,
+            "geographic_distribution": geographic_distribution,
+            "total_employees": total
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to fetch analytics data: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch analytics data: {str(e)}"
+        )
+
+
 @router.post("/snapshot/generate")
 async def generate_snapshot(
     current_user: Dict = Depends(get_current_user)

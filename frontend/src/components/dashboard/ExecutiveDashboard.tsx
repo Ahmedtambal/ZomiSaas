@@ -1,6 +1,7 @@
 import { TrendingDown } from 'lucide-react';
 import { WorkforceDashboard } from './WorkforceDashboard';
 import { TimeSeriesCharts } from './TimeSeriesCharts';
+import { AnalyticsDashboard } from './AnalyticsDashboard';
 
 export const ExecutiveDashboard = () => {
   const retirementPipeline = [
@@ -24,6 +25,10 @@ export const ExecutiveDashboard = () => {
       {/* Section 2: Time Series Charts */}
       <TimeSeriesCharts />
 
+      {/* Section 3: Analytics Dashboard */}
+      <AnalyticsDashboard />
+
+      {/* Section 4: Retirement Pipeline */}
       <div className="glass-panel rounded-2xl p-6">
         <div className="flex items-center gap-3 mb-6">
           <TrendingDown className="w-6 h-6 text-zomi-green" />
