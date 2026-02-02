@@ -82,21 +82,9 @@ export const TimeSeriesCharts = forwardRef((props, ref) => {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-900">Workforce Trends</h2>
-          <p className="text-slate-600">Historical hiring and growth patterns</p>
-        </div>
-        <button
-          onClick={handleRefresh}
-          disabled={refreshing}
-          className="flex items-center gap-2 px-4 py-2 bg-white hover:bg-slate-50 border border-slate-200 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
-        >
-          <RefreshCw className={`w-4 h-4 text-zomi-green ${refreshing ? 'animate-spin' : ''}`} />
-          <span className="text-sm font-medium text-slate-700">
-            {refreshing ? 'Refreshing...' : 'Refresh'}
-          </span>
-        </button>
+      <div>
+        <h2 className="text-2xl font-bold text-slate-900">Workforce Trends</h2>
+        <p className="text-slate-600">Historical hiring and growth patterns</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

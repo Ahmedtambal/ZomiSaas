@@ -88,18 +88,9 @@ export const WorkforceDashboard = forwardRef((props, ref) => {
   if (loading) {
     return (
       <div>
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="text-xl font-bold text-slate-900">Workforce Metrics</h2>
-            <p className="text-sm text-slate-600">Real-time employee and salary analytics</p>
-          </div>
-          <button
-            disabled
-            className="flex items-center gap-2 px-4 py-2 bg-slate-200 text-slate-400 rounded-lg cursor-not-allowed"
-          >
-            <RefreshCw className="w-4 h-4" />
-            <span>Refresh</span>
-          </button>
+        <div className="mb-4">
+          <h2 className="text-xl font-bold text-slate-900">Workforce Metrics</h2>
+          <p className="text-sm text-slate-600">Real-time employee and salary analytics</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {[1, 2, 3, 4].map((i) => (
