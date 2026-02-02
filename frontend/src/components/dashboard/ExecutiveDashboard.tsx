@@ -1,63 +1,57 @@
-import { TrendingDown } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { RefreshCw } from 'lucide-react';
 import { WorkforceDashboard } from './WorkforceDashboard';
 import { TimeSeriesCharts } from './TimeSeriesCharts';
 import { AnalyticsDashboard } from './AnalyticsDashboard';
 
 export const ExecutiveDashboard = () => {
-  const retirementPipeline = [
-    { year: '2024', count: 8 },
-    { year: '2025', count: 15 },
-    { year: '2026', count: 22 },
-    { year: '2027', count: 18 },
-    { year: '2028', count: 25 },
-  ];
+  const [refreshing, setRefreshing] = useState(false);
+  const workforceRef = useRef<any>(null);
+  const timeSeriesRef = useRef<any>(null);
+  const analyticsRef = useRef<any>(null);
+
+  const handleUnifiedRefresh = async () => {
+    setRefreshing(true);
+    try {
+      // Trigger refresh on all child components
+      await Promise.all([
+        workforceRef.current?.refresh(),
+        timeSeriesRef.current?.refresh(),
+        analyticsRef.current?.refresh()
+      ]);
+    } catch (error) {
+      console.error('Error refreshing dashboard:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-slate-900 mb-2">Executive Dashboard</h1>
-        <p className="text-slate-600">Real-time insights for Zomi Wealth Group</p>
+      {/* Header with Unified Refresh Button */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900 mb-2">Executive Dashboard</h1>
+          <p className="text-slate-600">Real-time insights for Zomi Wealth Group</p>
+        </div>
+        <button
+          onClick={handleUnifiedRefresh}
+          disabled={refreshing}
+          className="flex items-center gap-2 px-5 py-3 bg-zomi-green text-white rounded-lg hover:bg-zomi-green/90 transition-all duration-300 disabled:bg-slate-300 disabled:cursor-not-allowed shadow-md hover:shadow-lg"
+        >
+          <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />
+          <span className="font-semibold">{refreshing ? 'Refreshing All Data...' : 'Refresh All'}</span>
+        </button>
       </div>
 
       {/* Section 1: Workforce KPIs */}
-      <WorkforceDashboard />
+      <WorkforceDashboard ref={workforceRef} />
 
       {/* Section 2: Time Series Charts */}
-      <TimeSeriesCharts />
+      <TimeSeriesCharts ref={timeSeriesRef} />
 
       {/* Section 3: Analytics Dashboard */}
-      <AnalyticsDashboard />
-
-      {/* Section 4: Retirement Pipeline */}
-      <div className="glass-panel rounded-2xl p-6">
-        <div className="flex items-center gap-3 mb-6">
-          <TrendingDown className="w-6 h-6 text-zomi-green" />
-          <h2 className="text-xl font-bold text-slate-900">Retirement Pipeline</h2>
-        </div>
-        <div className="flex items-end justify-between gap-4 h-64">
-          {retirementPipeline.map((item, index) => {
-            const maxPipelineCount = Math.max(...retirementPipeline.map(d => d.count));
-            const height = (item.count / maxPipelineCount) * 100;
-            return (
-              <div key={item.year} className="flex-1 flex flex-col items-center gap-3">
-                <div className="w-full flex items-end justify-center" style={{ height: '200px' }}>
-                  <div
-                    className="w-full bg-gradient-to-t from-zomi-green to-zomi-mint rounded-t-xl transition-all duration-500 hover:opacity-80 cursor-pointer relative group"
-                    style={{ height: `${height}%` }}
-                  >
-                    <div className="absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <span className="bg-slate-900 text-white px-2 py-1 rounded text-sm font-bold whitespace-nowrap">
-                        {item.count} members
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                <span className="text-sm font-medium text-slate-700">{item.year}</span>
-              </div>
-            );
-          })}
-        </div>
-      </div>
+      <AnalyticsDashboard ref={analyticsRef} />
     </div>
   );
 };

@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Users, TrendingUp, TrendingDown, DollarSign, PoundSterling, Clock, RefreshCw, Upload, Send } from 'lucide-react';
+import { useEffect, useState, forwardRef, useImperativeHandle } from 'react';
+import { Users, TrendingUp, TrendingDown, DollarSign, PoundSterling, Clock, Upload, Send } from 'lucide-react';
 import apiClient from '../../services/apiClient';
 
 interface KPIData {
@@ -18,10 +18,9 @@ interface WorkforceKPIs {
   pension_packs_sent: KPIData;
 }
 
-export const WorkforceDashboard = () => {
+export const WorkforceDashboard = forwardRef((props, ref) => {
   const [kpiData, setKpiData] = useState<WorkforceKPIs | null>(null);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -44,7 +43,6 @@ export const WorkforceDashboard = () => {
 
   const handleRefresh = async () => {
     try {
-      setRefreshing(true);
       // First, trigger snapshot generation to get fresh data
       await apiClient.post('/api/kpi/snapshot/generate');
       // Then fetch the updated KPIs
@@ -52,10 +50,13 @@ export const WorkforceDashboard = () => {
     } catch (err: any) {
       console.error('Failed to refresh KPI data:', err);
       setError(err.response?.data?.detail || 'Failed to refresh KPI data');
-    } finally {
-      setRefreshing(false);
     }
   };
+
+  // Expose refresh method to parent
+  useImperativeHandle(ref, () => ({
+    refresh: handleRefresh
+  }));
 
   const formatCurrency = (value: number): string => {
     if (value >= 1000000) {
@@ -133,19 +134,9 @@ export const WorkforceDashboard = () => {
   if (error) {
     return (
       <div>
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="text-xl font-bold text-slate-900">Workforce Metrics</h2>
-            <p className="text-sm text-slate-600">Real-time employee and salary analytics</p>
-          </div>
-          <button
-            onClick={handleRefresh}
-            disabled={refreshing}
-            className="flex items-center gap-2 px-4 py-2 bg-zomi-green text-white rounded-lg hover:bg-zomi-green/90 transition-colors disabled:bg-slate-300 disabled:cursor-not-allowed"
-          >
-            <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-            <span>{refreshing ? 'Refreshing...' : 'Refresh'}</span>
-          </button>
+        <div className="mb-4">
+          <h2 className="text-xl font-bold text-slate-900">Workforce Metrics</h2>
+          <p className="text-sm text-slate-600">Real-time employee and salary analytics</p>
         </div>
         <div className="glass-panel rounded-2xl p-6 border-red-200">
           <p className="text-red-600 font-medium">Error loading KPI data</p>
@@ -165,20 +156,10 @@ export const WorkforceDashboard = () => {
 
   return (
     <div>
-      {/* Header with Refresh Button */}
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h2 className="text-xl font-bold text-slate-900">Workforce Metrics</h2>
-          <p className="text-sm text-slate-600">Real-time employee and salary analytics</p>
-        </div>
-        <button
-          onClick={handleRefresh}
-          disabled={refreshing}
-          className="flex items-center gap-2 px-4 py-2 bg-zomi-green text-white rounded-lg hover:bg-zomi-green/90 transition-all duration-300 disabled:bg-slate-300 disabled:cursor-not-allowed shadow-sm hover:shadow-md"
-        >
-          <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-          <span className="font-medium">{refreshing ? 'Refreshing...' : 'Refresh'}</span>
-        </button>
+      {/* Header */}
+      <div className="mb-4">
+        <h2 className="text-xl font-bold text-slate-900">Workforce Metrics</h2>
+        <p className="text-sm text-slate-600">Real-time employee and salary analytics</p>
       </div>
 
       {/* KPI Cards */}
@@ -334,4 +315,4 @@ export const WorkforceDashboard = () => {
       </div>
     </div>
   );
-};
+});

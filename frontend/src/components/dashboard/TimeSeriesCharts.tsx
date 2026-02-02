@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { TrendingUp, Users, RefreshCw } from 'lucide-react';
+import { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
+import { TrendingUp, Users } from 'lucide-react';
 import apiClient from '../../services/apiClient';
 
 interface WeeklyHires {
@@ -17,10 +17,9 @@ interface TimeSeriesData {
   growth_rate_monthly: MonthlyGrowth[];
 }
 
-export const TimeSeriesCharts = () => {
+export const TimeSeriesCharts = forwardRef((props, ref) => {
   const [data, setData] = useState<TimeSeriesData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchData = async () => {
@@ -32,7 +31,6 @@ export const TimeSeriesCharts = () => {
       setError(err.response?.data?.detail || 'Failed to load time series data');
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
   };
 
@@ -40,10 +38,10 @@ export const TimeSeriesCharts = () => {
     fetchData();
   }, []);
 
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    await fetchData();
-  };
+  // Expose refresh method to parent
+  useImperativeHandle(ref, () => ({
+    refresh: fetchData
+  }));
 
   if (loading) {
     return (
@@ -242,4 +240,4 @@ export const TimeSeriesCharts = () => {
       </div>
     </div>
   );
-};
+});

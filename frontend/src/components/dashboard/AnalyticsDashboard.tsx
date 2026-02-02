@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { 
   Building2, Globe, Users, TrendingUp, Shield, Heart, Activity, 
-  FileCheck, MapPin, RefreshCw, Info
+  FileCheck, MapPin, Info
 } from 'lucide-react';
 import apiClient from '../../services/apiClient';
 
@@ -30,10 +30,9 @@ const ABBREVIATIONS = {
   'BUPA': 'British United Provident Association (Private Healthcare)'
 };
 
-export const AnalyticsDashboard = () => {
+export const AnalyticsDashboard = forwardRef((props, ref) => {
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showInfo, setShowInfo] = useState<string | null>(null);
 
@@ -46,7 +45,6 @@ export const AnalyticsDashboard = () => {
       setError(err.response?.data?.detail || 'Failed to load analytics data');
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
   };
 
@@ -54,10 +52,10 @@ export const AnalyticsDashboard = () => {
     fetchData();
   }, []);
 
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    await fetchData();
-  };
+  // Expose refresh method to parent
+  useImperativeHandle(ref, () => ({
+    refresh: fetchData
+  }));
 
   if (loading) {
     return (
@@ -160,21 +158,9 @@ export const AnalyticsDashboard = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-900">Workforce Analytics</h2>
-          <p className="text-sm text-slate-600 mt-1">Comprehensive insights and distributions</p>
-        </div>
-        <button
-          onClick={handleRefresh}
-          disabled={refreshing}
-          className="flex items-center gap-2 px-4 py-2.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
-        >
-          <RefreshCw className={`w-4 h-4 text-zomi-green ${refreshing ? 'animate-spin' : ''}`} />
-          <span className="text-sm font-medium text-slate-700">
-            {refreshing ? 'Refreshing...' : 'Refresh'}
-          </span>
-        </button>
+      <div>
+        <h2 className="text-2xl font-bold text-slate-900">Workforce Analytics</h2>
+        <p className="text-sm text-slate-600 mt-1">Comprehensive insights and distributions</p>
       </div>
 
       {/* Section 1: Comparison Bar Charts */}
@@ -537,4 +523,4 @@ export const AnalyticsDashboard = () => {
       `}</style>
     </div>
   );
-};
+});
