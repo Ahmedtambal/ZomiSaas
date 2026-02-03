@@ -1,17 +1,60 @@
 """
 Audit Logs Routes - View system activity logs
 """
-from fastapi import APIRouter, HTTPException, status, Depends, Query
+from fastapi import APIRouter, HTTPException, status, Depends, Query, Body
 from typing import Dict, Any, List, Optional
 from datetime import datetime
 import logging
+from pydantic import BaseModel
 
 from app.services.database_service import db_service
 from app.services.encryption_service import get_encryption_service
 from app.routes.auth import get_current_user
+from app.services.audit_service import AuditService
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+audit_service = AuditService()
+
+
+class AuditLogCreate(BaseModel):
+    action: str
+    resource_type: str
+    resource_id: Optional[str] = None
+    details: Optional[Dict[str, Any]] = None
+
+
+@router.post("", status_code=status.HTTP_201_CREATED)
+async def create_audit_log(
+    log_data: AuditLogCreate,
+    current_user: dict = Depends(get_current_user)
+) -> Dict[str, Any]:
+    """
+    Create a new audit log entry
+    """
+    try:
+        organization_id = current_user["organization_id"]
+        user_id = current_user["id"]
+        
+        await audit_service.log_action(
+            user_id=user_id,
+            organization_id=organization_id,
+            action=log_data.action,
+            resource=log_data.resource_type,
+            resource_id=log_data.resource_id,
+            details=log_data.details or {}
+        )
+        
+        return {
+            "message": "Audit log created successfully"
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to create audit log: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to create audit log"
+        )
 
 
 @router.get("", status_code=status.HTTP_200_OK)
