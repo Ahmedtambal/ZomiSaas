@@ -34,7 +34,7 @@ CREATE POLICY "Admins and owners can view invite codes"
 -- 2. Create a function to get user email safely (works around Admin API limitations)
 CREATE OR REPLACE FUNCTION get_user_emails_for_organization(org_id UUID)
 RETURNS TABLE (
-    user_id UUID,
+    id UUID,
     email TEXT,
     full_name TEXT,
     job_title TEXT,
@@ -49,7 +49,7 @@ AS $$
 BEGIN
     RETURN QUERY
     SELECT 
-        up.id as user_id,
+        up.id,
         au.email,
         up.full_name,
         up.job_title,

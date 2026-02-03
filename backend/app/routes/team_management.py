@@ -154,26 +154,14 @@ async def list_members(
     try:
         organization_id = current_user["organization_id"]
         
-        # Use the database function to get members with emails
+        # Use the database function via RPC to get members with emails
         # This avoids needing Admin API access
-        response = await db_service.execute_query(
-            f"SELECT * FROM get_user_emails_for_organization('{organization_id}')"
-        )
+        response = db_service.client.rpc(
+            'get_user_emails_for_organization',
+            {'org_id': organization_id}
+        ).execute()
         
-        # Convert the result to list of dicts
-        members = []
-        for row in response:
-            members.append({
-                "id": str(row[0]),  # user_id
-                "email": row[1],     # email
-                "full_name": row[2], # full_name
-                "job_title": row[3], # job_title
-                "role": row[4],      # role
-                "created_at": row[5].isoformat() if row[5] else None,  # created_at
-                "updated_at": row[6].isoformat() if row[6] else None   # updated_at
-            })
-        
-        return members
+        return response.data
         
     except HTTPException:
         raise
