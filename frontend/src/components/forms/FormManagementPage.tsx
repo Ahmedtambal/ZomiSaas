@@ -28,8 +28,7 @@ const NEW_EMPLOYEE_TEMPLATE = {
     { name: 'salary', label: 'Basic Annual Salary', type: 'number', required: true },
     { name: 'employmentStartDate', label: 'Employment Start Date', type: 'date', required: true },
     { name: 'selectedRetirementAge', label: 'Selected Retirement Age', type: 'number', required: true },
-    { name: 'sectionNumber', label: 'Section Number', type: 'text', required: false },
-    { name: 'pensionInvestmentApproach', label: 'Pension Investment Approach', type: 'searchable-select', required: true, options: ['Adventurous Targeting Annuity', 'Adventurous Targeting Encashment', 'Adventurous Targeting Flex Access', 'Balanced Targeting Annuity', 'Balanced Targeting Encashment', 'Balanced Targeting Flex Access', 'Cautious Targeting Annuity', 'Cautious Targeting Encashment', 'Cautious Targeting Flex Access', 'Premier Adventurous Targeting Annuity', 'Premier Adventurous Targeting Encashment', 'Premier Adventurous Targeting Flex Access', 'Premier Balanced Targeting Annuity', 'Premier Balanced Targeting Encashment', 'Premier Balanced Targeting Flex Access', 'Premier Cautious Targeting Annuity', 'Premier Cautious Targeting Encashment', 'Premier Cautious Targeting Flex Access'] },
+    // Section Number and Pension Investment Approach removed - will be filled by team in database later
   ]
 };
 
