@@ -131,7 +131,7 @@ export const NEW_EMPLOYEE_UPLOAD_COLUMNS: ColumnDefinition[] = [
   { id: 'pensionInvestmentApproach', label: 'Pension Investment Approach', sortable: true, editable: true, type: 'select', options: ['Adventurous', 'Cautious'] },
 ];
 
-export type DatabaseType = 'ioUpload' | 'newEmployeeUpload';
+export type DatabaseType = 'ioUpload' | 'newEmployeeUpload' | 'changeInformation';
 
 export interface DatabaseMember {
   id: string;

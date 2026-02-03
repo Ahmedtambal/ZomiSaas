@@ -10,10 +10,13 @@ interface DatabaseSelectorProps {
 export const DatabaseSelector = ({ onSelectDatabase }: DatabaseSelectorProps) => {
   const [employeeCount, setEmployeeCount] = useState(0);
   const [lastUpdated, setLastUpdated] = useState('');
+  const [changeInfoCount, setChangeInfoCount] = useState(0);
+  const [changeInfoLastUpdated, setChangeInfoLastUpdated] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchEmployeeStats();
+    fetchChangeInformationStats();
   }, []);
 
   const fetchEmployeeStats = async () => {
@@ -38,6 +41,26 @@ export const DatabaseSelector = ({ onSelectDatabase }: DatabaseSelectorProps) =>
     }
   };
 
+  const fetchChangeInformationStats = async () => {
+    try {
+      const response = await apiClient.get('/api/change-information');
+      const changeInfos = response.data;
+      setChangeInfoCount(changeInfos.length);
+      
+      // Get most recent updated_at timestamp
+      if (changeInfos.length > 0) {
+        const mostRecent = changeInfos.reduce((latest: any, info: any) => {
+          const infoDate = new Date(info.updated_at || info.created_at);
+          const latestDate = new Date(latest.updated_at || latest.created_at);
+          return infoDate > latestDate ? info : latest;
+        });
+        setChangeInfoLastUpdated(new Date(mostRecent.updated_at || mostRecent.created_at).toISOString().split('T')[0]);
+      }
+    } catch (error) {
+      console.error('Failed to fetch change information stats:', error);
+    }
+  };
+
   const databases = [
     {
       id: 'ioUpload' as DatabaseType,
@@ -48,6 +71,16 @@ export const DatabaseSelector = ({ onSelectDatabase }: DatabaseSelectorProps) =>
       lastUpdated: loading ? '...' : lastUpdated,
       color: 'bg-blue-500',
       features: ['Employee Details', 'Pension Setup', 'Provider Routes', 'Team Tracking', 'Financial Status']
+    },
+    {
+      id: 'changeInformation' as DatabaseType,
+      name: 'Change of Information',
+      description: 'Track and manage employee status changes, updates, and modifications',
+      icon: Database,
+      recordCount: loading ? '...' : changeInfoCount,
+      lastUpdated: loading ? '...' : changeInfoLastUpdated,
+      color: 'bg-orange-500',
+      features: ['Change Type', 'Date of Effect', 'Processing Status', 'Audit Trail', 'Form Submissions']
     }
   ];
 
@@ -115,16 +148,31 @@ export const DatabaseSelector = ({ onSelectDatabase }: DatabaseSelectorProps) =>
 
       <div className="glass-panel rounded-2xl p-6">
         <h3 className="text-lg font-bold text-slate-900 mb-4">Database Information</h3>
-        <div>
-          <h4 className="font-semibold text-slate-900 mb-2">Employee Database</h4>
-          <ul className="text-sm text-slate-600 space-y-1">
-            <li>• Complete member profiles with full address information</li>
-            <li>• Policy numbers and adviser assignments</li>
-            <li>• Service status and client categorization</li>
-            <li>• Salary information with post-sacrifice details</li>
-            <li>• Real-time employee count: <span className="font-semibold text-slate-900">{loading ? 'Loading...' : employeeCount}</span></li>
-            <li>• Last updated: <span className="font-semibold text-slate-900">{loading ? 'Loading...' : lastUpdated}</span></li>
-          </ul>
+        
+        <div className="space-y-4">
+          <div>
+            <h4 className="font-semibold text-slate-900 mb-2">Employee Database</h4>
+            <ul className="text-sm text-slate-600 space-y-1">
+              <li>• Complete member profiles with full address information</li>
+              <li>• Policy numbers and adviser assignments</li>
+              <li>• Service status and client categorization</li>
+              <li>• Salary information with post-sacrifice details</li>
+              <li>• Real-time employee count: <span className="font-semibold text-slate-900">{loading ? 'Loading...' : employeeCount}</span></li>
+              <li>• Last updated: <span className="font-semibold text-slate-900">{loading ? 'Loading...' : lastUpdated}</span></li>
+            </ul>
+          </div>
+
+          <div>
+            <h4 className="font-semibold text-slate-900 mb-2">Change of Information</h4>
+            <ul className="text-sm text-slate-600 space-y-1">
+              <li>• Track employee status changes (Leavers, Maternity, etc.)</li>
+              <li>• Name, address, and salary change records</li>
+              <li>• Form submission tracking and audit trail</li>
+              <li>• Processing status workflow management</li>
+              <li>• Real-time record count: <span className="font-semibold text-slate-900">{loading ? 'Loading...' : changeInfoCount}</span></li>
+              <li>• Last updated: <span className="font-semibold text-slate-900">{loading ? 'Loading...' : changeInfoLastUpdated}</span></li>
+            </ul>
+          </div>
         </div>
       </div>
     </div>

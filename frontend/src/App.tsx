@@ -10,6 +10,7 @@ import { DashboardLayout } from './components/layout/DashboardLayout';
 import { ExecutiveDashboard } from './components/dashboard/ExecutiveDashboard';
 import { DatabaseSelector } from './components/members/DatabaseSelector';
 import { MembersTable } from './components/members/MembersTable';
+import { ChangeInformationTable } from './components/members/ChangeInformationTable';
 import { FormManagementPage } from './components/forms/FormManagementPage';
 import { DynamicFormRenderer } from './components/forms/DynamicFormRenderer';
 import { PublicFormView } from './components/forms/PublicFormView';
@@ -50,6 +51,15 @@ function MembersRoute() {
   
   if (selectedDatabase === null) {
     return <DatabaseSelector onSelectDatabase={setSelectedDatabase} />;
+  }
+
+  if (selectedDatabase === 'changeInformation') {
+    return (
+      <ChangeInformationTable 
+        databaseType={selectedDatabase}
+        onBack={() => setSelectedDatabase(null)}
+      />
+    );
   }
   
   return (
