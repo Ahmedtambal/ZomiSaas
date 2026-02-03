@@ -4,7 +4,7 @@ import { ColumnDefinition, DatabaseType } from '../../types';
 import { changeInformationService, ChangeInformation } from '../../services/changeInformationService';
 import { useNotification } from '../../context/NotificationContext';
 import { auditService } from '../../services/auditService';
-import ExportModal from './ExportModal';
+import ChangeInformationExportModal from './ChangeInformationExportModal';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import {
@@ -872,7 +872,7 @@ export const ChangeInformationTable = ({ databaseType, onBack }: ChangeInformati
       </div>
 
       {/* Export Modal */}
-      <ExportModal 
+      <ChangeInformationExportModal 
         isOpen={showExportModal}
         onClose={() => setShowExportModal(false)}
       />
