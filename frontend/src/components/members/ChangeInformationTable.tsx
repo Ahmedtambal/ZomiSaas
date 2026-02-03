@@ -1,9 +1,12 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { Search, Download, Trash2, Eye, EyeOff, Filter, ArrowUpDown, ArrowUp, ArrowDown, GripVertical, ArrowLeft } from 'lucide-react';
+import { Search, Download, Trash2, Eye, EyeOff, Filter, ArrowUpDown, ArrowUp, ArrowDown, GripVertical, ArrowLeft, Calendar } from 'lucide-react';
 import { ColumnDefinition, DatabaseType } from '../../types';
 import { changeInformationService, ChangeInformation } from '../../services/changeInformationService';
 import { useNotification } from '../../context/NotificationContext';
+import { auditService } from '../../services/auditService';
 import ExportModal from './ExportModal';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 import {
   DndContext,
   closestCenter,
@@ -35,8 +38,10 @@ interface SortConfig {
 }
 
 interface FilterConfig {
+  companyName: string;
   changeType: string;
-  processingStatus: string;
+  fromDate: Date | null;
+  toDate: Date | null;
 }
 
 interface ValidationError {
@@ -136,9 +141,12 @@ export const ChangeInformationTable = ({ databaseType, onBack }: ChangeInformati
   const [editingCell, setEditingCell] = useState<EditingCell | null>(null);
   const [sortConfig, setSortConfig] = useState<SortConfig>({ column: 'created_at', direction: 'desc' });
   const [filterConfig, setFilterConfig] = useState<FilterConfig>({
+    companyName: '',
     changeType: '',
-    processingStatus: '',
+    fromDate: null,
+    toDate: null,
   });
+  const [companies, setCompanies] = useState<Array<{id: string; name: string}>>([]);
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
   const [showExportModal, setShowExportModal] = useState(false);
   const editInputRef = useRef<HTMLInputElement | HTMLSelectElement>(null);
@@ -163,10 +171,24 @@ export const ChangeInformationTable = ({ databaseType, onBack }: ChangeInformati
     })
   );
 
-  // Load records from API
+  // Load records and companies from API
   useEffect(() => {
     loadRecords();
+    loadCompanies();
   }, []);
+
+  const loadCompanies = async () => {
+    try {
+      const response = await changeInformationService.getAll();
+      // Extract unique company names
+      const uniqueCompanies = Array.from(
+        new Map(response.map(r => [r.company_name, { id: r.company_id || '', name: r.company_name || '' }])).values()
+      );
+      setCompanies(uniqueCompanies);
+    } catch (err) {
+      console.error('Failed to load companies:', err);
+    }
+  };
 
   const loadRecords = async () => {
     try {
@@ -214,40 +236,57 @@ export const ChangeInformationTable = ({ databaseType, onBack }: ChangeInformati
     }
   };
 
-  const updateRecordField = (recordId: string, fieldName: string, value: string): boolean => {
+  const updateRecordField = async (recordId: string, fieldName: string, value: string): Promise<boolean> => {
     const recordIndex = records.findIndex(r => r.id === recordId);
     if (recordIndex === -1) return false;
 
     const updatedRecords = [...records];
+    const oldValue = (updatedRecords[recordIndex] as any)[fieldName];
     (updatedRecords[recordIndex] as any)[fieldName] = value;
     setRecords(updatedRecords);
 
-    // Call API to update
-    changeInformationService.update(recordId, { [fieldName]: value })
-      .then(() => {
-        notify({
-          type: 'success',
-          title: 'Update successful',
-          description: 'Record updated successfully',
-          duration: 2000,
+    try {
+      // Call API to update
+      await changeInformationService.update(recordId, { [fieldName]: value });
+      
+      // Log audit trail
+      try {
+        await auditService.logActivity({
+          action: 'update',
+          resource_type: 'change_information',
+          resource_id: recordId,
+          details: {
+            field: fieldName,
+            old_value: oldValue,
+            new_value: value
+          }
         });
-      })
-      .catch((err) => {
-        console.error('Failed to update record:', err);
-        notify({
-          type: 'error',
-          title: 'Update failed',
-          description: err.response?.data?.detail || 'Failed to update record',
-        });
-        // Revert on error
-        loadRecords();
-      });
+      } catch (auditErr) {
+        console.error('Failed to log audit:', auditErr);
+      }
 
-    return true;
+      notify({
+        type: 'success',
+        title: 'Update successful',
+        description: 'Record updated successfully',
+        duration: 2000,
+      });
+      return true;
+    } catch (err: any) {
+      console.error('Failed to update record:', err);
+      notify({
+        type: 'error',
+        title: 'Update failed',
+        description: err.response?.data?.detail || 'Failed to update record',
+      });
+      // Revert on error
+      loadRecords();
+      return false;
+    }
   };
 
-  const handleCellSave = (recordId: string, columnId: string, value: string) => {
-    const success = updateRecordField(recordId, columnId, value);
+  const handleCellSave = async (recordId: string, columnId: string, value: string) => {
+    const success = await updateRecordField(recordId, columnId, value);
     if (success) {
       setEditingCell(null);
     }
@@ -292,6 +331,21 @@ export const ChangeInformationTable = ({ databaseType, onBack }: ChangeInformati
               const idsToDelete = Array.from(selectedRows);
               await changeInformationService.bulkDelete(idsToDelete);
               
+              // Log audit trail
+              try {
+                await auditService.logActivity({
+                  action: 'bulk_delete',
+                  resource_type: 'change_information',
+                  resource_id: null,
+                  details: {
+                    deleted_count: idsToDelete.length,
+                    ids: idsToDelete
+                  }
+                });
+              } catch (auditErr) {
+                console.error('Failed to log audit:', auditErr);
+              }
+              
               // Remove from local state
               setRecords(prev => prev.filter(r => !selectedRows.has(r.id)));
               setSelectedRows(new Set());
@@ -330,12 +384,22 @@ export const ChangeInformationTable = ({ databaseType, onBack }: ChangeInformati
           value && value.toString().toLowerCase().includes(searchTerm.toLowerCase())
         );
       
+      const matchesCompany = !filterConfig.companyName || 
+        record.company_name === filterConfig.companyName;
+      
       const matchesChangeType = !filterConfig.changeType || 
         record.change_type === filterConfig.changeType;
-      const matchesStatus = !filterConfig.processingStatus || 
-        record.processing_status === filterConfig.processingStatus;
+      
+      // Date range filter
+      const matchesDateRange = (() => {
+        if (!filterConfig.fromDate && !filterConfig.toDate) return true;
+        const recordDate = new Date(record.date_of_effect);
+        if (filterConfig.fromDate && recordDate < filterConfig.fromDate) return false;
+        if (filterConfig.toDate && recordDate > filterConfig.toDate) return false;
+        return true;
+      })();
 
-      return matchesSearch && matchesChangeType && matchesStatus;
+      return matchesSearch && matchesCompany && matchesChangeType && matchesDateRange;
     })
     .sort((a, b) => {
       const aValue = (a as any)[sortConfig.column];
@@ -387,16 +451,74 @@ export const ChangeInformationTable = ({ databaseType, onBack }: ChangeInformati
     }
   };
 
-  const exportToCSV = () => {
+  const exportToCSV = async () => {
     const selectedRecords = selectedRows.size > 0 
       ? records.filter(r => selectedRows.has(r.id))
       : sortedAndFilteredRecords;
     
-    notify({
-      type: 'info',
-      title: 'Export started',
-      description: `Exporting ${selectedRecords.length} records`,
-    });
+    try {
+      // Create CSV content
+      const headers = ['Company Name', 'First Name', 'Surname', 'Date of Birth', 'Date of Effect', 'Change Type', 'Other Reason', 'Processing Status', 'Created At', 'Updated At'];
+      const rows = selectedRecords.map(record => [
+        record.company_name || '',
+        record.first_name || '',
+        record.surname || '',
+        record.date_of_birth || '',
+        record.date_of_effect || '',
+        record.change_type || '',
+        record.other_reason || '',
+        record.processing_status || '',
+        new Date(record.created_at).toLocaleString(),
+        new Date(record.updated_at).toLocaleString()
+      ]);
+
+      const csvContent = [
+        headers.join(','),
+        ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+      ].join('\n');
+
+      // Download file
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      const timestamp = new Date().toISOString().split('T')[0].replace(/-/g, '');
+      link.download = `change_information_${timestamp}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      // Log audit trail
+      try {
+        await auditService.logActivity({
+          action: 'export',
+          resource_type: 'change_information',
+          resource_id: null,
+          details: {
+            format: 'csv',
+            record_count: selectedRecords.length,
+            filters: filterConfig
+          }
+        });
+      } catch (auditErr) {
+        console.error('Failed to log audit:', auditErr);
+      }
+
+      notify({
+        type: 'success',
+        title: 'Export successful',
+        description: `Exported ${selectedRecords.length} records to CSV`,
+        duration: 3000,
+      });
+    } catch (err) {
+      console.error('Export failed:', err);
+      notify({
+        type: 'error',
+        title: 'Export failed',
+        description: 'Failed to export data. Please try again.',
+      });
+    }
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -552,6 +674,17 @@ export const ChangeInformationTable = ({ databaseType, onBack }: ChangeInformati
 
               <div className="flex gap-2 flex-wrap">
                 <select
+                  value={filterConfig.companyName}
+                  onChange={(e) => setFilterConfig(prev => ({ ...prev, companyName: e.target.value }))}
+                  className="px-4 py-3 rounded-xl text-slate-900 border border-slate-200 bg-slate-50 focus:bg-white focus:border-zomi-green focus:outline-none transition-colors"
+                >
+                  <option value="">All Companies</option>
+                  {companies.map(company => (
+                    <option key={company.id} value={company.name}>{company.name}</option>
+                  ))}
+                </select>
+
+                <select
                   value={filterConfig.changeType}
                   onChange={(e) => setFilterConfig(prev => ({ ...prev, changeType: e.target.value }))}
                   className="px-4 py-3 rounded-xl text-slate-900 border border-slate-200 bg-slate-50 focus:bg-white focus:border-zomi-green focus:outline-none transition-colors"
@@ -566,17 +699,25 @@ export const ChangeInformationTable = ({ databaseType, onBack }: ChangeInformati
                   <option value="Other">Other</option>
                 </select>
 
-                <select
-                  value={filterConfig.processingStatus}
-                  onChange={(e) => setFilterConfig(prev => ({ ...prev, processingStatus: e.target.value }))}
-                  className="px-4 py-3 rounded-xl text-slate-900 border border-slate-200 bg-slate-50 focus:bg-white focus:border-zomi-green focus:outline-none transition-colors"
-                >
-                  <option value="">All Statuses</option>
-                  <option value="pending">Pending</option>
-                  <option value="in_progress">In Progress</option>
-                  <option value="completed">Completed</option>
-                  <option value="rejected">Rejected</option>
-                </select>
+                <div className="relative">
+                  <DatePicker
+                    selected={filterConfig.fromDate}
+                    onChange={(date) => setFilterConfig(prev => ({ ...prev, fromDate: date }))}
+                    placeholderText="From Date"
+                    dateFormat="yyyy-MM-dd"
+                    className="px-4 py-3 rounded-xl text-slate-900 border border-slate-200 bg-slate-50 focus:bg-white focus:border-zomi-green focus:outline-none transition-colors w-40"
+                  />
+                </div>
+
+                <div className="relative">
+                  <DatePicker
+                    selected={filterConfig.toDate}
+                    onChange={(date) => setFilterConfig(prev => ({ ...prev, toDate: date }))}
+                    placeholderText="To Date"
+                    dateFormat="yyyy-MM-dd"
+                    className="px-4 py-3 rounded-xl text-slate-900 border border-slate-200 bg-slate-50 focus:bg-white focus:border-zomi-green focus:outline-none transition-colors w-40"
+                  />
+                </div>
 
                 <button
                   onClick={() => setShowExportModal(true)}
