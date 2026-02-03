@@ -1,12 +1,10 @@
 import { useState } from 'react';
-import { Lock, Mail, Leaf } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Lock, Mail } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
-interface LoginPageProps {
-  onShowRegister: () => void;
-}
-
-export const LoginPage = ({ onShowRegister }: LoginPageProps) => {
+export const LoginPage = () => {
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -32,7 +30,7 @@ export const LoginPage = ({ onShowRegister }: LoginPageProps) => {
       <div className="glass-panel rounded-3xl p-8 w-full max-w-md">
         <div className="flex flex-col items-center mb-8">
           <div className="w-16 h-16 bg-zomi-green rounded-2xl flex items-center justify-center mb-4 shadow-lg">
-            <Leaf className="w-10 h-10 text-white" />
+            <img src="/logo.png" alt="Zomi Wealth Logo" className="w-10 h-10 rounded-lg" />
           </div>
           <h1 className="text-3xl font-bold text-slate-900 mb-2">Zomi Wealth Portal</h1>
           <p className="text-slate-600 text-center">Secure access for Zomi Wealth Group</p>
@@ -88,7 +86,7 @@ export const LoginPage = ({ onShowRegister }: LoginPageProps) => {
           <p className="text-center text-sm text-slate-600">
             Have an invite code?{' '}
             <button
-              onClick={onShowRegister}
+              onClick={() => navigate('/register')}
               className="text-zomi-green font-medium hover:underline"
             >
               Register here

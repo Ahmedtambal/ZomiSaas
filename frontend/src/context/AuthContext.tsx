@@ -82,7 +82,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         id: response.data.user.id,
         email: response.data.user.email,
         fullName: response.data.user.full_name,
-        role: response.data.user.role === 'admin' ? 'Admin' : 'Member',
+        role: response.data.user.role || 'user',
         createdAt: response.data.user.created_at,
       };
 
@@ -133,7 +133,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         id: response.data.user.id,
         email: response.data.user.email,
         fullName: response.data.user.full_name,
-        role: 'Admin',
+        role: response.data.user.role || 'owner',
         createdAt: response.data.user.created_at,
       };
 
@@ -175,7 +175,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         id: response.data.user.id,
         email: response.data.user.email,
         fullName: response.data.user.full_name,
-        role: 'Member',
+        role: response.data.user.role || 'user',
         createdAt: response.data.user.created_at,
       };
 

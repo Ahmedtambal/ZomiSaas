@@ -1,15 +1,12 @@
 import { useState } from 'react';
-import { Lock, Mail, User, Key, Leaf, ArrowLeft, Building2, Briefcase } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Lock, Mail, User, Key, ArrowLeft, Building2, Briefcase } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-
-interface RegisterPageProps {
-  onShowLogin: () => void;
-  onRegistrationSuccess?: (email: string) => void;
-}
 
 type TabType = 'admin' | 'user';
 
-export const RegisterPage = ({ onShowLogin, onRegistrationSuccess }: RegisterPageProps) => {
+export const RegisterPage = () => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TabType>('user');
   const [formData, setFormData] = useState({
     email: '',
@@ -22,6 +19,8 @@ export const RegisterPage = ({ onShowLogin, onRegistrationSuccess }: RegisterPag
   });
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showEmailConfirmation, setShowEmailConfirmation] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState('');
   const { registerAdmin, registerUser } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -98,10 +97,9 @@ export const RegisterPage = ({ onShowLogin, onRegistrationSuccess }: RegisterPag
         requiresEmailConfirmation = true;
       }
       
-      // Show email confirmation popup
-      if (onRegistrationSuccess) {
-        onRegistrationSuccess(formData.email);
-      }
+      // Show email confirmation modal
+      setRegisteredEmail(formData.email);
+      setShowEmailConfirmation(true);
     } catch (err: any) {
       setError(err.message || 'Registration failed. Please try again.');
     } finally {
@@ -116,11 +114,41 @@ export const RegisterPage = ({ onShowLogin, onRegistrationSuccess }: RegisterPag
     }));
   };
 
+  if (showEmailConfirmation) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="glass-panel rounded-3xl p-8 w-full max-w-md">
+          <div className="flex flex-col items-center mb-8">
+            <div className="w-16 h-16 bg-zomi-green rounded-2xl flex items-center justify-center mb-4 shadow-lg">
+              <img src="/logo.png" alt="Zomi Wealth Logo" className="w-10 h-10 rounded-lg" />
+            </div>
+            <h1 className="text-3xl font-bold text-slate-900 mb-2">Check Your Email</h1>
+            <p className="text-slate-600 text-center">We've sent a confirmation email to</p>
+            <p className="text-zomi-green font-semibold text-center mt-1">{registeredEmail}</p>
+          </div>
+
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
+            <p className="text-sm text-slate-700">
+              Click the confirmation link in the email to activate your account and complete the registration process.
+            </p>
+          </div>
+
+          <button
+            onClick={() => navigate('/login')}
+            className="w-full bg-zomi-green hover:bg-zomi-green/90 text-white font-semibold py-3 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl"
+          >
+            Back to Login
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="glass-panel rounded-3xl p-8 w-full max-w-md">
         <button
-          onClick={onShowLogin}
+          onClick={() => navigate('/login')}
           className="flex items-center gap-2 text-slate-600 hover:text-zomi-green transition-colors mb-6"
         >
           <ArrowLeft className="w-4 h-4" />
@@ -129,7 +157,7 @@ export const RegisterPage = ({ onShowLogin, onRegistrationSuccess }: RegisterPag
 
         <div className="flex flex-col items-center mb-8">
           <div className="w-16 h-16 bg-zomi-green rounded-2xl flex items-center justify-center mb-4 shadow-lg">
-            <Leaf className="w-10 h-10 text-white" />
+            <img src="/logo.png" alt="Zomi Wealth Logo" className="w-10 h-10 rounded-lg" />
           </div>
           <h1 className="text-3xl font-bold text-slate-900 mb-2">Join Zomi Wealth</h1>
           <p className="text-slate-600 text-center">Create your account</p>

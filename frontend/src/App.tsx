@@ -5,7 +5,6 @@ import { NotificationProvider } from './context/NotificationContext';
 import { NotificationContainer } from './components/common/NotificationContainer';
 import { LoginPage } from './components/auth/LoginPage';
 import { RegisterPage } from './components/auth/RegisterPage';
-import { EmailConfirmationPage } from './components/auth/EmailConfirmationPage';
 import { DashboardLayout } from './components/layout/DashboardLayout';
 import { ExecutiveDashboard } from './components/dashboard/ExecutiveDashboard';
 import { DatabaseSelector } from './components/members/DatabaseSelector';
@@ -72,8 +71,6 @@ function MembersRoute() {
 
 function AppContent() {
   const { isAuthenticated, isLoading } = useAuth();
-  const [authView, setAuthView] = useState<'login' | 'register' | 'email-confirmation'>('login');
-  const [registeredEmail, setRegisteredEmail] = useState<string>('');
 
   if (isLoading) {
     return (
@@ -97,7 +94,7 @@ function AppContent() {
           isAuthenticated ? (
             <Navigate to="/dashboard" replace />
           ) : (
-            <LoginPage onShowRegister={() => setAuthView('register')} />
+            <LoginPage />
           )
         } 
       />
@@ -107,21 +104,7 @@ function AppContent() {
           isAuthenticated ? (
             <Navigate to="/dashboard" replace />
           ) : (
-            <>
-              <RegisterPage 
-                onShowLogin={() => setAuthView('login')}
-                onRegistrationSuccess={(email) => {
-                  setRegisteredEmail(email);
-                  setAuthView('email-confirmation');
-                }}
-              />
-              {authView === 'email-confirmation' && (
-                <EmailConfirmationPage 
-                  email={registeredEmail}
-                  onBackToLogin={() => setAuthView('login')}
-                />
-              )}
-            </>
+            <RegisterPage />
           )
         } 
       />

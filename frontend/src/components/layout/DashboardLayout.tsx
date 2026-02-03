@@ -6,7 +6,6 @@ import {
   Link as LinkIcon,
   Settings,
   LogOut,
-  Leaf,
   Menu,
   X,
   FileText
@@ -58,8 +57,8 @@ export const DashboardLayout = ({ children, currentPage }: DashboardLayoutProps)
           <div className="flex items-center justify-between mb-8">
             {!isSidebarCollapsed && (
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-zomi-green rounded-xl flex items-center justify-center">
-                  <Leaf className="w-6 h-6 text-white" />
+                <div className="w-10 h-10 bg-zomi-green rounded-xl flex items-center justify-center p-1">
+                  <img src="/logo.png" alt="Zomi Wealth" className="w-full h-full object-cover rounded-lg" />
                 </div>
                 <div>
                   <h2 className="font-bold text-slate-900">Zomi Wealth</h2>
@@ -68,8 +67,8 @@ export const DashboardLayout = ({ children, currentPage }: DashboardLayoutProps)
               </div>
             )}
             {isSidebarCollapsed && (
-              <div className="w-10 h-10 bg-zomi-green rounded-xl flex items-center justify-center mx-auto">
-                <Leaf className="w-6 h-6 text-white" />
+              <div className="w-10 h-10 bg-zomi-green rounded-xl flex items-center justify-center mx-auto p-1">
+                <img src="/logo.png" alt="Zomi Wealth" className="w-full h-full object-cover rounded-lg" />
               </div>
             )}
           </div>
