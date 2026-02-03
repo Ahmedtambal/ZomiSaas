@@ -260,23 +260,29 @@ async def signup_user(request: Request, user_data: UserCreate) -> Dict[str, Any]
             detail=error or "Signup failed"
         )
     
-    security_logger.info({
-        'event': 'user_signup_success',
-        'email': user_data.email,
-        'user_id': token_response.user.id
-    })
-    
     # Check if email confirmation is required
     if error == "EMAIL_CONFIRMATION_REQUIRED":
+        security_logger.info({
+            'event': 'user_signup_success_email_confirmation_required',
+            'email': user_data.email
+        })
         return {
             "message": "Account created successfully. Please check your email to verify your account.",
             "email_confirmation_required": True,
             "email": user_data.email
         }
     
+    # Log successful signup with user ID
+    if token_response and token_response.user:
+        security_logger.info({
+            'event': 'user_signup_success',
+            'email': user_data.email,
+            'user_id': token_response.user.id
+        })
+    
     return {
         "message": "User account created successfully",
-        "data": token_response.model_dump()
+        "data": token_response.model_dump() if token_response else {}
     }
 
 

@@ -6,6 +6,8 @@ DROP POLICY IF EXISTS "Only admins can create invite codes" ON invite_codes;
 DROP POLICY IF EXISTS "Users can view organization invite codes" ON invite_codes;
 DROP POLICY IF EXISTS "Admins can create invite codes" ON invite_codes;
 DROP POLICY IF EXISTS "Admins can view invite codes" ON invite_codes;
+DROP POLICY IF EXISTS "Admins and owners can create invite codes" ON invite_codes;
+DROP POLICY IF EXISTS "Admins and owners can view invite codes" ON invite_codes;
 
 -- Allow admins and owners to insert invite codes
 CREATE POLICY "Admins and owners can create invite codes"
@@ -32,6 +34,8 @@ CREATE POLICY "Admins and owners can view invite codes"
     );
 
 -- 2. Create a function to get user email safely (works around Admin API limitations)
+DROP FUNCTION IF EXISTS get_user_emails_for_organization(uuid);
+
 CREATE OR REPLACE FUNCTION get_user_emails_for_organization(org_id UUID)
 RETURNS TABLE (
     id UUID,
@@ -50,7 +54,7 @@ BEGIN
     RETURN QUERY
     SELECT 
         up.id,
-        au.email,
+        au.email::TEXT,
         up.full_name,
         up.job_title,
         up.role,
