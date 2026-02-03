@@ -1,12 +1,32 @@
-import { useState, useCallback, useEffect } from 'react';
-import { Search, Download, Trash2, ArrowUpDown, ArrowUp, ArrowDown, ArrowLeft } from 'lucide-react';
-import { DatabaseType } from '../../types';
+import { useState, useCallback, useRef, useEffect } from 'react';
+import { Search, Download, Trash2, Eye, EyeOff, Filter, ArrowUpDown, ArrowUp, ArrowDown, GripVertical, ArrowLeft } from 'lucide-react';
+import { ColumnDefinition, DatabaseType } from '../../types';
 import { changeInformationService, ChangeInformation } from '../../services/changeInformationService';
 import { useNotification } from '../../context/NotificationContext';
+import ExportModal from './ExportModal';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
+import {
+  CSS,
+} from '@dnd-kit/utilities';
 
-interface ChangeInformationTableProps {
-  databaseType: DatabaseType;
-  onBack: () => void;
+interface EditingCell {
+  rowId: string;
+  columnId: string;
 }
 
 interface SortConfig {
@@ -14,362 +34,707 @@ interface SortConfig {
   direction: 'asc' | 'desc';
 }
 
-export const ChangeInformationTable = ({ databaseType, onBack }: ChangeInformationTableProps) => {
-  const [data, setData] = useState<ChangeInformation[]>([]);
-  const [filteredData, setFilteredData] = useState<ChangeInformation[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [sortConfig, setSortConfig] = useState<SortConfig>({ column: 'created_at', direction: 'desc' });
-  const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
-  const { showNotification } = useNotification();
+interface FilterConfig {
+  changeType: string;
+  processingStatus: string;
+}
 
+interface ValidationError {
+  rowId: string;
+  columnId: string;
+  message: string;
+}
+
+interface ChangeInformationTableProps {
+  databaseType: DatabaseType;
+  onBack: () => void;
+}
+
+// Helper function to generate columns dynamically from change information data
+const generateColumnsFromData = (records: ChangeInformation[]): ColumnDefinition[] => {
+  if (records.length === 0) return [];
+  
+  const sampleRecord = records[0];
+  const columns: ColumnDefinition[] = [];
+  
+  // Backend columns to HIDE from UI (remain in database only)
+  const hiddenColumns = new Set([
+    'id',
+    'organization_id',
+    'company_id', // Replaced by company_name
+    'source_form_id',
+    'created_by_user_id'
+  ]);
+  
+  // Field label mapping
+  const labelMap: Record<string, string> = {
+    company_name: 'Company Name',
+    first_name: 'First Name',
+    surname: 'Surname',
+    date_of_birth: 'Date of Birth',
+    date_of_effect: 'Date of Effect',
+    change_type: 'Change Type',
+    other_reason: 'Other Reason',
+    processing_status: 'Processing Status',
+    created_at: 'Created At',
+    updated_at: 'Updated At',
+  };
+  
+  // Generate columns from record keys
+  Object.keys(sampleRecord).forEach(key => {
+    if (hiddenColumns.has(key)) return;
+    
+    let columnType: 'text' | 'number' | 'date' | 'select' | 'email' = 'text';
+    
+    if (key.includes('date') || key.includes('_at')) {
+      columnType = 'date';
+    }
+    
+    columns.push({
+      id: key,
+      label: labelMap[key] || key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+      sortable: true,
+      editable: !['created_at', 'updated_at', 'company_name'].includes(key),
+      type: columnType
+    });
+  });
+  
+  return columns;
+};
+
+const SortableTableHeader = ({ column, children }: { column: ColumnDefinition; children: React.ReactNode }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+  } = useSortable({ id: column.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <th ref={setNodeRef} style={style} className="text-left p-4 text-sm font-semibold text-slate-700 relative bg-white">
+      <div className="flex items-center gap-2">
+        <div {...attributes} {...listeners} className="cursor-grab hover:cursor-grabbing">
+          <GripVertical className="w-4 h-4 text-slate-400" />
+        </div>
+        {children}
+      </div>
+    </th>
+  );
+};
+
+export const ChangeInformationTable = ({ databaseType, onBack }: ChangeInformationTableProps) => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
+  const [showSensitiveData, setShowSensitiveData] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [editingCell, setEditingCell] = useState<EditingCell | null>(null);
+  const [sortConfig, setSortConfig] = useState<SortConfig>({ column: 'created_at', direction: 'desc' });
+  const [filterConfig, setFilterConfig] = useState<FilterConfig>({
+    changeType: '',
+    processingStatus: '',
+  });
+  const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const editInputRef = useRef<HTMLInputElement | HTMLSelectElement>(null);
+  const [records, setRecords] = useState<ChangeInformation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [columnOrder, setColumnOrder] = useState<ColumnDefinition[]>([]);
+  const { notify, update } = useNotification();
+
+  const databaseNames = {
+    ioUpload: 'Employee Database',
+    newEmployeeUpload: 'Audit Logs',
+    changeInformation: 'Change of Information'
+  };
+
+  const rowsPerPage = 10;
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // Load records from API
   useEffect(() => {
-    fetchData();
+    loadRecords();
   }, []);
 
-  useEffect(() => {
-    filterAndSortData();
-  }, [data, searchTerm, sortConfig]);
-
-  const fetchData = async () => {
+  const loadRecords = async () => {
     try {
       setLoading(true);
-      const response = await changeInformationService.getAll();
-      setData(response);
-    } catch (error: any) {
-      console.error('Failed to fetch change information:', error);
-      showNotification('Failed to load change information data', 'error');
+      setError(null);
+      const data = await changeInformationService.getAll();
+      
+      // Sort by created_at DESC (newest first) by default
+      const sortedRecords = [...data].sort((a, b) => {
+        const dateA = new Date(a.created_at).getTime();
+        const dateB = new Date(b.created_at).getTime();
+        return dateB - dateA; // DESC order
+      });
+      
+      setRecords(sortedRecords);
+      
+      // Generate columns dynamically from the first record
+      if (sortedRecords.length > 0) {
+        const dynamicColumns = generateColumnsFromData(sortedRecords);
+        setColumnOrder(dynamicColumns);
+      }
+    } catch (err: any) {
+      console.error('Failed to load change information:', err);
+      setError(err.response?.data?.detail || 'Failed to load change information data');
+      notify({
+        type: 'error',
+        title: 'Load failed',
+        description: 'Failed to load change information data',
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  const filterAndSortData = useCallback(() => {
-    let filtered = [...data];
-
-    // Search filter
-    if (searchTerm) {
-      const lowerSearch = searchTerm.toLowerCase();
-      filtered = filtered.filter(item =>
-        item.first_name?.toLowerCase().includes(lowerSearch) ||
-        item.surname?.toLowerCase().includes(lowerSearch) ||
-        item.company_name?.toLowerCase().includes(lowerSearch) ||
-        item.change_type?.toLowerCase().includes(lowerSearch) ||
-        item.other_reason?.toLowerCase().includes(lowerSearch)
-      );
+  useEffect(() => {
+    if (editingCell && editInputRef.current) {
+      editInputRef.current.focus();
     }
+  }, [editingCell]);
 
-    // Sort
-    filtered.sort((a, b) => {
-      const aValue = a[sortConfig.column as keyof ChangeInformation];
-      const bValue = b[sortConfig.column as keyof ChangeInformation];
+  const handleCellEdit = (recordId: string, columnId: string) => {
+    const column = columnOrder.find(col => col.id === columnId);
+    if (column?.editable) {
+      setEditingCell({ rowId: recordId, columnId });
+    }
+  };
 
-      if (aValue === null || aValue === undefined) return 1;
-      if (bValue === null || bValue === undefined) return -1;
+  const updateRecordField = (recordId: string, fieldName: string, value: string): boolean => {
+    const recordIndex = records.findIndex(r => r.id === recordId);
+    if (recordIndex === -1) return false;
 
-      if (typeof aValue === 'string' && typeof bValue === 'string') {
-        return sortConfig.direction === 'asc'
-          ? aValue.localeCompare(bValue)
-          : bValue.localeCompare(aValue);
-      }
+    const updatedRecords = [...records];
+    (updatedRecords[recordIndex] as any)[fieldName] = value;
+    setRecords(updatedRecords);
 
-      if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
-      if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
-      return 0;
-    });
+    // Call API to update
+    changeInformationService.update(recordId, { [fieldName]: value })
+      .then(() => {
+        notify({
+          type: 'success',
+          title: 'Update successful',
+          description: 'Record updated successfully',
+          duration: 2000,
+        });
+      })
+      .catch((err) => {
+        console.error('Failed to update record:', err);
+        notify({
+          type: 'error',
+          title: 'Update failed',
+          description: err.response?.data?.detail || 'Failed to update record',
+        });
+        // Revert on error
+        loadRecords();
+      });
 
-    setFilteredData(filtered);
-  }, [data, searchTerm, sortConfig]);
+    return true;
+  };
 
-  const handleSort = (column: string) => {
+  const handleCellSave = (recordId: string, columnId: string, value: string) => {
+    const success = updateRecordField(recordId, columnId, value);
+    if (success) {
+      setEditingCell(null);
+    }
+  };
+
+  const handleSort = (columnId: string) => {
+    const column = columnOrder.find(col => col.id === columnId);
+    if (!column?.sortable) return;
+
     setSortConfig(prev => ({
-      column,
-      direction: prev.column === column && prev.direction === 'asc' ? 'desc' : 'asc'
+      column: columnId,
+      direction: prev.column === columnId && prev.direction === 'asc' ? 'desc' : 'asc'
     }));
   };
 
-  const handleSelectAll = () => {
-    if (selectedRows.size === filteredData.length) {
-      setSelectedRows(new Set());
-    } else {
-      setSelectedRows(new Set(filteredData.map(item => item.id)));
-    }
-  };
-
-  const handleSelectRow = (id: string) => {
-    const newSelected = new Set(selectedRows);
-    if (newSelected.has(id)) {
-      newSelected.delete(id);
-    } else {
-      newSelected.add(id);
-    }
-    setSelectedRows(newSelected);
-  };
-
-  const handleBulkDelete = async () => {
-    if (selectedRows.size === 0) return;
-
-    if (!confirm(`Are you sure you want to delete ${selectedRows.size} record(s)?`)) {
+  const handleDeleteSelected = async () => {
+    if (selectedRows.size === 0) {
+      notify({
+        type: 'warning',
+        title: 'No selection',
+        description: 'Please select rows to delete',
+      });
       return;
     }
 
-    try {
-      await changeInformationService.bulkDelete(Array.from(selectedRows));
-      showNotification(`Successfully deleted ${selectedRows.size} record(s)`, 'success');
+    notify({
+      type: 'warning',
+      title: `Delete ${selectedRows.size} record(s)?`,
+      description: 'This action cannot be undone',
+      duration: 10000,
+      actions: [
+        {
+          label: 'Confirm Delete',
+          onClick: async () => {
+            const loadingId = notify({
+              type: 'loading',
+              title: 'Deleting records...',
+              dismissible: false,
+            });
+
+            try {
+              const idsToDelete = Array.from(selectedRows);
+              await changeInformationService.bulkDelete(idsToDelete);
+              
+              // Remove from local state
+              setRecords(prev => prev.filter(r => !selectedRows.has(r.id)));
+              setSelectedRows(new Set());
+              
+              update(loadingId, {
+                type: 'success',
+                title: 'Delete successful',
+                description: `Successfully deleted ${idsToDelete.length} record(s)`,
+                duration: 3000,
+                dismissible: true,
+              });
+            } catch (err: any) {
+              console.error('Failed to delete records:', err);
+              update(loadingId, {
+                type: 'error',
+                title: 'Delete failed',
+                description: err.response?.data?.detail || 'Failed to delete records',
+                duration: 6000,
+                dismissible: true,
+              });
+            }
+          },
+        },
+        {
+          label: 'Cancel',
+          onClick: () => {},
+        },
+      ],
+    });
+  };
+
+  const sortedAndFilteredRecords = records
+    .filter(record => {
+      const matchesSearch = 
+        Object.values(record).some(value => 
+          value && value.toString().toLowerCase().includes(searchTerm.toLowerCase())
+        );
+      
+      const matchesChangeType = !filterConfig.changeType || 
+        record.change_type === filterConfig.changeType;
+      const matchesStatus = !filterConfig.processingStatus || 
+        record.processing_status === filterConfig.processingStatus;
+
+      return matchesSearch && matchesChangeType && matchesStatus;
+    })
+    .sort((a, b) => {
+      const aValue = (a as any)[sortConfig.column];
+      const bValue = (b as any)[sortConfig.column];
+      
+      // Handle null/undefined values
+      if (aValue === null || aValue === undefined) return 1;
+      if (bValue === null || bValue === undefined) return -1;
+      
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        return sortConfig.direction === 'asc' 
+          ? aValue.localeCompare(bValue)
+          : bValue.localeCompare(aValue);
+      }
+      
+      if (typeof aValue === 'number' && typeof bValue === 'number') {
+        return sortConfig.direction === 'asc' ? aValue - bValue : bValue - aValue;
+      }
+      
+      // Handle date strings
+      if (sortConfig.column.includes('date') || sortConfig.column.includes('_at')) {
+        const dateA = new Date(aValue).getTime();
+        const dateB = new Date(bValue).getTime();
+        return sortConfig.direction === 'asc' ? dateA - dateB : dateB - dateA;
+      }
+      
+      return 0;
+    });
+
+  const totalPages = Math.ceil(sortedAndFilteredRecords.length / rowsPerPage);
+  const startIndex = (currentPage - 1) * rowsPerPage;
+  const paginatedRecords = sortedAndFilteredRecords.slice(startIndex, startIndex + rowsPerPage);
+
+  const toggleRowSelection = (id: string) => {
+    const newSelection = new Set(selectedRows);
+    if (newSelection.has(id)) {
+      newSelection.delete(id);
+    } else {
+      newSelection.add(id);
+    }
+    setSelectedRows(newSelection);
+  };
+
+  const toggleAllRows = () => {
+    if (selectedRows.size === paginatedRecords.length) {
       setSelectedRows(new Set());
-      await fetchData();
-    } catch (error) {
-      showNotification('Failed to delete records', 'error');
+    } else {
+      setSelectedRows(new Set(paginatedRecords.map(r => r.id)));
     }
   };
 
-  const handleExport = () => {
-    const headers = ['Company Name', 'First Name', 'Last Name', 'Date of Birth', 'Date of Effect', 'Change Type', 'Other Reason', 'Created At', 'Updated At'];
-    const csvData = filteredData.map(item => [
-      item.company_name || '',
-      item.first_name,
-      item.surname,
-      item.date_of_birth,
-      item.date_of_effect,
-      item.change_type,
-      item.other_reason || '',
-      new Date(item.created_at).toLocaleString(),
-      new Date(item.updated_at).toLocaleString()
-    ]);
-
-    const csv = [
-      headers.join(','),
-      ...csvData.map(row => row.map(cell => `"${cell}"`).join(','))
-    ].join('\n');
-
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `change-information-${new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
-    window.URL.revokeObjectURL(url);
+  const exportToCSV = () => {
+    const selectedRecords = selectedRows.size > 0 
+      ? records.filter(r => selectedRows.has(r.id))
+      : sortedAndFilteredRecords;
+    
+    notify({
+      type: 'info',
+      title: 'Export started',
+      description: `Exporting ${selectedRecords.length} records`,
+    });
   };
 
-  const formatDate = (dateString: string) => {
-    if (!dateString) return '';
-    return new Date(dateString).toLocaleDateString();
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      setColumnOrder((items) => {
+        const oldIndex = items.findIndex(item => item.id === active.id);
+        const newIndex = items.findIndex(item => item.id === over.id);
+
+        return arrayMove(items, oldIndex, newIndex);
+      });
+    }
   };
 
-  const formatDateTime = (dateString: string) => {
-    if (!dateString) return '';
-    return new Date(dateString).toLocaleString();
+  const getCellValue = (record: ChangeInformation, columnId: string) => {
+    const value = (record as any)[columnId];
+    
+    // Skip rendering if value is an object
+    if (value && typeof value === 'object' && !Array.isArray(value) && !(value instanceof Date)) {
+      return '';
+    }
+    
+    // Handle boolean values
+    if (typeof value === 'boolean') {
+      return value ? 'Yes' : 'No';
+    }
+    
+    // Handle null/undefined
+    if (value === null || value === undefined) {
+      return '';
+    }
+    
+    return value;
   };
 
-  const getSortIcon = (column: string) => {
-    if (sortConfig.column !== column) return <ArrowUpDown className="w-4 h-4" />;
-    return sortConfig.direction === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />;
-  };
+  const renderCell = (record: ChangeInformation, column: ColumnDefinition) => {
+    const isEditing = editingCell?.rowId === record.id && editingCell?.columnId === column.id;
+    const hasError = validationErrors.some(err => err.rowId === record.id && err.columnId === column.id);
+    const error = validationErrors.find(err => err.rowId === record.id && err.columnId === column.id);
 
-  if (loading) {
-    return (
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="h-8 w-64 bg-slate-200 rounded animate-pulse"></div>
-          <div className="h-10 w-32 bg-slate-200 rounded animate-pulse"></div>
-        </div>
-        <div className="glass-panel rounded-2xl p-6">
-          <div className="space-y-4">
-            {[1, 2, 3, 4, 5].map(i => (
-              <div key={i} className="h-16 bg-slate-100 rounded animate-pulse"></div>
+    if (isEditing && column.editable) {
+      const currentValue = (record as any)[column.id];
+      
+      if (column.type === 'select' && column.options) {
+        return (
+          <select
+            ref={editInputRef as React.RefObject<HTMLSelectElement>}
+            defaultValue={currentValue}
+            onBlur={(e) => handleCellSave(record.id, column.id, e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                handleCellSave(record.id, column.id, e.currentTarget.value);
+              }
+              if (e.key === 'Escape') {
+                setEditingCell(null);
+              }
+            }}
+            className={`w-full px-2 py-1 border rounded ${hasError ? 'border-red-500' : 'border-slate-300'} focus:outline-none focus:border-zomi-green`}
+          >
+            {column.options.map(option => (
+              <option key={option} value={option}>{option}</option>
             ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
+          </select>
+        );
+      }
 
-  return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={onBack}
-            className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5 text-slate-600" />
-          </button>
-          <div>
-            <h2 className="text-2xl font-bold text-slate-900">Change of Information</h2>
-            <p className="text-sm text-slate-600">{filteredData.length} records</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleExport}
-            className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
-          >
-            <Download className="w-4 h-4" />
-            <span className="text-sm font-medium">Export</span>
-          </button>
-          {selectedRows.size > 0 && (
-            <button
-              onClick={handleBulkDelete}
-              className="flex items-center gap-2 px-4 py-2 bg-red-50 border border-red-200 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
-            >
-              <Trash2 className="w-4 h-4" />
-              <span className="text-sm font-medium">Delete ({selectedRows.size})</span>
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-        <input
-          type="text"
-          placeholder="Search by name, company, or change type..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-zomi-green/20 focus:border-zomi-green"
-        />
-      </div>
-
-      {/* Table */}
-      <div className="glass-panel rounded-2xl overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-slate-50 border-b border-slate-200">
-              <tr>
-                <th className="px-4 py-3 text-left">
-                  <input
-                    type="checkbox"
-                    checked={selectedRows.size === filteredData.length && filteredData.length > 0}
-                    onChange={handleSelectAll}
-                    className="rounded border-slate-300 text-zomi-green focus:ring-zomi-green"
-                  />
-                </th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">
-                  <button
-                    onClick={() => handleSort('company_name')}
-                    className="flex items-center gap-2 hover:text-zomi-green"
-                  >
-                    Company Name {getSortIcon('company_name')}
-                  </button>
-                </th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">
-                  <button
-                    onClick={() => handleSort('first_name')}
-                    className="flex items-center gap-2 hover:text-zomi-green"
-                  >
-                    First Name {getSortIcon('first_name')}
-                  </button>
-                </th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">
-                  <button
-                    onClick={() => handleSort('surname')}
-                    className="flex items-center gap-2 hover:text-zomi-green"
-                  >
-                    Last Name {getSortIcon('surname')}
-                  </button>
-                </th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">
-                  <button
-                    onClick={() => handleSort('date_of_birth')}
-                    className="flex items-center gap-2 hover:text-zomi-green"
-                  >
-                    Date of Birth {getSortIcon('date_of_birth')}
-                  </button>
-                </th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">
-                  <button
-                    onClick={() => handleSort('date_of_effect')}
-                    className="flex items-center gap-2 hover:text-zomi-green"
-                  >
-                    Date of Effect {getSortIcon('date_of_effect')}
-                  </button>
-                </th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">
-                  <button
-                    onClick={() => handleSort('change_type')}
-                    className="flex items-center gap-2 hover:text-zomi-green"
-                  >
-                    Change Type {getSortIcon('change_type')}
-                  </button>
-                </th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">
-                  Other Reason
-                </th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">
-                  <button
-                    onClick={() => handleSort('created_at')}
-                    className="flex items-center gap-2 hover:text-zomi-green"
-                  >
-                    Created At {getSortIcon('created_at')}
-                  </button>
-                </th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">
-                  <button
-                    onClick={() => handleSort('updated_at')}
-                    className="flex items-center gap-2 hover:text-zomi-green"
-                  >
-                    Updated At {getSortIcon('updated_at')}
-                  </button>
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {filteredData.map((item) => (
-                <tr
-                  key={item.id}
-                  className="hover:bg-slate-50 transition-colors"
-                >
-                  <td className="px-4 py-3">
-                    <input
-                      type="checkbox"
-                      checked={selectedRows.has(item.id)}
-                      onChange={() => handleSelectRow(item.id)}
-                      className="rounded border-slate-300 text-zomi-green focus:ring-zomi-green"
-                    />
-                  </td>
-                  <td className="px-4 py-3 text-sm text-slate-900">
-                    {item.company_name || 'N/A'}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-slate-900">
-                    {item.first_name}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-slate-900">
-                    {item.surname}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-slate-700">
-                    {formatDate(item.date_of_birth)}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-slate-700">
-                    {formatDate(item.date_of_effect)}
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                      {item.change_type}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-slate-700">
-                    {item.other_reason || '-'}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-slate-600">
-                    {formatDateTime(item.created_at)}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-slate-600">
-                    {formatDateTime(item.updated_at)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-          {filteredData.length === 0 && (
-            <div className="text-center py-12">
-              <p className="text-slate-500">No records found</p>
+      return (
+        <div className="relative">
+          <input
+            ref={editInputRef as React.RefObject<HTMLInputElement>}
+            type={column.type === 'number' ? 'number' : column.type === 'date' ? 'date' : 'text'}
+            defaultValue={currentValue}
+            onBlur={(e) => handleCellSave(record.id, column.id, e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                handleCellSave(record.id, column.id, e.currentTarget.value);
+              }
+              if (e.key === 'Escape') {
+                setEditingCell(null);
+              }
+            }}
+            className={`w-full px-2 py-1 border rounded ${hasError ? 'border-red-500' : 'border-slate-300'} focus:outline-none focus:border-zomi-green`}
+          />
+          {error && (
+            <div className="absolute top-full left-0 mt-1 px-2 py-1 bg-red-100 border border-red-300 rounded text-xs text-red-700 z-10 whitespace-nowrap">
+              {error.message}
             </div>
           )}
         </div>
+      );
+    }
+
+    return (
+      <div
+        onClick={() => handleCellEdit(record.id, column.id)}
+        className={`cursor-pointer hover:bg-slate-100 px-2 py-1 rounded ${column.editable ? 'hover:bg-blue-50' : ''} ${hasError ? 'bg-red-50' : ''}`}
+      >
+        {getCellValue(record, column.id)}
       </div>
+    );
+  };
+
+  const getSortIcon = (columnId: string) => {
+    if (sortConfig.column !== columnId) {
+      return <ArrowUpDown className="w-4 h-4 text-slate-400" />;
+    }
+    return sortConfig.direction === 'asc' 
+      ? <ArrowUp className="w-4 h-4 text-zomi-green" />
+      : <ArrowDown className="w-4 h-4 text-zomi-green" />;
+  };
+
+  return (
+    <div
+      className="bg-white rounded-xl border border-slate-200 shadow-sm w-full max-w-full min-h-0 h-full"
+      style={{
+        display: 'grid',
+        gridTemplateRows: 'auto minmax(0, 1fr) auto',
+        minWidth: 0,
+        maxWidth: '100%',
+        overflow: 'hidden'
+      }}
+    >
+      {/* TOP SECTION - FIXED HEADER */}
+      <div className="bg-white border-b border-slate-200" style={{ minWidth: 0, maxWidth: '100%', overflow: 'hidden' }}>
+        <div className="px-6 py-6">
+          <div className="flex items-center gap-4 mb-2">
+            <button
+              onClick={onBack}
+              className="flex items-center gap-2 px-4 py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-xl transition-all duration-200"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to Databases
+            </button>
+            <h1 className="text-3xl font-bold text-slate-900">{databaseNames[databaseType]}</h1>
+          </div>
+          <p className="text-slate-600">Manage and export change information with spreadsheet functionality</p>
+        </div>
+
+        {!loading && !error && (
+          <div className="bg-white p-6 border-t border-slate-100">
+            <div className="flex flex-col lg:flex-row gap-4 mb-4">
+              <div className="flex-1 relative">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-12 pr-4 py-3 rounded-xl text-slate-900 border border-slate-200 bg-slate-50 focus:bg-white focus:border-zomi-green focus:outline-none transition-colors"
+                  placeholder="Search by name, company, or change type..."
+                />
+              </div>
+
+              <div className="flex gap-2 flex-wrap">
+                <select
+                  value={filterConfig.changeType}
+                  onChange={(e) => setFilterConfig(prev => ({ ...prev, changeType: e.target.value }))}
+                  className="px-4 py-3 rounded-xl text-slate-900 border border-slate-200 bg-slate-50 focus:bg-white focus:border-zomi-green focus:outline-none transition-colors"
+                >
+                  <option value="">All Change Types</option>
+                  <option value="Leaver">Leaver</option>
+                  <option value="Maternity Leave">Maternity Leave</option>
+                  <option value="Died">Died</option>
+                  <option value="Change of Name">Change of Name</option>
+                  <option value="Change of Address">Change of Address</option>
+                  <option value="Change of Salary">Change of Salary</option>
+                  <option value="Other">Other</option>
+                </select>
+
+                <select
+                  value={filterConfig.processingStatus}
+                  onChange={(e) => setFilterConfig(prev => ({ ...prev, processingStatus: e.target.value }))}
+                  className="px-4 py-3 rounded-xl text-slate-900 border border-slate-200 bg-slate-50 focus:bg-white focus:border-zomi-green focus:outline-none transition-colors"
+                >
+                  <option value="">All Statuses</option>
+                  <option value="pending">Pending</option>
+                  <option value="in_progress">In Progress</option>
+                  <option value="completed">Completed</option>
+                  <option value="rejected">Rejected</option>
+                </select>
+
+                <button
+                  onClick={() => setShowExportModal(true)}
+                  className="flex items-center gap-2 px-4 py-3 bg-zomi-green hover:bg-zomi-green/90 text-white rounded-xl transition-all duration-200"
+                >
+                  <Download className="w-5 h-5" />
+                  <span className="hidden sm:inline">Export</span>
+                </button>
+              </div>
+            </div>
+
+            {selectedRows.size > 0 && (
+              <div className="flex items-center justify-between p-4 bg-zomi-mint/50 rounded-xl">
+                <span className="font-medium text-slate-900">
+                  {selectedRows.size} record(s) selected
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => exportToCSV()}
+                    className="flex items-center gap-2 px-4 py-2 bg-zomi-green hover:bg-zomi-green/90 text-white rounded-lg transition-all duration-200"
+                  >
+                    <Download className="w-4 h-4" />
+                    Export CSV
+                  </button>
+                  <button 
+                    onClick={handleDeleteSelected}
+                    disabled={selectedRows.size === 0}
+                    className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Delete {selectedRows.size > 0 ? `(${selectedRows.size})` : ''}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* MIDDLE SECTION - ONLY THIS AREA SCROLLS */}
+      <div className="bg-white" style={{ minWidth: 0, minHeight: 0, overflow: 'auto' }}>
+        {loading && (
+          <div className="p-12 text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zomi-green mx-auto mb-4"></div>
+            <p className="text-slate-600">Loading change information...</p>
+          </div>
+        )}
+
+        {error && (
+          <div className="p-6">
+            <div className="bg-white rounded-2xl p-6 border border-red-200">
+              <p className="text-red-600">{error}</p>
+            </div>
+          </div>
+        )}
+
+        {!loading && !error && (
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <table
+              className="border-collapse"
+              style={{ width: 'max-content', minWidth: '100%' }}
+            >
+              <thead className="bg-slate-50 border-b border-slate-200">
+                <tr>
+                  <th className="text-left p-4 bg-slate-50 sticky left-0 border-r border-slate-200">
+                    <input
+                      type="checkbox"
+                      checked={selectedRows.size === paginatedRecords.length && paginatedRecords.length > 0}
+                      onChange={toggleAllRows}
+                      className="w-4 h-4 accent-zomi-green"
+                    />
+                  </th>
+                  <SortableContext items={columnOrder} strategy={verticalListSortingStrategy}>
+                    {columnOrder.map((column) => (
+                      <SortableTableHeader key={column.id} column={column}>
+                        <button
+                          onClick={() => handleSort(column.id)}
+                          className="flex items-center gap-2 hover:text-zomi-green transition-colors w-full text-left"
+                          disabled={!column.sortable}
+                        >
+                          <span className="font-medium text-slate-700">{column.label}</span>
+                          {column.sortable && getSortIcon(column.id)}
+                        </button>
+                      </SortableTableHeader>
+                    ))}
+                  </SortableContext>
+                </tr>
+              </thead>
+              <tbody>
+                {paginatedRecords.map((record) => (
+                  <tr
+                    key={record.id}
+                    className="border-b border-slate-100 hover:bg-slate-50 transition-colors"
+                  >
+                    <td className="p-4 bg-white sticky left-0 border-r border-slate-200">
+                      <input
+                        type="checkbox"
+                        checked={selectedRows.has(record.id)}
+                        onChange={() => toggleRowSelection(record.id)}
+                        className="w-4 h-4 accent-zomi-green"
+                      />
+                    </td>
+                    {columnOrder.map((column) => (
+                      <td key={column.id} className="p-4 text-sm text-slate-600 relative whitespace-nowrap">
+                        {renderCell(record, column)}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </DndContext>
+        )}
+      </div>
+
+      {/* BOTTOM SECTION - FIXED FOOTER */}
+      <div className="bg-white border-t border-slate-200" style={{ minWidth: 0, maxWidth: '100%', overflow: 'hidden' }}>
+        <div className="px-6 py-4">
+          {!loading && !error ? (
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-slate-600">
+                Showing {startIndex + 1} to {Math.min(startIndex + rowsPerPage, sortedAndFilteredRecords.length)} of {sortedAndFilteredRecords.length} records
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  className="px-4 py-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                >
+                  Previous
+                </button>
+                <span className="px-4 py-2 bg-zomi-green text-white rounded-lg font-medium">
+                  {currentPage}
+                </span>
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                  className="px-4 py-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="text-sm text-slate-500">&nbsp;</div>
+          )}
+        </div>
+      </div>
+
+      {/* Export Modal */}
+      <ExportModal 
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+      />
     </div>
   );
 };
