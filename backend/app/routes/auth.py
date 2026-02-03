@@ -442,3 +442,90 @@ async def logout(token_data: TokenRefresh) -> Dict[str, Any]:
     return {
         "message": "Logout successful"
     }
+
+
+@router.post("/forgot-password", status_code=status.HTTP_200_OK)
+@limiter.limit("3/hour")
+async def forgot_password(
+    request: Request,
+    body: Dict[str, str]
+) -> Dict[str, str]:
+    """
+    Request password reset email
+    
+    Rate limit: 3 attempts per hour
+    """
+    email = sanitize_email(body.get("email", ""))
+    
+    if not email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email is required"
+        )
+    
+    security_logger.info({
+        'event': 'password_reset_requested',
+        'email': email,
+        'ip': request.client.host if request.client else 'unknown'
+    })
+    
+    try:
+        # Request password reset from Supabase
+        auth_service = AuthService()
+        await auth_service.reset_password_for_email(email)
+        
+        # Always return success to prevent email enumeration
+        return {
+            "message": "If an account exists with this email, a password reset link will be sent"
+        }
+    except Exception as e:
+        security_logger.error({
+            'event': 'password_reset_failed',
+            'email': email,
+            'error': str(e)
+        })
+        # Still return success to prevent email enumeration
+        return {
+            "message": "If an account exists with this email, a password reset link will be sent"
+        }
+
+
+@router.post("/reset-password", status_code=status.HTTP_200_OK)
+async def reset_password(
+    request: Request,
+    body: Dict[str, str]
+) -> Dict[str, str]:
+    """
+    Reset password with token from email link
+    """
+    token = body.get("token", "")
+    new_password = body.get("password", "")
+    
+    if not token or not new_password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Token and password are required"
+        )
+    
+    try:
+        # Update password using Supabase
+        auth_service = AuthService()
+        await auth_service.update_user_password(token, new_password)
+        
+        security_logger.info({
+            'event': 'password_reset_completed',
+            'ip': request.client.host if request.client else 'unknown'
+        })
+        
+        return {
+            "message": "Password reset successful"
+        }
+    except Exception as e:
+        security_logger.error({
+            'event': 'password_reset_error',
+            'error': str(e)
+        })
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Failed to reset password. The link may have expired."
+        )

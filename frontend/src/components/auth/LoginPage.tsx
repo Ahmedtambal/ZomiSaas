@@ -82,6 +82,15 @@ export const LoginPage = () => {
           </button>
         </form>
 
+        <div className="mt-4 text-center">
+          <button
+            onClick={() => navigate('/forgot-password')}
+            className="text-sm text-slate-600 hover:text-zomi-green transition-colors"
+          >
+            Forgot your password?
+          </button>
+        </div>
+
         <div className="mt-6 pt-6 border-t border-slate-200">
           <p className="text-center text-sm text-slate-600">
             Have an invite code?{' '}

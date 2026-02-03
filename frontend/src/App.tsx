@@ -5,6 +5,8 @@ import { NotificationProvider } from './context/NotificationContext';
 import { NotificationContainer } from './components/common/NotificationContainer';
 import { LoginPage } from './components/auth/LoginPage';
 import { RegisterPage } from './components/auth/RegisterPage';
+import { ForgotPasswordPage } from './components/auth/ForgotPasswordPage';
+import { ResetPasswordPage } from './components/auth/ResetPasswordPage';
 import { DashboardLayout } from './components/layout/DashboardLayout';
 import { ExecutiveDashboard } from './components/dashboard/ExecutiveDashboard';
 import { DatabaseSelector } from './components/members/DatabaseSelector';
@@ -107,6 +109,20 @@ function AppContent() {
             <RegisterPage />
           )
         } 
+      />
+      <Route 
+        path="/forgot-password" 
+        element={
+          isAuthenticated ? (
+            <Navigate to="/dashboard" replace />
+          ) : (
+            <ForgotPasswordPage />
+          )
+        } 
+      />
+      <Route 
+        path="/reset-password" 
+        element={<ResetPasswordPage />}
       />
       
       {/* Protected routes */}

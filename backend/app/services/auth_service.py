@@ -79,3 +79,26 @@ class AuthService:
             return response
         except Exception as e:
             raise Exception(f"Token refresh failed: {str(e)}")
+    
+    async def reset_password_for_email(self, email: str) -> bool:
+        """Send password reset email"""
+        try:
+            client = self._get_client()
+            client.auth.reset_password_email(email, {
+                "redirect_to": f"{settings.FRONTEND_URL}/reset-password"
+            })
+            return True
+        except Exception as e:
+            # Don't expose error details for security
+            return True
+    
+    async def update_user_password(self, access_token: str, new_password: str) -> bool:
+        """Update user password with recovery token"""
+        try:
+            client = self._get_client()
+            # Use the recovery token to set a session and update password
+            client.auth.set_session(access_token, access_token)
+            client.auth.update_user({"password": new_password})
+            return True
+        except Exception as e:
+            raise Exception(f"Password update failed: {str(e)}")
