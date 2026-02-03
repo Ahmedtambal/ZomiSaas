@@ -13,7 +13,7 @@ export const SettingsPage = () => {
   const tabs = [
     { id: 'profile', label: 'My Profile', icon: User },
     { id: 'security', label: 'Security', icon: Shield },
-    ...(user?.role === 'Admin' ? [
+    ...(user?.role === 'admin' || user?.role === 'owner' ? [
       { id: 'team', label: 'Team Management', icon: UsersIcon },
       { id: 'config', label: 'App Config', icon: SettingsIcon },
     ] : []),
@@ -26,9 +26,9 @@ export const SettingsPage = () => {
       case 'security':
         return <SecurityTab />;
       case 'team':
-        return user?.role === 'Admin' ? <TeamTab /> : null;
+        return (user?.role === 'admin' || user?.role === 'owner') ? <TeamTab /> : null;
       case 'config':
-        return user?.role === 'Admin' ? <AppConfigTab /> : null;
+        return (user?.role === 'admin' || user?.role === 'owner') ? <AppConfigTab /> : null;
       default:
         return <ProfileTab />;
     }
