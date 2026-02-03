@@ -12,7 +12,7 @@ from slowapi.errors import RateLimitExceeded
 import logging
 
 from app.config import settings
-from app.routes import auth, forms, public_forms, companies, employees, form_submissions, form_templates, form_analytics, audit_logs, kpi_stats
+from app.routes import auth, forms, public_forms, companies, employees, form_submissions, form_templates, form_analytics, audit_logs, kpi_stats, change_information
 from app.middleware import ActivityTrackingMiddleware, SecurityHeadersMiddleware
 
 # Configure logging
@@ -96,6 +96,7 @@ app.include_router(form_analytics.router, prefix="/api/analytics", tags=["Analyt
 app.include_router(public_forms.router, prefix="/api/public", tags=["Public"])
 app.include_router(companies.router, prefix="/api/companies", tags=["Companies"])
 app.include_router(employees.router, prefix="/api/employees", tags=["Employees"])
+app.include_router(change_information.router, prefix="/api/change-information", tags=["Change Information"])
 app.include_router(audit_logs.router, prefix="/api/audit-logs", tags=["Audit Logs"])
 app.include_router(kpi_stats.router, prefix="/api/kpi", tags=["KPI Statistics"])
 
