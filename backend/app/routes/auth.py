@@ -18,6 +18,7 @@ from app.middleware import (
     check_account_locked,
     record_failed_login,
     record_successful_login,
+    clear_lockout,
     sanitize_email
 )
 
@@ -287,7 +288,7 @@ async def signup_user(request: Request, user_data: UserCreate) -> Dict[str, Any]
 
 
 @router.post("/login")
-@limiter.limit("5/minute")  # Maximum 5 login attempts per minute
+@limiter.limit("10/minute")  # Maximum 10 login attempts per minute
 async def login(request: Request, credentials: UserLogin) -> Dict[str, Any]:
     """
     Login endpoint - validates credentials and returns JWT tokens
@@ -301,24 +302,10 @@ async def login(request: Request, credentials: UserLogin) -> Dict[str, Any]:
     - refresh_token (valid for 7 days)
     - user details
     
-    Rate limit: 5 attempts per minute
-    Security: Account locked after 5 failed attempts for 15 minutes
+    Rate limit: 10 attempts per minute
     """
     # Sanitize email
     email = sanitize_email(credentials.email)
-    
-    # Check if account is locked
-    is_locked, lock_message = check_account_locked(email)
-    if is_locked:
-        security_logger.warning({
-            'event': 'login_blocked_locked_account',
-            'email': email,
-            'ip': request.client.host if request.client else 'unknown'
-        })
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail=lock_message
-        )
     
     # Log login attempt
     security_logger.info({
@@ -335,9 +322,6 @@ async def login(request: Request, credentials: UserLogin) -> Dict[str, Any]:
     )
     
     if not success:
-        # Record failed attempt
-        record_failed_login(email)
-        
         security_logger.warning({
             'event': 'login_failed',
             'email': email,
@@ -349,9 +333,6 @@ async def login(request: Request, credentials: UserLogin) -> Dict[str, Any]:
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=error or "Invalid credentials"
         )
-    
-    # Clear failed attempts on successful login
-    record_successful_login(email)
     
     # Initialize activity tracking for this user
     update_session_activity(token_response.user.id)
@@ -529,3 +510,42 @@ async def reset_password(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Failed to reset password. The link may have expired."
         )
+
+
+@router.post("/admin/clear-lockout", status_code=status.HTTP_200_OK)
+async def admin_clear_lockout(
+    request: Request,
+    body: Dict[str, str],
+    current_user: dict = Depends(get_current_user)
+) -> Dict[str, str]:
+    """
+    Clear account lockout for a specific email (admin/owner only)
+    """
+    # Check if user is admin or owner
+    if current_user.get("role") not in ["admin", "owner"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admins and owners can clear account lockouts"
+        )
+    
+    email = body.get("email", "").strip()
+    if not email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email is required"
+        )
+    
+    email = sanitize_email(email)
+    clear_lockout(email)
+    
+    security_logger.info({
+        'event': 'account_lockout_cleared',
+        'email': email,
+        'cleared_by': current_user.get("email"),
+        'ip': request.client.host if request.client else 'unknown'
+    })
+    
+    return {
+        "message": f"Account lockout cleared for {email}"
+    }
+
