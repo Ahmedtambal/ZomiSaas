@@ -1,17 +1,31 @@
 import { useState } from 'react';
 import { Lock } from 'lucide-react';
 import { useNotification } from '../../context/NotificationContext';
+import { userProfileService } from '../../services/userProfileService';
 
 export const SecurityTab = () => {
   const { notify } = useNotification();
+  const [changing, setChanging] = useState(false);
   const [formData, setFormData] = useState({
     currentPassword: '',
     newPassword: '',
     confirmPassword: '',
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate new password length
+    if (formData.newPassword.length < 8) {
+      notify({
+        type: 'error',
+        title: 'Invalid password',
+        description: 'New password must be at least 8 characters',
+      });
+      return;
+    }
+    
+    // Validate password match
     if (formData.newPassword !== formData.confirmPassword) {
       notify({
         type: 'error',
@@ -20,12 +34,33 @@ export const SecurityTab = () => {
       });
       return;
     }
-    notify({
-      type: 'success',
-      title: 'Password updated',
-      description: 'Your password has been updated successfully',
-    });
-    setFormData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    
+    try {
+      setChanging(true);
+      
+      await userProfileService.changePassword({
+        current_password: formData.currentPassword,
+        new_password: formData.newPassword,
+      });
+      
+      notify({
+        type: 'success',
+        title: 'Password updated',
+        description: 'Your password has been updated successfully',
+      });
+      
+      // Clear form
+      setFormData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    } catch (error: any) {
+      console.error('Failed to change password:', error);
+      notify({
+        type: 'error',
+        title: 'Update failed',
+        description: error.response?.data?.detail || 'Failed to update password',
+      });
+    } finally {
+      setChanging(false);
+    }
   };
 
   return (
@@ -80,14 +115,16 @@ export const SecurityTab = () => {
         <div className="flex gap-3">
           <button
             type="submit"
-            className="px-6 py-3 bg-zomi-green hover:bg-zomi-green/90 text-white font-semibold rounded-xl transition-all duration-200"
+            disabled={changing}
+            className="px-6 py-3 bg-zomi-green hover:bg-zomi-green/90 text-white font-semibold rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Update Password
+            {changing ? 'Updating...' : 'Update Password'}
           </button>
           <button
             type="button"
             onClick={() => setFormData({ currentPassword: '', newPassword: '', confirmPassword: '' })}
-            className="px-6 py-3 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-semibold rounded-xl transition-all duration-200"
+            disabled={changing}
+            className="px-6 py-3 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-semibold rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Cancel
           </button>

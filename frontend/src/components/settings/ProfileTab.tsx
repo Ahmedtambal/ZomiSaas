@@ -1,25 +1,80 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { AlertTriangle } from 'lucide-react';
 import { useNotification } from '../../context/NotificationContext';
+import { userProfileService, UserProfile } from '../../services/userProfileService';
 
 export const ProfileTab = () => {
   const { user } = useAuth();
   const { notify } = useNotification();
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [formData, setFormData] = useState({
-    fullName: user?.fullName || '',
-    email: user?.email || '',
-    dateOfBirth: user?.dateOfBirth || '',
+    fullName: '',
+    email: '',
+    jobTitle: '',
   });
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Load user profile on mount
+  useEffect(() => {
+    loadProfile();
+  }, []);
+
+  const loadProfile = async () => {
+    try {
+      setLoading(true);
+      const profileData = await userProfileService.getMyProfile();
+      setProfile(profileData);
+      setFormData({
+        fullName: profileData.full_name || '',
+        email: profileData.email || '',
+        jobTitle: profileData.job_title || '',
+      });
+    } catch (error: any) {
+      console.error('Failed to load profile:', error);
+      notify({
+        type: 'error',
+        title: 'Load failed',
+        description: error.response?.data?.detail || 'Failed to load profile',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    notify({
-      type: 'success',
-      title: 'Profile updated',
-      description: 'Your profile has been updated successfully',
-    });
+    
+    try {
+      setSaving(true);
+      
+      const updateData = {
+        full_name: formData.fullName,
+        job_title: formData.jobTitle || null,
+      };
+      
+      await userProfileService.updateMyProfile(updateData);
+      
+      notify({
+        type: 'success',
+        title: 'Profile updated',
+        description: 'Your profile has been updated successfully',
+      });
+      
+      // Reload profile to get latest data
+      await loadProfile();
+    } catch (error: any) {
+      console.error('Failed to update profile:', error);
+      notify({
+        type: 'error',
+        title: 'Update failed',
+        description: error.response?.data?.detail || 'Failed to update profile',
+      });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleDelete = () => {
@@ -31,6 +86,15 @@ export const ProfileTab = () => {
     });
     setShowDeleteModal(false);
   };
+
+  if (loading) {
+    return (
+      <div className="glass-panel rounded-2xl p-6">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zomi-green mx-auto"></div>
+        <p className="text-center text-slate-600 mt-4">Loading profile...</p>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -53,31 +117,37 @@ export const ProfileTab = () => {
             <input
               type="email"
               value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="glass-input w-full px-4 py-3 rounded-xl text-slate-900"
+              disabled
+              className="glass-input w-full px-4 py-3 rounded-xl text-slate-900 bg-slate-100 cursor-not-allowed"
+              title="Email cannot be changed"
             />
+            <p className="text-xs text-slate-500 mt-1">Email cannot be changed</p>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Date of Birth</label>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Job Title</label>
             <input
-              type="date"
-              value={formData.dateOfBirth}
-              onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
+              type="text"
+              value={formData.jobTitle}
+              onChange={(e) => setFormData({ ...formData, jobTitle: e.target.value })}
               className="glass-input w-full px-4 py-3 rounded-xl text-slate-900"
+              placeholder="e.g. Financial Advisor"
             />
           </div>
 
           <div className="flex gap-3">
             <button
               type="submit"
-              className="px-6 py-3 bg-zomi-green hover:bg-zomi-green/90 text-white font-semibold rounded-xl transition-all duration-200"
+              disabled={saving}
+              className="px-6 py-3 bg-zomi-green hover:bg-zomi-green/90 text-white font-semibold rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Save Changes
+              {saving ? 'Saving...' : 'Save Changes'}
             </button>
             <button
               type="button"
-              className="px-6 py-3 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-semibold rounded-xl transition-all duration-200"
+              onClick={loadProfile}
+              disabled={saving}
+              className="px-6 py-3 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-semibold rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Cancel
             </button>
