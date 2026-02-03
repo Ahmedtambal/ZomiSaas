@@ -107,8 +107,8 @@ export const SWNewEmployeeForm: React.FC = () => {
       case 3: // Employment Details
         return !!(formData.ukResident && formData.nationality && formData.salary && 
                   formData.employmentStartDate && formData.selectedRetirementAge);
-      case 4: // Pension Details
-        return !!(formData.sectionNumber && formData.pensionInvestmentApproach);
+      case 4: // Pension Details (Section Number and Pension Investment Approach disabled - filled by team later)
+        return true; // No required fields in this step anymore
       default:
         return true;
     }
@@ -167,8 +167,9 @@ export const SWNewEmployeeForm: React.FC = () => {
             { name: 'salary', label: 'Salary', type: 'number', required: true, min: 0 },
             { name: 'employmentStartDate', label: 'Employment Start Date', type: 'date', required: true },
             { name: 'selectedRetirementAge', label: 'Selected Retirement Age', type: 'number', required: true, min: 55, max: 75 },
-            { name: 'sectionNumber', label: 'Section Number', type: 'text', required: true },
-            { name: 'pensionInvestmentApproach', label: 'Pension Investment Approach', type: 'select', required: true, options: ['Default', 'Ethical', 'High Growth', 'Conservative'] },
+            // Disabled fields - to be filled by team in database later
+            // { name: 'sectionNumber', label: 'Section Number', type: 'text', required: false },
+            // { name: 'pensionInvestmentApproach', label: 'Pension Investment Approach', type: 'select', required: false, options: ['Default', 'Ethical', 'High Growth', 'Conservative'] },
           ]
         }
       };
@@ -470,33 +471,13 @@ export const SWNewEmployeeForm: React.FC = () => {
           {/* Step 4: Pension Details & Company */}
           {currentStep === 4 && (
             <div className="space-y-6">
-              <h2 className="text-2xl font-bold text-white mb-4">Pension Details & Company</h2>
+              <h2 className="text-2xl font-bold text-white mb-4">Company Selection</h2>
+              <p className="text-white/70 text-sm mb-4">
+                Note: Section Number and Pension Investment Approach will be filled by the team later in the database.
+              </p>
               
               <div className="space-y-6">
-                <div>
-                  <label className="block text-white mb-2">Section Number *</label>
-                  <input
-                    type="text"
-                    value={formData.sectionNumber}
-                    onChange={(e) => handleInputChange('sectionNumber', e.target.value)}
-                    className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-white mb-2">Pension Investment Approach *</label>
-                  <select
-                    value={formData.pensionInvestmentApproach}
-                    onChange={(e) => handleInputChange('pensionInvestmentApproach', e.target.value)}
-                    className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  >
-                    <option value="">Select</option>
-                    <option value="Default">Default</option>
-                    <option value="Ethical">Ethical</option>
-                    <option value="High Growth">High Growth</option>
-                    <option value="Conservative">Conservative</option>
-                  </select>
-                </div>
+                {/* Section Number and Pension Investment Approach fields are hidden - will be filled by team in database */}
 
                 <div className="border-t border-white/20 pt-6 mt-6">
                   <div>
