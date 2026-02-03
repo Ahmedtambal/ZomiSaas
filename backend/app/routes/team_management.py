@@ -106,7 +106,7 @@ async def create_invite_code(
         logger.error(f"Failed to create invite code: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to create invite code"
+            detail=f"Failed to create invite code: {str(e)}"
         )
 
 
@@ -154,26 +154,24 @@ async def list_members(
     try:
         organization_id = current_user["organization_id"]
         
-        # Get all user profiles in the organization
-        response = db_service.client.table("user_profiles").select("*").eq(
-            "organization_id", organization_id
-        ).order("created_at", desc=False).execute()
+        # Use the database function to get members with emails
+        # This avoids needing Admin API access
+        response = await db_service.execute_query(
+            f"SELECT * FROM get_user_emails_for_organization('{organization_id}')"
+        )
         
-        members = response.data
-        
-        # For each member, fetch email from auth.users
-        # We'll do this by making individual requests since we can't join with auth.users
-        for member in members:
-            try:
-                # Try to get email from sign-in (this will work for the current user)
-                auth_response = db_service.client.auth.admin.get_user_by_id(member["id"])
-                if auth_response and auth_response.user:
-                    member["email"] = auth_response.user.email
-                else:
-                    member["email"] = None
-            except:
-                # If we can't get email, set it to None
-                member["email"] = None
+        # Convert the result to list of dicts
+        members = []
+        for row in response:
+            members.append({
+                "id": str(row[0]),  # user_id
+                "email": row[1],     # email
+                "full_name": row[2], # full_name
+                "job_title": row[3], # job_title
+                "role": row[4],      # role
+                "created_at": row[5].isoformat() if row[5] else None,  # created_at
+                "updated_at": row[6].isoformat() if row[6] else None   # updated_at
+            })
         
         return members
         
