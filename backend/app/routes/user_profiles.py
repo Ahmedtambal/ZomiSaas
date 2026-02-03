@@ -1,8 +1,8 @@
 """
 User Profiles Routes - Manage user profile information
 """
-from fastapi import APIRouter, HTTPException, status, Depends
-from typing import Dict, Any
+from fastapi import APIRouter, HTTPException, status, Depends, Header
+from typing import Dict, Any, Optional
 from pydantic import BaseModel
 import logging
 
@@ -23,10 +23,11 @@ async def get_my_profile(
     current_user: dict = Depends(get_current_user)
 ) -> Dict[str, Any]:
     """
-    Get current user's profile with email from auth.users
+    Get current user's profile with email from JWT token
     """
     try:
         user_id = current_user["id"]
+        email = current_user.get("email")  # Email from JWT token
         
         # Get user profile from user_profiles table
         profile = await db_service.get_user_profile_by_id(user_id)
@@ -37,15 +38,7 @@ async def get_my_profile(
                 detail="User profile not found"
             )
         
-        # Get email from auth.users using Supabase Admin API
-        try:
-            auth_user = db_service.client.auth.admin.get_user_by_id(user_id)
-            email = auth_user.user.email if auth_user and auth_user.user else None
-        except Exception as e:
-            logger.error(f"Failed to fetch email from auth.users: {str(e)}")
-            email = None
-        
-        # Combine profile with email
+        # Combine profile with email from JWT
         profile_with_email = {
             **profile,
             "email": email
@@ -94,13 +87,8 @@ async def update_my_profile(
         # Get updated profile
         updated_profile = await db_service.get_user_profile_by_id(user_id)
         
-        # Get email from auth.users
-        try:
-            auth_user = db_service.client.auth.admin.get_user_by_id(user_id)
-            email = auth_user.user.email if auth_user and auth_user.user else None
-        except Exception as e:
-            logger.error(f"Failed to fetch email from auth.users: {str(e)}")
-            email = None
+        # Get email from JWT token
+        email = current_user.get("email")
         
         return {
             **updated_profile,
@@ -125,24 +113,30 @@ class PasswordChange(BaseModel):
 @router.post("/change-password", status_code=status.HTTP_200_OK)
 async def change_password(
     password_data: PasswordChange,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user),
+    authorization: Optional[str] = Header(None)
 ) -> Dict[str, Any]:
     """
-    Change user password
+    Change user password using the current session token
     """
     try:
         user_id = current_user["id"]
+        email = current_user.get("email")
         
-        # Get user email for verification
-        auth_user = db_service.client.auth.admin.get_user_by_id(user_id)
-        
-        if not auth_user or not auth_user.user:
+        if not email:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found"
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email not found in user session"
             )
         
-        email = auth_user.user.email
+        if not authorization or not authorization.startswith("Bearer "):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid authorization header"
+            )
+        
+        # Extract token
+        access_token = authorization.replace("Bearer ", "")
         
         # Verify current password by attempting sign-in
         try:
@@ -170,17 +164,29 @@ async def change_password(
                 detail="New password must be at least 8 characters"
             )
         
-        # Update password using Admin API
+        # Create a new client with the user's access token
+        from supabase import create_client
+        from app.config import settings
+        
+        user_client = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
+        user_client.auth.set_session(access_token, sign_in_response.session.refresh_token)
+        
+        # Update password using the authenticated user's session
         try:
-            db_service.client.auth.admin.update_user_by_id(
-                user_id,
-                {"password": password_data.new_password}
-            )
+            update_response = user_client.auth.update_user({
+                "password": password_data.new_password
+            })
+            
+            if not update_response or not update_response.user:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Failed to update password"
+                )
         except Exception as e:
             logger.error(f"Failed to update password: {str(e)}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to update password"
+                detail=f"Failed to update password: {str(e)}"
             )
         
         return {
