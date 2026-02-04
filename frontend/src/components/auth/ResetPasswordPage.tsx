@@ -14,21 +14,33 @@ export const ResetPasswordPage = () => {
   const [token, setToken] = useState<string | null>(null);
 
   useEffect(() => {
+    // Debug: Log full URL
+    console.log('Reset Password Page - Full URL:', window.location.href);
+    console.log('Reset Password Page - Hash:', window.location.hash);
+    console.log('Reset Password Page - Search:', window.location.search);
+    
     // Supabase redirects with token in URL hash (#access_token=XXX&type=recovery)
     const hash = window.location.hash.substring(1); // Remove the # symbol
     const params = new URLSearchParams(hash);
     const accessToken = params.get('access_token');
     const type = params.get('type');
     
+    console.log('Extracted from hash - access_token:', accessToken ? 'present' : 'missing', 'type:', type);
+    
     // Also check query params as fallback (?token=XXX&type=recovery)
     const queryToken = searchParams.get('token');
     const queryType = searchParams.get('type');
     
+    console.log('Extracted from query - token:', queryToken ? 'present' : 'missing', 'type:', queryType);
+    
     if (accessToken && type === 'recovery') {
       setToken(accessToken);
+      console.log('Token set from hash fragment');
     } else if (queryToken && queryType === 'recovery') {
       setToken(queryToken);
+      console.log('Token set from query params');
     } else {
+      console.error('No valid token found in URL');
       setError('Invalid or expired reset link. Please request a new password reset.');
     }
   }, [searchParams]);
