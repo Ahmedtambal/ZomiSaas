@@ -74,6 +74,13 @@ class AuthViewModel:
                 # Email confirmation required - return success but no tokens
                 return True, None, "EMAIL_CONFIRMATION_REQUIRED"
             
+            expires_in_raw = getattr(auth_response.session, "expires_in", None)
+            logger.info(
+                "Admin signup session expires_in raw=%r type=%s",
+                expires_in_raw,
+                type(expires_in_raw).__name__
+            )
+
             # Get user profile
             profile = await db_service.get_user_profile_by_id(auth_response.user.id)
             
@@ -100,7 +107,7 @@ class AuthViewModel:
             return True, token_response, None
             
         except Exception as e:
-            logger.error(f"Admin signup error: {e}")
+            logger.exception("Admin signup error")
             return False, None, str(e)
     
     async def signup_user(self, user_data: UserCreate) -> Tuple[bool, Optional[TokenResponse], Optional[str]]:
@@ -156,6 +163,13 @@ class AuthViewModel:
                 # Email confirmation required - return success but no tokens
                 return True, None, "EMAIL_CONFIRMATION_REQUIRED"
             
+            expires_in_raw = getattr(auth_response.session, "expires_in", None)
+            logger.info(
+                "User signup session expires_in raw=%r type=%s",
+                expires_in_raw,
+                type(expires_in_raw).__name__
+            )
+
             # Create token response
             token_response = TokenResponse(
                 access_token=auth_response.session.access_token,
@@ -179,7 +193,7 @@ class AuthViewModel:
             return True, token_response, None
             
         except Exception as e:
-            logger.error(f"User signup error: {e}")
+            logger.exception("User signup error")
             return False, None, str(e)
     
     async def login(self, email: str, password: str) -> Tuple[bool, Optional[TokenResponse], Optional[str]]:

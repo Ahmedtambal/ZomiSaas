@@ -2,7 +2,7 @@
 User Model - Authentication & Profile
 """
 
-from pydantic import BaseModel, EmailStr, Field, validator
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from typing import Optional
 from datetime import datetime
 from uuid import UUID
@@ -77,7 +77,8 @@ class TokenResponse(BaseModel):
     expires_in: int
     user: UserResponse
     
-    @validator('expires_in', pre=True)
+    @field_validator('expires_in', mode='before')
+    @classmethod
     def validate_expires_in(cls, v):
         """Convert expires_in to int if it's a string or return default"""
         if v is None or v == "":
