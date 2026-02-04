@@ -10,6 +10,7 @@ import logging
 
 from app.models.user import UserCreate, UserLogin, TokenRefresh
 from app.viewmodels.auth_viewmodel import auth_viewmodel
+from app.services.auth_service import AuthService
 from app.config import settings
 from app.middleware import (
     check_session_activity, 
