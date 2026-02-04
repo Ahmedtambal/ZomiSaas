@@ -10,6 +10,8 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 import logging
+import os
+import pydantic
 
 from app.config import settings
 from app.routes import auth, forms, public_forms, companies, employees, form_submissions, form_templates, form_analytics, audit_logs, kpi_stats, change_information, user_profiles, team_management
@@ -132,6 +134,8 @@ async def root():
 async def startup_event():
     logger.info(f"🚀 Starting Zomi Wealth Portal API - {settings.ENVIRONMENT}")
     logger.info(f"📍 Frontend URL: {settings.FRONTEND_URL}")
+    logger.info(f"🔧 Commit: {os.getenv('RENDER_GIT_COMMIT', 'unknown')}")
+    logger.info(f"🔧 Pydantic: {pydantic.__version__}")
 
 @app.on_event("shutdown")
 async def shutdown_event():
