@@ -72,7 +72,7 @@ class AuthViewModel:
                 access_token=auth_response.session.access_token,
                 refresh_token=auth_response.session.refresh_token,
                 token_type="bearer",
-                expires_in=auth_response.session.expires_in or 3600,
+                expires_in=int(auth_response.session.expires_in) if auth_response.session.expires_in else 3600,
                 user=UserResponse(
                     id=UUID(auth_response.user.id),
                     organization_id=UUID(org["id"]),
@@ -151,7 +151,7 @@ class AuthViewModel:
                 access_token=auth_response.session.access_token,
                 refresh_token=auth_response.session.refresh_token,
                 token_type="bearer",
-                expires_in=auth_response.session.expires_in or 3600,
+                expires_in=int(auth_response.session.expires_in) if auth_response.session.expires_in else 3600,
                 user=UserResponse(
                     id=UUID(auth_response.user.id),
                     organization_id=UUID(invite_code["organization_id"]),
@@ -202,7 +202,7 @@ class AuthViewModel:
                 access_token=auth_response.session.access_token,
                 refresh_token=auth_response.session.refresh_token,
                 token_type="bearer",
-                expires_in=auth_response.session.expires_in or 3600,
+                expires_in=int(auth_response.session.expires_in) if auth_response.session.expires_in else 3600,
                 user=UserResponse(
                     id=UUID(auth_response.user.id),
                     organization_id=UUID(profile["organization_id"]),
