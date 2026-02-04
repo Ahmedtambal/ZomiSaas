@@ -13,6 +13,16 @@ from app.services.database_service import db_service
 logger = logging.getLogger(__name__)
 
 
+def safe_int(value: Any, default: int = 3600) -> int:
+    """Safely convert a value to int, handling strings, None, and already-int values"""
+    if value is None or value == "":
+        return default
+    try:
+        return int(value)
+    except (ValueError, TypeError):
+        return default
+
+
 class AuthViewModel:
     """Authentication business logic using Supabase Auth"""
     
@@ -72,7 +82,7 @@ class AuthViewModel:
                 access_token=auth_response.session.access_token,
                 refresh_token=auth_response.session.refresh_token,
                 token_type="bearer",
-                expires_in=int(auth_response.session.expires_in) if auth_response.session.expires_in else 3600,
+                expires_in=safe_int(auth_response.session.expires_in),
                 user=UserResponse(
                     id=UUID(auth_response.user.id),
                     organization_id=UUID(org["id"]),
@@ -151,7 +161,7 @@ class AuthViewModel:
                 access_token=auth_response.session.access_token,
                 refresh_token=auth_response.session.refresh_token,
                 token_type="bearer",
-                expires_in=int(auth_response.session.expires_in) if auth_response.session.expires_in else 3600,
+                expires_in=safe_int(auth_response.session.expires_in),
                 user=UserResponse(
                     id=UUID(auth_response.user.id),
                     organization_id=UUID(invite_code["organization_id"]),
@@ -202,7 +212,7 @@ class AuthViewModel:
                 access_token=auth_response.session.access_token,
                 refresh_token=auth_response.session.refresh_token,
                 token_type="bearer",
-                expires_in=int(auth_response.session.expires_in) if auth_response.session.expires_in else 3600,
+                expires_in=safe_int(auth_response.session.expires_in),
                 user=UserResponse(
                     id=UUID(auth_response.user.id),
                     organization_id=UUID(profile["organization_id"]),
