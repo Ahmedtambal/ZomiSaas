@@ -136,7 +136,7 @@ class AuthViewModel:
                 return False, None, "Invite code has already been used"
             
             # Check expiration
-            expires_at = datetime.fromisoformat(invite_code["expires_at"].replace("Z", "+00:00"))
+            expires_at = safe_datetime(invite_code["expires_at"])
             if datetime.utcnow() > expires_at.replace(tzinfo=None):
                 return False, None, "Invite code has expired"
             
