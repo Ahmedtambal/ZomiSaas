@@ -16,7 +16,8 @@ class UserBase(BaseModel):
     email: EmailStr
     job_title: Optional[str] = Field(None, max_length=200)
     
-    @validator('full_name', 'job_title')
+    @field_validator('full_name', 'job_title', mode='before')
+    @classmethod
     def sanitize_text_fields(cls, v):
         """Sanitize text fields to prevent XSS"""
         if v:
@@ -33,7 +34,8 @@ class UserCreate(UserBase):
     invite_code: Optional[str] = None  # For user signup
     organization_name: Optional[str] = None  # For admin signup
     
-    @validator('password')
+    @field_validator('password', mode='before')
+    @classmethod
     def validate_password(cls, v):
         """Validate password strength"""
         if len(v) < 8:
