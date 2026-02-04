@@ -188,7 +188,7 @@ class AuthService {
    * Request password reset
    */
   async resetPassword(email: string): Promise<void> {
-    const response = await apiClient.post(`${API_URL}/auth/forgot-password`, { email });
+    const response = await apiClient.post(`${API_URL}/api/auth/forgot-password`, { email });
     return response.data;
   }
 
@@ -196,7 +196,7 @@ class AuthService {
    * Update password with reset token
    */
   async updatePassword(newPassword: string, token: string): Promise<void> {
-    const response = await apiClient.post(`${API_URL}/auth/reset-password`, { 
+    const response = await apiClient.post(`${API_URL}/api/auth/reset-password`, { 
       password: newPassword,
       token 
     });

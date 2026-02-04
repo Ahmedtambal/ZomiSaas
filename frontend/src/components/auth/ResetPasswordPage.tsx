@@ -11,13 +11,24 @@ export const ResetPasswordPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [token, setToken] = useState<string | null>(null);
 
   useEffect(() => {
-    // Check if we have the recovery token
-    const token = searchParams.get('token');
-    const type = searchParams.get('type');
+    // Supabase redirects with token in URL hash (#access_token=XXX&type=recovery)
+    const hash = window.location.hash.substring(1); // Remove the # symbol
+    const params = new URLSearchParams(hash);
+    const accessToken = params.get('access_token');
+    const type = params.get('type');
     
-    if (!token || type !== 'recovery') {
+    // Also check query params as fallback (?token=XXX&type=recovery)
+    const queryToken = searchParams.get('token');
+    const queryType = searchParams.get('type');
+    
+    if (accessToken && type === 'recovery') {
+      setToken(accessToken);
+    } else if (queryToken && queryType === 'recovery') {
+      setToken(queryToken);
+    } else {
       setError('Invalid or expired reset link. Please request a new password reset.');
     }
   }, [searchParams]);
@@ -61,7 +72,6 @@ export const ResetPasswordPage = () => {
     setIsLoading(true);
 
     try {
-      const token = searchParams.get('token');
       if (!token) {
         throw new Error('No reset token found');
       }
