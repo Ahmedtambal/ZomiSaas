@@ -23,6 +23,15 @@ def safe_int(value: Any, default: int = 3600) -> int:
         return default
 
 
+def safe_datetime(value: Any) -> datetime:
+    """Safely convert a value to datetime, handling strings and datetime objects"""
+    if isinstance(value, datetime):
+        return value
+    if isinstance(value, str):
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    raise ValueError("Invalid datetime value")
+
+
 class AuthViewModel:
     """Authentication business logic using Supabase Auth"""
     
@@ -99,7 +108,7 @@ class AuthViewModel:
                     role="admin",
                     is_active=True,
                     is_email_verified=auth_response.user.email_confirmed_at is not None,
-                    created_at=datetime.fromisoformat(auth_response.user.created_at.replace("Z", "+00:00")),
+                    created_at=safe_datetime(auth_response.user.created_at),
                     last_login_at=None
                 )
             )
@@ -185,7 +194,7 @@ class AuthViewModel:
                     role=invite_code["role"],
                     is_active=True,
                     is_email_verified=auth_response.user.email_confirmed_at is not None,
-                    created_at=datetime.fromisoformat(auth_response.user.created_at.replace("Z", "+00:00")),
+                    created_at=safe_datetime(auth_response.user.created_at),
                     last_login_at=None
                 )
             )
@@ -236,7 +245,7 @@ class AuthViewModel:
                     role=profile["role"],
                     is_active=True,
                     is_email_verified=auth_response.user.email_confirmed_at is not None,
-                    created_at=datetime.fromisoformat(profile["created_at"].replace("Z", "+00:00")),
+                    created_at=safe_datetime(profile["created_at"]),
                     last_login_at=datetime.utcnow()
                 )
             )
