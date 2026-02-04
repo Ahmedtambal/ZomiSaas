@@ -76,6 +76,16 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
     expires_in: int
     user: UserResponse
+    
+    @validator('expires_in', pre=True)
+    def validate_expires_in(cls, v):
+        """Convert expires_in to int if it's a string or return default"""
+        if v is None or v == "":
+            return 3600
+        try:
+            return int(v)
+        except (ValueError, TypeError):
+            return 3600
 
 
 class TokenRefresh(BaseModel):
