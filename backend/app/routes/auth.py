@@ -94,8 +94,13 @@ async def get_current_user(authorization: Optional[str] = Header(None), request:
         # Update activity timestamp
         update_session_activity(user_id)
         
-        # Get user profile from database to get organization_id and role
-        profile = await db_service.get_user_profile_by_id(user_id)
+        # Get user profile using authenticated client (respects RLS)
+        from supabase import create_client
+        user_client = create_client(settings.SUPABASE_URL, settings.SUPABASE_ANON_KEY)
+        user_client.auth.set_session(token, token)  # Set access token
+        
+        profile_response = user_client.table("user_profiles").select("*").eq("id", user_id).execute()
+        profile = profile_response.data[0] if profile_response.data else None
         
         if not profile:
             raise HTTPException(
