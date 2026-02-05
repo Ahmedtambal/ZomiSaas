@@ -20,17 +20,29 @@ class UserProfileUpdate(BaseModel):
 
 @router.get("/me", status_code=status.HTTP_200_OK)
 async def get_my_profile(
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user),
+    authorization: Optional[str] = Header(None)
 ) -> Dict[str, Any]:
     """
     Get current user's profile with email from JWT token
+    Uses authenticated client to respect RLS
     """
     try:
         user_id = current_user["id"]
-        email = current_user.get("email")  # Email from JWT token
+        email = current_user.get("email")
         
-        # Get user profile from user_profiles table
-        profile = await db_service.get_user_profile_by_id(user_id)
+        # Extract token for authenticated client
+        scheme, token = authorization.split()
+        
+        # Get user profile using authenticated client (respects RLS)
+        from supabase import create_client
+        from app.config import settings
+        
+        user_client = create_client(settings.SUPABASE_URL, settings.SUPABASE_ANON_KEY)
+        user_client.auth.set_session(token, token)
+        
+        profile_response = user_client.table("user_profiles").select("*").eq("id", user_id).execute()
+        profile = profile_response.data[0] if profile_response.data else None
         
         if not profile:
             raise HTTPException(
