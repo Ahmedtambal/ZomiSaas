@@ -71,13 +71,26 @@ async def get_my_profile(
 @router.put("/me", status_code=status.HTTP_200_OK)
 async def update_my_profile(
     profile_update: UserProfileUpdate,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user),
+    authorization: Optional[str] = Header(None)
 ) -> Dict[str, Any]:
     """
     Update current user's profile
+    Uses authenticated client to respect RLS
     """
     try:
         user_id = current_user["id"]
+        email = current_user.get("email")
+        
+        # Extract token for authenticated client
+        scheme, token = authorization.split()
+        
+        # Create authenticated client (respects RLS)
+        from supabase import create_client
+        from app.config import settings
+        
+        user_client = create_client(settings.SUPABASE_URL, settings.SUPABASE_ANON_KEY)
+        user_client.auth.set_session(token, token)
         
         # Prepare update data (only include non-None fields)
         update_data = {
@@ -87,20 +100,24 @@ async def update_my_profile(
         if profile_update.job_title is not None:
             update_data["job_title"] = profile_update.job_title
         
-        # Update user profile
-        success = await db_service.update_user_profile(user_id, update_data)
+        # Update user profile using authenticated client
+        update_response = user_client.table("user_profiles").update(update_data).eq("id", user_id).execute()
         
-        if not success:
+        if not update_response.data:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Failed to update user profile"
             )
         
         # Get updated profile
-        updated_profile = await db_service.get_user_profile_by_id(user_id)
+        profile_response = user_client.table("user_profiles").select("*").eq("id", user_id).execute()
+        updated_profile = profile_response.data[0] if profile_response.data else None
         
-        # Get email from JWT token
-        email = current_user.get("email")
+        if not updated_profile:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User profile not found"
+            )
         
         return {
             **updated_profile,
