@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     # Supabase Configuration
     SUPABASE_URL: str
     SUPABASE_KEY: str  # service_role key for backend operations
+    SUPABASE_ANON_KEY: str  # anon key for user-authenticated queries (respects RLS)
     SUPABASE_JWT_SECRET: str
     
     # Frontend URL

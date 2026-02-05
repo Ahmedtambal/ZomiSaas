@@ -216,26 +216,22 @@ class AuthViewModel:
             if not auth_response.user or not auth_response.session:
                 return False, None, "Invalid email or password"
             
-            # Get user profile
-            profile = await db_service.get_user_profile_by_id(auth_response.user.id)
+            # Create authenticated client with user's token (respects RLS)
+            from supabase import create_client
+            from app.config import settings
+            
+            user_client = create_client(settings.SUPABASE_URL, settings.SUPABASE_ANON_KEY)
+            user_client.auth.set_session(
+                auth_response.session.access_token,
+                auth_response.session.refresh_token
+            )
+            
+            # Get user profile using authenticated client (auth.uid() will be set from JWT)
+            profile_response = user_client.table("user_profiles").select("*").eq("id", auth_response.user.id).execute()
+            profile = profile_response.data[0] if profile_response.data else None
+            
             if not profile:
-                user_metadata = auth_response.user.user_metadata or {}
-                organization_id = user_metadata.get("organization_id")
-                if organization_id:
-                    profile_data = {
-                        "organization_id": organization_id,
-                        "full_name": user_metadata.get("full_name", ""),
-                        "job_title": user_metadata.get("job_title", ""),
-                        "role": user_metadata.get("role", "user")
-                    }
-                    try:
-                        await db_service.create_user_profile(auth_response.user.id, profile_data)
-                        profile = await db_service.get_user_profile_by_id(auth_response.user.id)
-                    except Exception as e:
-                        logger.error(f"Failed to auto-create user profile: {e}")
-
-            if not profile:
-                return False, None, "User profile not found"
+                return False, None, "User profile not found. Please contact support."
             
             # Log audit event
             await db_service.create_audit_log({
