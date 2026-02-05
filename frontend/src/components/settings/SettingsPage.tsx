@@ -1,10 +1,9 @@
 import { useState } from 'react';
-import { User, Shield, Users as UsersIcon, Settings as SettingsIcon } from 'lucide-react';
+import { User, Shield, Users as UsersIcon } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { ProfileTab } from './ProfileTab';
 import { SecurityTab } from './SecurityTab';
 import { TeamTab } from './TeamTab';
-import { AppConfigTab } from './AppConfigTab';
 
 export const SettingsPage = () => {
   const { user } = useAuth();
@@ -15,7 +14,6 @@ export const SettingsPage = () => {
     { id: 'security', label: 'Security', icon: Shield },
     ...(user?.role === 'admin' || user?.role === 'owner' ? [
       { id: 'team', label: 'Team Management', icon: UsersIcon },
-      { id: 'config', label: 'App Config', icon: SettingsIcon },
     ] : []),
   ];
 
@@ -27,8 +25,6 @@ export const SettingsPage = () => {
         return <SecurityTab />;
       case 'team':
         return (user?.role === 'admin' || user?.role === 'owner') ? <TeamTab /> : null;
-      case 'config':
-        return (user?.role === 'admin' || user?.role === 'owner') ? <AppConfigTab /> : null;
       default:
         return <ProfileTab />;
     }

@@ -8,6 +8,7 @@ from typing import Dict, Any, Optional
 import logging
 
 from app.services.database_service import db_service
+from app.services.encryption_service import get_encryption_service
 from app.services.kpi_snapshot_service import kpi_snapshot_service
 from app.routes.auth import get_current_user
 
@@ -288,13 +289,22 @@ async def get_analytics_data(
         ]
         
         # 3. Age Distribution (calculate from date_of_birth)
-        from datetime import date
+        from datetime import date, datetime
+        encryption = get_encryption_service()
         age_brackets = {"18-25": 0, "26-35": 0, "36-45": 0, "46-55": 0, "56-65": 0, "65+": 0}
         for emp in employees:
             dob = emp.get("date_of_birth")
             if dob:
                 try:
-                    birth_date = date.fromisoformat(dob) if isinstance(dob, str) else dob
+                    decrypted_dob = encryption.decrypt(dob) if isinstance(dob, str) else dob
+                    if isinstance(decrypted_dob, datetime):
+                        birth_date = decrypted_dob.date()
+                    elif isinstance(decrypted_dob, date):
+                        birth_date = decrypted_dob
+                    elif isinstance(decrypted_dob, str):
+                        birth_date = date.fromisoformat(decrypted_dob)
+                    else:
+                        continue
                     age = (date.today() - birth_date).days // 365
                     if age <= 25:
                         age_brackets["18-25"] += 1
