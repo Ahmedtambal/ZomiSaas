@@ -12,6 +12,8 @@ from slowapi.errors import RateLimitExceeded
 import logging
 import os
 import pydantic
+import base64
+import json
 
 from app.config import settings
 from app.routes import auth, forms, public_forms, companies, employees, form_submissions, form_templates, form_analytics, audit_logs, kpi_stats, change_information, user_profiles, team_management
@@ -40,6 +42,45 @@ app = FastAPI(
     redoc_url="/redoc" if settings.ENVIRONMENT != "production" else None,
     redirect_slashes=False,  # Disable automatic slash redirects to prevent CORS issues
 )
+
+
+def _jwt_role_hint(jwt_token: str) -> str | None:
+    """Best-effort decode of a Supabase JWT to identify its role claim.
+
+    This is used for diagnostics only (no signature verification).
+    """
+    try:
+        parts = jwt_token.split(".")
+        if len(parts) < 2:
+            return None
+        payload_b64 = parts[1]
+        payload_b64 += "=" * (-len(payload_b64) % 4)
+        payload_json = base64.urlsafe_b64decode(payload_b64.encode("utf-8")).decode("utf-8")
+        payload = json.loads(payload_json)
+        return payload.get("role")
+    except Exception:
+        return None
+
+
+# =====================================================
+# Startup diagnostics
+# =====================================================
+
+supabase_key_role = _jwt_role_hint(settings.SUPABASE_KEY)
+if supabase_key_role and supabase_key_role != "service_role":
+    logger.warning(
+        "SUPABASE_KEY does not look like a service_role key (role=%s). "
+        "Team management actions (role updates/deletes) may fail due to RLS.",
+        supabase_key_role,
+    )
+
+if settings.SUPABASE_ANON_KEY:
+    anon_role = _jwt_role_hint(settings.SUPABASE_ANON_KEY)
+    if anon_role and anon_role != "anon":
+        logger.warning(
+            "SUPABASE_ANON_KEY role claim is unexpected (role=%s).",
+            anon_role,
+        )
 
 # Attach rate limiter to app state
 app.state.limiter = limiter

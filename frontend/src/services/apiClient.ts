@@ -11,12 +11,12 @@
 
 import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig, AxiosResponse } from 'axios';
 
-// Use environment variable with fallback
-const API_URL = import.meta.env.VITE_API_URL || 'https://zomisaasbackend.onrender.com';
+// Use environment variable with a LOCAL fallback.
+// NOTE: Avoid hard-coding a production URL here; it can accidentally point deployments to an old backend.
+const API_URL: string = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 // Activity tracking configuration
 const INACTIVITY_TIMEOUT = 15 * 60 * 1000; // 15 minutes in milliseconds
-let lastActivityTime = Date.now();
 let inactivityTimer: NodeJS.Timeout | null = null;
 let logoutCallback: (() => void) | null = null;
 
@@ -27,8 +27,6 @@ let tokenExpiryTimer: NodeJS.Timeout | null = null;
  * Update last activity timestamp
  */
 const updateActivity = () => {
-  lastActivityTime = Date.now();
-  
   // Reset inactivity timer
   if (inactivityTimer) {
     clearTimeout(inactivityTimer);
@@ -178,9 +176,14 @@ apiClient.interceptors.response.use(
       try {
         // Attempt to refresh token
         const refreshToken = localStorage.getItem('refresh_token');
-        
+
+        // If we have no refresh token, we cannot refresh – force logout to avoid noisy loops.
         if (!refreshToken) {
-          throw new Error('No refresh token');
+          isRefreshing = false;
+          if (logoutCallback) {
+            logoutCallback();
+          }
+          return Promise.reject(error);
         }
         
         const response = await axios.post(`${API_URL}/api/auth/refresh`, {

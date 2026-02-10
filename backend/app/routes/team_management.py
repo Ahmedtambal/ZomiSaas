@@ -219,6 +219,43 @@ async def update_member_role(
         ).eq("organization_id", organization_id).execute()
         
         if not target_member_response.data:
+            logger.info(
+                "Team role update: member lookup returned empty (member_id=%s, org_id=%s)",
+                member_id,
+                organization_id,
+            )
+
+            # Helpful diagnostics: check if the user exists but is not in this org
+            any_org_response = db_service.client.table("user_profiles").select(
+                "id, organization_id, role"
+            ).eq("id", member_id).execute()
+            if any_org_response.data:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Member not found in your organization"
+                )
+
+            # If we still can't find them, try Supabase Admin API (requires service_role key).
+            # This helps distinguish "truly missing" from "backend cannot access tables".
+            try:
+                admin_user = db_service.client.auth.admin.get_user_by_id(member_id)
+                if admin_user:
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail=(
+                            "Member exists in auth but profile lookup failed. "
+                            "Check SUPABASE_KEY is the service_role key and RLS policies for user_profiles."
+                        ),
+                    )
+            except HTTPException:
+                raise
+            except Exception as admin_err:
+                logger.warning(
+                    "Team role update: Admin API lookup failed (member_id=%s): %s",
+                    member_id,
+                    str(admin_err),
+                )
+
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Member not found"
@@ -310,6 +347,40 @@ async def delete_member(
         ).eq("organization_id", organization_id).execute()
         
         if not target_member_response.data:
+            logger.info(
+                "Team delete: member lookup returned empty (member_id=%s, org_id=%s)",
+                member_id,
+                organization_id,
+            )
+
+            any_org_response = db_service.client.table("user_profiles").select(
+                "id, organization_id, role"
+            ).eq("id", member_id).execute()
+            if any_org_response.data:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Member not found in your organization"
+                )
+
+            try:
+                admin_user = db_service.client.auth.admin.get_user_by_id(member_id)
+                if admin_user:
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail=(
+                            "Member exists in auth but profile lookup failed. "
+                            "Check SUPABASE_KEY is the service_role key and RLS policies for user_profiles."
+                        ),
+                    )
+            except HTTPException:
+                raise
+            except Exception as admin_err:
+                logger.warning(
+                    "Team delete: Admin API lookup failed (member_id=%s): %s",
+                    member_id,
+                    str(admin_err),
+                )
+
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Member not found"
