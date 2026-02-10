@@ -58,7 +58,11 @@ export const EmailConfirmationPage = ({ email, onBackToLogin }: EmailConfirmatio
         <div className="flex flex-col items-center mb-6">
           <div className="relative">
             <div className="w-16 h-16 bg-gradient-to-br from-zomi-green to-emerald-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg animate-pulse">
-              <img src="/logo.png" alt="Zomi Wealth Logo" className="w-10 h-10 rounded-lg" />
+              <img
+                src="/whiteleaf%20group/Whiteleaf%20Logo%20-%20New.png"
+                alt="WhiteLeaf Logo"
+                className="w-10 h-10 rounded-lg"
+              />
             </div>
             <div className="absolute -top-1 -right-1">
               <Sparkles className="w-5 h-5 text-yellow-400 animate-bounce" />

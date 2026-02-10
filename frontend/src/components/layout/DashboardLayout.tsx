@@ -58,17 +58,25 @@ export const DashboardLayout = ({ children, currentPage }: DashboardLayoutProps)
             {!isSidebarCollapsed && (
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-zomi-green rounded-xl flex items-center justify-center p-1">
-                  <img src="/logo.png" alt="Zomi Wealth" className="w-full h-full object-cover rounded-lg" />
+                  <img
+                    src="/whiteleaf%20group/Whiteleaf%20Logo%20-%20New.png"
+                    alt="WhiteLeaf"
+                    className="w-full h-full object-cover rounded-lg"
+                  />
                 </div>
                 <div>
-                  <h2 className="font-bold text-slate-900">Zomi Wealth</h2>
+                  <h2 className="font-bold text-slate-900">WhiteLeaf</h2>
                   <p className="text-xs text-slate-600">Portal</p>
                 </div>
               </div>
             )}
             {isSidebarCollapsed && (
               <div className="w-10 h-10 bg-zomi-green rounded-xl flex items-center justify-center mx-auto p-1">
-                <img src="/logo.png" alt="Zomi Wealth" className="w-full h-full object-cover rounded-lg" />
+                <img
+                  src="/whiteleaf%20group/Whiteleaf%20Logo%20-%20New.png"
+                  alt="WhiteLeaf"
+                  className="w-full h-full object-cover rounded-lg"
+                />
               </div>
             )}
           </div>

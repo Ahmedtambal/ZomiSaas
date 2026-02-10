@@ -44,7 +44,7 @@ export const PublicFormView: React.FC<PublicFormViewProps> = ({ token }) => {
         
         // Check if token is still valid (30-minute expiry)
         if (data.token_info.expires_at && new Date(data.token_info.expires_at) < new Date()) {
-          setError('This form link has expired. Please request a new link from Zomi Wealth Team.');
+          setError('This form link has expired. Please request a new link from WhiteLeaf Team.');
           return;
         }
         
@@ -389,7 +389,7 @@ export const PublicFormView: React.FC<PublicFormViewProps> = ({ token }) => {
 
         {/* Footer */}
         <div className="text-center mt-6 text-gray-600 text-sm">
-          <p>Powered by Zomi Wealth Portal</p>
+          <p>Powered by WhiteLeaf</p>
         </div>
       </div>
     </div>

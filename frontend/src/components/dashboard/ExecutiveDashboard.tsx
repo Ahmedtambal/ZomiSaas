@@ -32,7 +32,7 @@ export const ExecutiveDashboard = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-slate-900 mb-2">Executive Dashboard</h1>
-          <p className="text-slate-600">Real-time insights for Zomi Wealth Group</p>
+          <p className="text-slate-600">Real-time insights for WhiteLeaf Group</p>
         </div>
         <button
           onClick={handleUnifiedRefresh}
