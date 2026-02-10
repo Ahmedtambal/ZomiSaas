@@ -49,35 +49,33 @@ export const DashboardLayout = ({ children, currentPage }: DashboardLayoutProps)
         fixed inset-y-0 left-0 z-50
         glass-panel border-r border-white/30
         transform transition-all duration-300
-        ${isSidebarCollapsed ? 'w-20' : 'w-64'}
+        ${isSidebarCollapsed ? 'w-44' : 'w-64'}
         ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         overflow-y-auto overflow-x-hidden
       `}>
         <div className="flex flex-col h-full p-6">
           <div className="flex items-center justify-between mb-8">
             {!isSidebarCollapsed && (
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-zomi-green rounded-xl flex items-center justify-center p-1">
-                  <img
-                    src="/whiteleaf%20group/Whiteleaf%20Logo%20-%20New.png"
-                    alt="WhiteLeaf"
-                    className="w-full h-full object-cover rounded-lg"
-                  />
-                </div>
-                <div>
-                  <h2 className="font-bold text-slate-900">WhiteLeaf</h2>
-                  <p className="text-xs text-slate-600">Portal</p>
-                </div>
+              <div className="flex items-center">
+                <img
+                  src="/whiteleaf%20group/whiteleaf.png"
+                  alt="WhiteLeaf"
+                  className="h-10 w-auto max-w-full"
+                  onError={(e) => {
+                    e.currentTarget.src = '/whiteleaf%20group/Whiteleaf%20Logo%20-%20New.png';
+                  }}
+                />
               </div>
             )}
             {isSidebarCollapsed && (
-              <div className="w-10 h-10 bg-zomi-green rounded-xl flex items-center justify-center mx-auto p-1">
-                <img
-                  src="/whiteleaf%20group/Whiteleaf%20Logo%20-%20New.png"
-                  alt="WhiteLeaf"
-                  className="w-full h-full object-cover rounded-lg"
-                />
-              </div>
+              <img
+                src="/whiteleaf%20group/whiteleaf.png"
+                alt="WhiteLeaf"
+                className="h-10 w-auto mx-auto max-w-full"
+                onError={(e) => {
+                  e.currentTarget.src = '/whiteleaf%20group/Whiteleaf%20Logo%20-%20New.png';
+                }}
+              />
             )}
           </div>
 

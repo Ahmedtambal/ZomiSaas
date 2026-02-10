@@ -29,15 +29,15 @@ export const LoginPage = () => {
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="glass-panel rounded-3xl p-8 w-full max-w-md">
         <div className="flex flex-col items-center mb-8">
-          <div className="w-16 h-16 bg-zomi-green rounded-2xl flex items-center justify-center mb-4 shadow-lg">
-            <img
-              src="/whiteleaf%20group/Whiteleaf%20Logo%20-%20New.png"
-              alt="WhiteLeaf Logo"
-              className="w-10 h-10 rounded-lg"
-            />
-          </div>
-          <h1 className="text-3xl font-bold text-slate-900 mb-2">WhiteLeaf</h1>
-          <p className="text-slate-600 text-center">Secure access for WhiteLeaf Group</p>
+          <img
+            src="/whiteleaf%20group/whiteleaf.png"
+            alt="WhiteLeaf"
+            className="w-64 max-w-full h-auto mb-4"
+            onError={(e) => {
+              e.currentTarget.src = '/whiteleaf%20group/Whiteleaf%20Logo%20-%20New.png';
+            }}
+          />
+          <p className="text-slate-600 text-center">Secure access to your corporate wealth management platform</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">

@@ -69,13 +69,14 @@ export const ForgotPasswordPage = () => {
         </button>
 
         <div className="flex flex-col items-center mb-8">
-          <div className="w-16 h-16 bg-zomi-green rounded-2xl flex items-center justify-center mb-4 shadow-lg">
-            <img
-              src="/whiteleaf%20group/Whiteleaf%20Logo%20-%20New.png"
-              alt="WhiteLeaf Logo"
-              className="w-10 h-10 rounded-lg"
-            />
-          </div>
+          <img
+            src="/whiteleaf%20group/whiteleaf.png"
+            alt="WhiteLeaf"
+            className="w-64 max-w-full h-auto mb-4"
+            onError={(e) => {
+              e.currentTarget.src = '/whiteleaf%20group/Whiteleaf%20Logo%20-%20New.png';
+            }}
+          />
           <h1 className="text-3xl font-bold text-slate-900 mb-2">Reset Password</h1>
           <p className="text-slate-600 text-center">
             Enter your email address and we'll send you a link to reset your password
