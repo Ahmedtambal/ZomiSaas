@@ -366,20 +366,58 @@ async def bulk_delete_employees(
                 detail="No employee IDs provided"
             )
         
-        # Delete employees (CASCADE will handle related records)
-        db_service.client.table("employees").delete().in_(
+        # Verify which employees exist in this organization first.
+        existing = db_service.client.table("employees").select(
+            "id"
+        ).in_(
             "id", employee_ids
-        ).eq("organization_id", organization_id).execute()
+        ).eq(
+            "organization_id", organization_id
+        ).execute()
+
+        verified_ids = [row["id"] for row in (existing.data or []) if row.get("id")]
+        verified_set = set(verified_ids)
+        requested_set = set(employee_ids)
+
+        not_found_ids = [eid for eid in employee_ids if eid not in verified_set]
+
+        # Perform delete only for verified ids.
+        if verified_ids:
+            db_service.client.table("employees").delete().in_(
+                "id", verified_ids
+            ).eq("organization_id", organization_id).execute()
+
+        # Confirm what remains (PostgREST can return 200 even if 0 rows affected).
+        remaining_ids: List[str] = []
+        if verified_ids:
+            remaining = db_service.client.table("employees").select(
+                "id"
+            ).in_(
+                "id", verified_ids
+            ).eq(
+                "organization_id", organization_id
+            ).execute()
+            remaining_ids = [row["id"] for row in (remaining.data or []) if row.get("id")]
+
+        remaining_set = set(remaining_ids)
+        deleted_ids = [eid for eid in verified_ids if eid not in remaining_set]
+        not_deleted_ids = [eid for eid in verified_ids if eid in remaining_set]
         
-        # Audit log - bulk delete
+        # Audit log - bulk delete (log only confirmed deletions)
         await audit_service.log_bulk_delete(
             table_name="employees",
-            record_ids=employee_ids,
+            record_ids=deleted_ids,
             user_id=current_user["id"],
             organization_id=organization_id
         )
-        
-        return {"deleted_count": len(employee_ids)}
+
+        return {
+            "requested_count": len(employee_ids),
+            "verified_count": len(verified_ids),
+            "deleted_count": len(deleted_ids),
+            "not_found_ids": not_found_ids,
+            "not_deleted_ids": not_deleted_ids,
+        }
         
     except HTTPException:
         raise

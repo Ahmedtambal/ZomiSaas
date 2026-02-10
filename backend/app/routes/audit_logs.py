@@ -98,34 +98,33 @@ async def get_audit_logs(
         response = query.execute()
         logs = response.data
         
-        # Fetch user profiles separately for all user_ids
+        # Build a lookup of user display info without relying on Supabase Admin Auth APIs.
         user_ids = list(set([log.get("user_id") for log in logs if log.get("user_id")]))
-        user_profiles = {}
-        
+        user_lookup: Dict[str, Dict[str, Any]] = {}
+
         if user_ids:
-            # Fetch user profiles (has full_name)
-            profiles_response = db_service.client.table("user_profiles").select(
-                "id, full_name"
-            ).in_("id", user_ids).execute()
-            
-            for profile in profiles_response.data:
-                user_profiles[profile["id"]] = profile
-            
-            # Fetch emails from auth.users
+            # Prefer RPC that safely joins auth.users (SECURITY DEFINER) if available.
             try:
-                # Use admin API to fetch user emails from auth.users
-                for user_id in user_ids:
-                    try:
-                        auth_response = db_service.client.auth.admin.get_user_by_id(user_id)
-                        if auth_response and auth_response.user:
-                            if user_id in user_profiles:
-                                user_profiles[user_id]["email"] = auth_response.user.email
-                    except:
-                        # If admin API fails, just skip email for this user
-                        pass
-            except:
-                # If we can't fetch emails, continue without them
+                rpc_response = db_service.client.rpc(
+                    "get_user_emails_for_organization",
+                    {"org_id": organization_id},
+                ).execute()
+                for row in (rpc_response.data or []):
+                    if row.get("id"):
+                        user_lookup[row["id"]] = row
+            except Exception:
+                # RPC may not exist in some environments; fall back to user_profiles only.
                 pass
+
+            # Ensure we at least have full_name from user_profiles for any missing users.
+            missing_ids = [uid for uid in user_ids if uid not in user_lookup]
+            if missing_ids:
+                profiles_response = db_service.client.table("user_profiles").select(
+                    "id, full_name"
+                ).in_("id", missing_ids).execute()
+                for profile in (profiles_response.data or []):
+                    if profile.get("id"):
+                        user_lookup.setdefault(profile["id"], {}).update(profile)
         
         # Decrypt details field and process logs
         encryption = get_encryption_service()
@@ -141,14 +140,16 @@ async def get_audit_logs(
                     logger.warning(f"Failed to decrypt audit log details: {str(e)}")
                     log["details"] = None
             
-            # Get user info from profiles map
+            # Get user info from lookup
             user_id = log.get("user_id")
-            if user_id and user_id in user_profiles:
-                user_info = user_profiles[user_id]
-                log["user_name"] = user_info.get("full_name", "Unknown User")
-                log["user_email"] = user_info.get("email", "")
+            if user_id and user_id in user_lookup:
+                user_info = user_lookup[user_id]
+                full_name = user_info.get("full_name")
+                email = user_info.get("email")
+                log["user_name"] = full_name or email or f"User {user_id[:8]}"
+                log["user_email"] = email or ""
             else:
-                log["user_name"] = "Unknown User"
+                log["user_name"] = f"User {user_id[:8]}" if user_id else "Unknown User"
                 log["user_email"] = ""
             
             # Extract record_id from details if present

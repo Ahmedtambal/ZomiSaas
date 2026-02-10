@@ -346,7 +346,7 @@ async def delete_change_information(
 
 @router.post("/bulk-delete", status_code=status.HTTP_200_OK)
 async def bulk_delete_change_information(
-    ids: List[str],
+    data: Dict[str, List[str]],
     current_user: dict = Depends(get_current_user)
 ) -> Dict[str, Any]:
     """
@@ -355,6 +355,8 @@ async def bulk_delete_change_information(
     try:
         organization_id = current_user["organization_id"]
         user_id = current_user["id"]
+
+        ids = data.get("ids", [])
         
         if not ids:
             raise HTTPException(
@@ -381,6 +383,20 @@ async def bulk_delete_change_information(
             db_service.client.table("change_information").delete().in_(
                 "id", verified_ids
             ).execute()
+
+            # Confirm what remains
+            remaining = db_service.client.table("change_information").select(
+                "id"
+            ).in_(
+                "id", verified_ids
+            ).eq(
+                "organization_id", organization_id
+            ).execute()
+
+            remaining_ids = [row["id"] for row in (remaining.data or []) if row.get("id")]
+            remaining_set = set(remaining_ids)
+            deleted_ids = [cid for cid in verified_ids if cid not in remaining_set]
+            not_deleted_ids = [cid for cid in verified_ids if cid in remaining_set]
             
             # Log audit trail
             try:
@@ -391,16 +407,29 @@ async def bulk_delete_change_information(
                     resource_type="change_information",
                     resource_id=None,
                     details={
-                        "deleted_count": len(verified_ids),
-                        "ids": verified_ids
+                        "requested_count": len(ids),
+                        "verified_count": len(verified_ids),
+                        "deleted_count": len(deleted_ids),
+                        "deleted_ids": deleted_ids,
+                        "not_deleted_ids": not_deleted_ids,
+                        "not_found_count": len(ids) - len(verified_ids),
                     }
                 )
             except Exception as audit_error:
                 logger.warning(f"Failed to log audit: {audit_error}")
+
+            return {
+                "requested_count": len(ids),
+                "verified_count": len(verified_ids),
+                "deleted_count": len(deleted_ids),
+                "not_deleted_ids": not_deleted_ids,
+            }
         
         return {
-            "deleted_count": len(verified_ids),
-            "requested_count": len(ids)
+            "requested_count": len(ids),
+            "verified_count": 0,
+            "deleted_count": 0,
+            "not_deleted_ids": [],
         }
         
     except HTTPException:
