@@ -250,6 +250,16 @@ async def update_member_role(
             except HTTPException:
                 raise
             except Exception as admin_err:
+                # If the Admin API is forbidden, the backend is almost certainly not using the service_role key.
+                # Returning 500 here is intentionally loud and actionable.
+                if "User not allowed" in str(admin_err) or "403" in str(admin_err):
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail=(
+                            "Supabase Admin API forbidden (User not allowed). "
+                            "Set backend SUPABASE_KEY to the Supabase service_role key (not anon), then redeploy."
+                        ),
+                    )
                 logger.warning(
                     "Team role update: Admin API lookup failed (member_id=%s): %s",
                     member_id,
@@ -375,6 +385,14 @@ async def delete_member(
             except HTTPException:
                 raise
             except Exception as admin_err:
+                if "User not allowed" in str(admin_err) or "403" in str(admin_err):
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail=(
+                            "Supabase Admin API forbidden (User not allowed). "
+                            "Set backend SUPABASE_KEY to the Supabase service_role key (not anon), then redeploy."
+                        ),
+                    )
                 logger.warning(
                     "Team delete: Admin API lookup failed (member_id=%s): %s",
                     member_id,
