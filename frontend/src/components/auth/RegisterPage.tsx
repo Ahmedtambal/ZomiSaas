@@ -169,7 +169,6 @@ export const RegisterPage = () => {
               e.currentTarget.src = '/whiteleaf%20group/Whiteleaf%20Logo%20-%20New.png';
             }}
           />
-          <h1 className="text-3xl font-bold text-slate-900 mb-2">Create Your Account</h1>
           <p className="text-slate-600 text-center">Create your account</p>
         </div>
 
