@@ -309,14 +309,14 @@ export const FormManagementPage: React.FC = () => {
         <div className="flex gap-3">
           <button
             onClick={createNewEmployeeForm}
-            className="px-5 py-2.5 bg-zomi-green text-white rounded-lg hover:bg-emerald-600 transition-colors flex items-center gap-2 font-medium shadow-md"
+            className="px-5 py-2.5 bg-zomi-green text-white rounded-lg hover:bg-zomi-green/90 transition-colors flex items-center gap-2 font-medium shadow-md"
           >
             <Plus className="w-5 h-5" />
             New Employee Form
           </button>
           <button
             onClick={createChangeInformationForm}
-            className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 font-medium shadow-md"
+            className="px-5 py-2.5 bg-zomi-green text-white rounded-lg hover:bg-zomi-green/90 transition-colors flex items-center gap-2 font-medium shadow-md"
           >
             <Plus className="w-5 h-5" />
             Change Information Form
@@ -342,14 +342,14 @@ export const FormManagementPage: React.FC = () => {
           <div className="flex gap-3 justify-center">
             <button
               onClick={createNewEmployeeForm}
-              className="px-6 py-3 bg-zomi-green text-white rounded-lg hover:bg-emerald-600 transition-colors inline-flex items-center gap-2 font-medium shadow-md"
+              className="px-6 py-3 bg-zomi-green text-white rounded-lg hover:bg-zomi-green/90 transition-colors inline-flex items-center gap-2 font-medium shadow-md"
             >
               <Plus className="w-5 h-5" />
               New Employee Form
             </button>
             <button
               onClick={createChangeInformationForm}
-              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors inline-flex items-center gap-2 font-medium shadow-md"
+              className="px-6 py-3 bg-zomi-green text-white rounded-lg hover:bg-zomi-green/90 transition-colors inline-flex items-center gap-2 font-medium shadow-md"
             >
               <Plus className="w-5 h-5" />
               Change Information Form
@@ -454,7 +454,7 @@ export const FormManagementPage: React.FC = () => {
                   </select>
                   <button
                     onClick={() => setSelectedFormForLinks(form.id)}
-                    className="px-4 py-2.5 bg-zomi-green text-white rounded-lg hover:bg-emerald-600 transition-colors flex items-center gap-2 font-medium shadow-md"
+                    className="px-4 py-2.5 bg-zomi-green text-white rounded-lg hover:bg-zomi-green/90 transition-colors flex items-center gap-2 font-medium shadow-md"
                   >
                     <Eye className="w-4 h-4" />
                     View Links
@@ -476,7 +476,7 @@ export const FormManagementPage: React.FC = () => {
                           setCopiedLink(form.id);
                           setTimeout(() => setCopiedLink(null), 2000);
                         }}
-                        className="px-4 py-2.5 bg-zomi-green text-white rounded-lg hover:bg-emerald-600 transition-colors flex items-center gap-2 font-medium shadow-md"
+                        className="px-4 py-2.5 bg-zomi-green text-white rounded-lg hover:bg-zomi-green/90 transition-colors flex items-center gap-2 font-medium shadow-md"
                       >
                         <Copy className="w-4 h-4" />
                         {copiedLink === form.id ? 'Copied!' : 'Copy'}

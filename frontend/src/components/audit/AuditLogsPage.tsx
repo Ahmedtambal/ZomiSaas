@@ -224,7 +224,7 @@ const AuditLogsPage: React.FC = () => {
 
             <button
               onClick={handleExport}
-              className="ml-auto px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2"
+              className="ml-auto px-4 py-2 bg-zomi-green text-white rounded-lg hover:bg-zomi-green/90 transition-colors flex items-center gap-2"
             >
               <Download className="w-4 h-4" />
               Export CSV

@@ -177,7 +177,7 @@ export const FormTokenManager: React.FC<FormTokenManagerProps> = ({ formId }) =>
         </div>
         <button
           onClick={() => setShowModal(true)}
-          className="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-lg font-semibold flex items-center gap-2 transition-all"
+          className="px-6 py-3 bg-zomi-green hover:bg-zomi-green/90 text-white rounded-lg font-semibold flex items-center gap-2 transition-all"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -383,7 +383,7 @@ export const FormTokenManager: React.FC<FormTokenManagerProps> = ({ formId }) =>
               <button
                 onClick={handleGenerateToken}
                 disabled={generating}
-                className="flex-1 px-4 py-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-lg font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 px-4 py-3 bg-zomi-green hover:bg-zomi-green/90 text-white rounded-lg font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {generating ? 'Generating...' : 'Generate'}
               </button>

@@ -57,7 +57,7 @@ export const EmailConfirmationPage = ({ email, onBackToLogin }: EmailConfirmatio
         {/* Header */}
         <div className="flex flex-col items-center mb-6">
           <div className="relative">
-            <div className="w-16 h-16 bg-gradient-to-br from-zomi-green to-emerald-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg animate-pulse">
+            <div className="w-16 h-16 bg-zomi-green rounded-2xl flex items-center justify-center mb-4 shadow-lg animate-pulse">
               <img
                 src="/whiteleaf%20group/whiteleaf.png"
                 alt="WhiteLeaf"
@@ -133,7 +133,7 @@ export const EmailConfirmationPage = ({ email, onBackToLogin }: EmailConfirmatio
 
           <button
             onClick={handleClose}
-            className="w-full bg-gradient-to-r from-zomi-green to-emerald-600 hover:from-zomi-green/90 hover:to-emerald-600/90 text-white font-semibold py-3 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl"
+            className="w-full bg-zomi-green hover:bg-zomi-green/90 text-white font-semibold py-3 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl"
           >
             Back to Login
           </button>

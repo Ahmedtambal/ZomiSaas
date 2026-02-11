@@ -6,7 +6,7 @@ export default {
     extend: {
       colors: {
         zomi: {
-          green: '#38b000',
+          green: '#0e6f73',
           mint: '#c7f9cc',
           cream: '#fefae0',
         },

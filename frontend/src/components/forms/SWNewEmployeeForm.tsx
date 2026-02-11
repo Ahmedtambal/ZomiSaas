@@ -527,7 +527,7 @@ export const SWNewEmployeeForm: React.FC = () => {
             {currentStep < totalSteps ? (
               <button
                 onClick={nextStep}
-                className="ml-auto px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-lg font-semibold transition-all"
+                className="ml-auto px-6 py-3 bg-zomi-green hover:bg-zomi-green/90 text-white rounded-lg font-semibold transition-all"
               >
                 Next
               </button>
@@ -535,7 +535,7 @@ export const SWNewEmployeeForm: React.FC = () => {
               <button
                 onClick={handleSubmit}
                 disabled={loading}
-                className="ml-auto px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white rounded-lg font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="ml-auto px-6 py-3 bg-zomi-green hover:bg-zomi-green/90 text-white rounded-lg font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? 'Creating Form...' : 'Create Form'}
               </button>

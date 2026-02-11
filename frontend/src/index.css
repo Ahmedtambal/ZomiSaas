@@ -31,13 +31,13 @@
   .glass-input {
     background: rgba(255, 255, 255, 0.9);
     backdrop-filter: blur(8px);
-    border: 1px solid rgba(56, 176, 0, 0.2);
+    border: 1px solid rgba(14, 111, 115, 0.2);
     transition: all 0.3s ease;
   }
 
   .glass-input:focus {
     outline: none;
-    border-color: #38b000;
-    box-shadow: 0 0 0 3px rgba(56, 176, 0, 0.1);
+    border-color: #0e6f73;
+    box-shadow: 0 0 0 3px rgba(14, 111, 115, 0.1);
   }
 }
