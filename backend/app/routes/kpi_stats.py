@@ -70,6 +70,21 @@ async def get_workforce_kpis(
             snapshots = kpi_snapshot_service.get_snapshots_range(org_id, comparison_start_date, comparison_end_date)
             comparison_snapshot = snapshots[-1] if snapshots else None
         
+        # If still no comparison snapshot (limited historical data), use oldest available snapshot
+        if not comparison_snapshot:
+            all_snapshots = kpi_snapshot_service.get_snapshots_range(
+                org_id, 
+                date(2000, 1, 1),  # Far back date to get all snapshots
+                target_end_date
+            )
+            # Use the oldest snapshot (exclude today's snapshot)
+            if len(all_snapshots) >= 2:
+                comparison_snapshot = all_snapshots[0]
+                logger.info(f"Using oldest available snapshot from {all_snapshots[0].get('snapshot_date')} for comparison")
+            elif len(all_snapshots) == 1:
+                # Only one snapshot exists (today's), no comparison possible
+                comparison_snapshot = None
+        
         # Calculate trends
         if comparison_snapshot:
             active_trend = kpi_snapshot_service.calculate_trend(
@@ -198,6 +213,20 @@ async def get_time_series_data(
         else:
             # Default to 16 weeks back
             target_start_date = target_end_date - timedelta(weeks=16)
+        
+        # Check if we have any historical snapshots, and limit date range to available data
+        all_snapshots = kpi_snapshot_service.get_snapshots_range(
+            org_id, 
+            date(2000, 1, 1),  # Far back date to get all snapshots
+            target_end_date
+        )
+        
+        if all_snapshots:
+            # Use the oldest snapshot date as the earliest possible start date
+            oldest_snapshot_date = datetime.strptime(all_snapshots[0]["snapshot_date"], '%Y-%m-%d').date()
+            if target_start_date < oldest_snapshot_date:
+                logger.info(f"Adjusting start date from {target_start_date} to {oldest_snapshot_date} (oldest snapshot)")
+                target_start_date = oldest_snapshot_date
         
         # Calculate number of weeks in the period
         period_days = (target_end_date - target_start_date).days
