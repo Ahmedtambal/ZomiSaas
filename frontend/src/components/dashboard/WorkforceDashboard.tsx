@@ -28,10 +28,6 @@ export const WorkforceDashboard = forwardRef<any, WorkforceDashboardProps>(({ da
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchKPIData();
-  }, [dateRange, fetchKPIData]);
-
   const fetchKPIData = useCallback(async () => {
     try {
       setLoading(true);
@@ -50,6 +46,10 @@ export const WorkforceDashboard = forwardRef<any, WorkforceDashboardProps>(({ da
       setLoading(false);
     }
   }, [dateRange.startDate, dateRange.endDate]);
+
+  useEffect(() => {
+    fetchKPIData();
+  }, [fetchKPIData]);
 
   const handleRefresh = async () => {
     try {
