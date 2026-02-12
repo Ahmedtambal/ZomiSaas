@@ -9,20 +9,22 @@ SECURITY DEFINER
 SET search_path = ''
 AS $$
 BEGIN
-    -- Check if form_structure has changed
-    IF OLD.form_structure IS DISTINCT FROM NEW.form_structure THEN
+    -- Check if form_data has changed (NOT form_structure - that's the old field name)
+    IF OLD.form_data IS DISTINCT FROM NEW.form_data THEN
         -- Insert new version into form_versions table
         INSERT INTO public.form_versions (
             form_id,
-            version,
-            form_structure,
-            created_at
+            version_number,
+            form_data_snapshot,
+            created_by_user_id,
+            change_notes
         )
         VALUES (
             NEW.id,
             NEW.version,
-            NEW.form_structure,
-            NOW()
+            OLD.form_data,  -- Store OLD version before update
+            NEW.created_by_user_id,
+            'Auto-saved version ' || NEW.version
         );
         
         -- Increment version number
