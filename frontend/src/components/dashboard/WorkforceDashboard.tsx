@@ -1,6 +1,7 @@
-import { useEffect, useState, forwardRef, useImperativeHandle } from 'react';
+import { useEffect, useState, forwardRef, useImperativeHandle, useCallback } from 'react';
 import { Users, TrendingUp, TrendingDown, DollarSign, PoundSterling, Clock, Upload, Send } from 'lucide-react';
 import apiClient from '../../services/apiClient';
+import type { DateRange } from './TimePeriodSelector';
 
 interface KPIData {
   value: number;
@@ -18,19 +19,28 @@ interface WorkforceKPIs {
   pension_packs_sent: KPIData;
 }
 
-export const WorkforceDashboard = forwardRef((props, ref) => {
+interface WorkforceDashboardProps {
+  dateRange: DateRange;
+}
+
+export const WorkforceDashboard = forwardRef<any, WorkforceDashboardProps>(({ dateRange }, ref) => {
   const [kpiData, setKpiData] = useState<WorkforceKPIs | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchKPIData();
-  }, []);
+  }, [dateRange, fetchKPIData]);
 
-  const fetchKPIData = async () => {
+  const fetchKPIData = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await apiClient.get('/api/kpi/workforce');
+      const response = await apiClient.get('/api/kpi/workforce', {
+        params: {
+          start_date: dateRange.startDate,
+          end_date: dateRange.endDate,
+        },
+      });
       setKpiData(response.data);
       setError(null);
     } catch (err: any) {
@@ -39,7 +49,7 @@ export const WorkforceDashboard = forwardRef((props, ref) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [dateRange.startDate, dateRange.endDate]);
 
   const handleRefresh = async () => {
     try {

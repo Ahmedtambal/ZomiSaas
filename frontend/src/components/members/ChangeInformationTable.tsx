@@ -786,7 +786,7 @@ export const ChangeInformationTable = ({ databaseType, onBack }: ChangeInformati
             >
               <thead className="bg-slate-50 border-b border-slate-200">
                 <tr>
-                  <th className="text-left p-4 bg-slate-50 sticky left-0 border-r border-slate-200">
+                  <th className="text-left p-4 bg-white sticky left-0 z-10 border-r border-slate-200 shadow-[2px_0_4px_rgba(0,0,0,0.05)]">
                     <input
                       type="checkbox"
                       checked={selectedRows.size === paginatedRecords.length && paginatedRecords.length > 0}
@@ -816,7 +816,7 @@ export const ChangeInformationTable = ({ databaseType, onBack }: ChangeInformati
                     key={record.id}
                     className="border-b border-slate-100 hover:bg-slate-50 transition-colors"
                   >
-                    <td className="p-4 bg-white sticky left-0 border-r border-slate-200">
+                    <td className="p-4 bg-white sticky left-0 z-5 border-r border-slate-200 shadow-[2px_0_4px_rgba(0,0,0,0.05)]">
                       <input
                         type="checkbox"
                         checked={selectedRows.has(record.id)}

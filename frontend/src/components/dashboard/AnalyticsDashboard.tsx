@@ -1,9 +1,10 @@
-import { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
+import { useState, useEffect, forwardRef, useImperativeHandle, useCallback } from 'react';
 import { 
   Building2, Globe, Users, TrendingUp, Shield, Heart, Activity, 
   FileCheck, MapPin, Info
 } from 'lucide-react';
 import apiClient from '../../services/apiClient';
+import type { DateRange } from './TimePeriodSelector';
 
 interface AnalyticsData {
   employees_by_company: Array<{ name: string; count: number }>;
@@ -30,27 +31,35 @@ const ABBREVIATIONS = {
   'BUPA': 'British United Provident Association (Private Healthcare)'
 };
 
-export const AnalyticsDashboard = forwardRef((props, ref) => {
+interface AnalyticsDashboardProps {
+  dateRange: DateRange;
+}
+
+export const AnalyticsDashboard = forwardRef<any, AnalyticsDashboardProps>(({ dateRange }, ref) => {
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showInfo, setShowInfo] = useState<string | null>(null);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setError(null);
-      const response = await apiClient.get('/api/kpi/analytics');
+      const response = await apiClient.get('/api/kpi/analytics', {
+        params: {
+          date: dateRange.endDate,
+        },
+      });
       setData(response.data);
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to load analytics data');
     } finally {
       setLoading(false);
     }
-  };
+  }, [dateRange.endDate]);
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [fetchData]);
 
   // Expose refresh method to parent
   useImperativeHandle(ref, () => ({
@@ -268,39 +277,41 @@ export const AnalyticsDashboard = forwardRef((props, ref) => {
           </div>
         </div>
 
-        {/* Pension Investment Approach */}
-        <div className="glass-panel rounded-2xl p-6">
-          <div className="flex items-center gap-3 mb-5">
-            <div className="w-10 h-10 bg-zomi-mint rounded-lg flex items-center justify-center flex-shrink-0">
-              <TrendingUp className="w-5 h-5 text-zomi-green" />
+        {/* Pension Investment Approach - Temporarily Disabled */}
+        {false && (
+          <div className="glass-panel rounded-2xl p-6">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-10 h-10 bg-zomi-mint rounded-lg flex items-center justify-center flex-shrink-0">
+                <TrendingUp className="w-5 h-5 text-zomi-green" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-base font-bold text-slate-900 truncate">Investment Approach</h3>
+                <p className="text-xs text-slate-500 truncate">Pension strategies</p>
+              </div>
             </div>
-            <div className="flex-1 min-w-0">
-              <h3 className="text-base font-bold text-slate-900 truncate">Investment Approach</h3>
-              <p className="text-xs text-slate-500 truncate">Pension strategies</p>
+            <div className="space-y-2.5 max-h-[320px] overflow-y-auto pr-1 custom-scrollbar">
+              {data.pension_approaches.map((approach, idx) => {
+                const percentage = maxApproachCount > 0 ? (approach.count / maxApproachCount) * 100 : 0;
+                return (
+                  <div key={idx} className="group">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-xs font-medium text-slate-700 truncate max-w-[65%]" title={approach.name}>
+                        {approach.name}
+                      </span>
+                      <span className="text-xs font-bold text-slate-900 flex-shrink-0">{approach.count}</span>
+                    </div>
+                    <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
+                      <div
+                        className="bg-gradient-to-r from-zomi-green to-zomi-mint h-full rounded-full transition-all duration-500 group-hover:opacity-80"
+                        style={{ width: `${Math.max(percentage, 3)}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
-          <div className="space-y-2.5 max-h-[320px] overflow-y-auto pr-1 custom-scrollbar">
-            {data.pension_approaches.map((approach, idx) => {
-              const percentage = maxApproachCount > 0 ? (approach.count / maxApproachCount) * 100 : 0;
-              return (
-                <div key={idx} className="group">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-xs font-medium text-slate-700 truncate max-w-[65%]" title={approach.name}>
-                      {approach.name}
-                    </span>
-                    <span className="text-xs font-bold text-slate-900 flex-shrink-0">{approach.count}</span>
-                  </div>
-                  <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
-                    <div
-                      className="bg-gradient-to-r from-zomi-green to-zomi-mint h-full rounded-full transition-all duration-500 group-hover:opacity-80"
-                      style={{ width: `${Math.max(percentage, 3)}%` }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+        )}
       </div>
 
       {/* Section 2: Coverage Rates Grid (2x2 mini gauges) + Other Donuts */}

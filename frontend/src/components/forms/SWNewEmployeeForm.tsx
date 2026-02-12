@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createForm } from '../../services/formService';
 import { useAuth } from '../../context/AuthContext';
+import { getNationalities } from '../../services/lookupService';
 
 interface Company {
   id: string;
@@ -71,25 +72,31 @@ export const SWNewEmployeeForm: React.FC = () => {
 
   // Fetch companies on mount
   useEffect(() => {
-    const fetchCompanies = async () => {
+    const fetchData = async () => {
       try {
         const token = localStorage.getItem('access_token');
-        const response = await fetch(`${import.meta.env.VITE_API_URL || 'https://zomisaasbackend.onrender.com'}/api/companies`, {
+        
+        // Fetch companies
+        const compResponse = await fetch(`${import.meta.env.VITE_API_URL || 'https://zomisaasbackend.onrender.com'}/api/companies`, {
           headers: {
             'Authorization': `Bearer ${token}`,
           },
         });
-        if (response.ok) {
-          const data = await response.json();
+        if (compResponse.ok) {
+          const data = await compResponse.json();
           setCompanies(Array.isArray(data) ? data : []);
         } else {
           setCompanies([]);
         }
+        
+        // Fetch nationalities
+        const nats = await getNationalities();
+        setNationalities(nats);
       } catch (err) {
-        console.error('Failed to fetch companies:', err);
+        console.error('Failed to fetch data:', err);
       }
     };
-    fetchCompanies();
+    fetchData();
   }, []);
 
   const handleInputChange = (field: keyof FormData, value: string) => {
@@ -423,12 +430,16 @@ export const SWNewEmployeeForm: React.FC = () => {
 
                 <div>
                   <label className="block text-white mb-2">Nationality *</label>
-                  <input
-                    type="text"
+                  <select
                     value={formData.nationality}
                     onChange={(e) => handleInputChange('nationality', e.target.value)}
-                    className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  />
+                    className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  >
+                    <option value="">Select Nationality</option>
+                    {nationalities.map((nat) => (
+                      <option key={nat} value={nat}>{nat}</option>
+                    ))}
+                  </select>
                 </div>
 
                 <div>

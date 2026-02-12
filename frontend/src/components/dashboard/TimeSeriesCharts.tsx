@@ -1,6 +1,7 @@
-import { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
+import { useState, useEffect, forwardRef, useImperativeHandle, useCallback } from 'react';
 import { TrendingUp, Users } from 'lucide-react';
 import apiClient from '../../services/apiClient';
+import type { DateRange } from './TimePeriodSelector';
 
 interface WeeklyHires {
   week: string;
@@ -17,26 +18,35 @@ interface TimeSeriesData {
   growth_rate_monthly: MonthlyGrowth[];
 }
 
-export const TimeSeriesCharts = forwardRef((props, ref) => {
+interface TimeSeriesChartsProps {
+  dateRange: DateRange;
+}
+
+export const TimeSeriesCharts = forwardRef<any, TimeSeriesChartsProps>(({ dateRange }, ref) => {
   const [data, setData] = useState<TimeSeriesData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setError(null);
-      const response = await apiClient.get('/api/kpi/time-series');
+      const response = await apiClient.get('/api/kpi/time-series', {
+        params: {
+          start_date: dateRange.startDate,
+          end_date: dateRange.endDate,
+        },
+      });
       setData(response.data);
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to load time series data');
     } finally {
       setLoading(false);
     }
-  };
+  }, [dateRange.startDate, dateRange.endDate]);
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [fetchData]);
 
   // Expose refresh method to parent
   useImperativeHandle(ref, () => ({

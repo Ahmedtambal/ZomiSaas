@@ -4,9 +4,10 @@ import { FormBuilder } from './FormBuilder';
 import { FormDefinition } from '../../types/forms';
 import { getForms, createForm, deleteForm, generateToken, getTokens, refreshFormTemplate } from '../../services/formService';
 import { useNotification } from '../../context/NotificationContext';
+import { getNationalities } from '../../services/lookupService';
 
 // Pre-defined New Employee Upload Form Template
-const NEW_EMPLOYEE_TEMPLATE = {
+const getNewEmployeeTemplate = (nationalities: string[]) => ({
   fields: [
     { name: 'title', label: 'Title', type: 'select', required: true, options: ['Mr', 'Mrs', 'Miss', 'Ms', 'Dr', 'Mx', 'Professor', 'Lady', 'Sir', 'Dame', 'Lord', 'Rabbi', 'Reverend', 'Other'] },
     { name: 'forename', label: 'Forename', type: 'text', required: true },
@@ -23,14 +24,14 @@ const NEW_EMPLOYEE_TEMPLATE = {
     { name: 'addressLine4', label: 'Address 4', type: 'text', required: false },
     { name: 'postcode', label: 'Postcode', type: 'text', required: true },
     { name: 'ukResident', label: 'UK Resident', type: 'select', required: true, options: ['Yes', 'No'] },
-    { name: 'nationality', label: 'Nationality', type: 'searchable-select', required: true, options: ['British', 'Unknown', 'Afghan', 'Alander', 'Albanian', 'Algerian', 'American', 'American Samoan', 'Andorran', 'Angolan', 'Anguillan', 'Antiguan', 'Argentine', 'Armenian', 'Aruban', 'Australian', 'Austrian', 'Azerbaijani', 'Bahamian', 'Bahraini', 'Bangladeshi', 'Barbadian', 'Basotho', 'Batswana', 'Belarusian', 'Belgian', 'Belizean', 'Beninese', 'Bermudan', 'Bhutanese', 'Bolivian', 'Bosnian', 'Brazilian', 'British Virgin Islan', 'Bruneian', 'Bulgarian', 'Burkinabe', 'Burmese', 'Burundian', 'Cambodian', 'Cameroonian', 'Canadian', 'Cape Verdean', 'Caymanian', 'Central African', 'Chadian', 'Chilean', 'Chinese', 'Christmas Islander', 'Cocos Islander', 'Colombian', 'Comoran', 'Congolese', 'Cook Islander', 'Costa Rican', 'Croatian', 'Cuban', 'Cypriot', 'Czech', 'Danish', 'Djiboutian', 'Dominican', 'Dominican Republican', 'Dutch', 'Dutch Antillean', 'Ecuadorian', 'Egyptian', 'Emirian', 'Equatorial Guinean', 'Eritrean', 'Estonian', 'Ethiopian', 'Falkland Islander', 'Faroese', 'Fijian', 'Filipino', 'Finnish', 'French', 'French Guianese', 'French Polynesian', 'Gabonese', 'Gambian', 'Georgian', 'German', 'Ghanaian', 'Gibraltarian', 'Greek', 'Greenlander', 'Grenadian', 'Guadeloupian', 'Guamanian', 'Guatamalan', 'Guinea-Bissauan', 'Guinean', 'Guyanese', 'Haitian', 'HK Chinese', 'Honduran', 'Hungarian', 'Icelander'] },
+    { name: 'nationality', label: 'Nationality', type: 'searchable-select', required: true, options: nationalities },
     { name: 'jobTitle', label: 'Job Title', type: 'text', required: true },
     { name: 'salary', label: 'Basic Annual Salary', type: 'number', required: true },
     { name: 'employmentStartDate', label: 'Employment Start Date', type: 'date', required: true },
     { name: 'selectedRetirementAge', label: 'Selected Retirement Age', type: 'number', required: true },
     // Section Number and Pension Investment Approach removed - will be filled by team in database later
   ]
-};
+});
 
 // Pre-defined Change Information Form Template
 const CHANGE_INFORMATION_TEMPLATE = {
@@ -58,13 +59,20 @@ export const FormManagementPage: React.FC = () => {
   const [selectedFormForLinks, setSelectedFormForLinks] = useState<string | null>(null);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [generatingLink, setGeneratingLink] = useState(false);
+  const [nationalities, setNationalities] = useState<string[]>([]);
   const [copiedLink, setCopiedLink] = useState<string | null>(null);
   const [generatedLinks, setGeneratedLinks] = useState<Record<string, string>>({});
 
   useEffect(() => {
     loadForms();
     loadCompanies();
+    fetchNationalities();
   }, []);
+
+  const fetchNationalities = async () => {
+    const nats = await getNationalities();
+    setNationalities(nats);
+  };
 
   const loadForms = async () => {
     try {
@@ -106,7 +114,7 @@ export const FormManagementPage: React.FC = () => {
       const newForm = await createForm({
         name: 'New Employee Form',
         description: 'Complete employee onboarding form with all required information including personal details, contact info, job title, address, and employment data',
-        form_data: NEW_EMPLOYEE_TEMPLATE,
+        form_data: getNewEmployeeTemplate(nationalities),
         template_type: 'new_employee_upload',
       });
       await loadForms();

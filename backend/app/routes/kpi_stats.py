@@ -1,8 +1,8 @@
-"""
+"""  
 KPI Statistics API endpoints for Executive Dashboard
 Uses historical snapshots for accurate trend tracking
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from datetime import datetime, timedelta, date
 from typing import Dict, Any, Optional
 import logging
@@ -18,6 +18,8 @@ router = APIRouter()
 
 @router.get("/workforce")
 async def get_workforce_kpis(
+    start_date: Optional[str] = Query(None, description="Start date in YYYY-MM-DD format"),
+    end_date: Optional[str] = Query(None, description="End date in YYYY-MM-DD format"),
     current_user: Dict = Depends(get_current_user)
 ) -> Dict[str, Any]:
     """
@@ -27,7 +29,8 @@ async def get_workforce_kpis(
     - Total Pensionable Salary Under Management
     - Pending Pension Activations
     
-    Trends are calculated by comparing today's snapshot with 7 days ago
+    Trends are calculated by comparing end date with equivalent prior period
+    If no dates provided, defaults to comparing today vs 7 days ago
     """
     try:
         org_id = current_user.get("organization_id")
@@ -37,40 +40,53 @@ async def get_workforce_kpis(
                 detail="Organization ID not found"
             )
         
-        today = date.today()
-        week_ago = today - timedelta(days=7)
+        # Parse dates or use defaults
+        if end_date:
+            target_end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+        else:
+            target_end_date = date.today()
         
-        # Get or create today's snapshot
-        today_snapshot = kpi_snapshot_service.get_snapshot(org_id, today)
+        if start_date:
+            target_start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+        else:
+            target_start_date = target_end_date - timedelta(days=7)
+        
+        # Calculate comparison period (same duration, prior)
+        period_days = (target_end_date - target_start_date).days
+        comparison_end_date = target_start_date - timedelta(days=1)
+        comparison_start_date = comparison_end_date - timedelta(days=period_days)
+        
+        # Get or create snapshot for end date
+        today_snapshot = kpi_snapshot_service.get_snapshot(org_id, target_end_date)
         if not today_snapshot:
-            logger.info(f"No snapshot for today, calculating now for org {org_id}")
-            today_snapshot = await kpi_snapshot_service.calculate_and_store_snapshot(org_id, today)
+            logger.info(f"No snapshot for {target_end_date}, calculating now for org {org_id}")
+            today_snapshot = await kpi_snapshot_service.calculate_and_store_snapshot(org_id, target_end_date)
         
-        # Get snapshot from 7 days ago (or closest available)
-        week_ago_snapshot = kpi_snapshot_service.get_snapshot(org_id, week_ago)
+        # Get snapshot from comparison period (or closest available)
+        comparison_snapshot = kpi_snapshot_service.get_snapshot(org_id, comparison_end_date)
         
-        # If no week-ago snapshot, look for the most recent one before today
-        if not week_ago_snapshot:
-            snapshots = kpi_snapshot_service.get_snapshots_range(org_id, week_ago, today - timedelta(days=1))
-            week_ago_snapshot = snapshots[0] if snapshots else None
+        # If no comparison snapshot, look for the most recent one in the comparison range
+        if not comparison_snapshot:
+            snapshots = kpi_snapshot_service.get_snapshots_range(org_id, comparison_start_date, comparison_end_date)
+            comparison_snapshot = snapshots[-1] if snapshots else None
         
         # Calculate trends
-        if week_ago_snapshot:
+        if comparison_snapshot:
             active_trend = kpi_snapshot_service.calculate_trend(
                 today_snapshot["total_active_employees"],
-                week_ago_snapshot["total_active_employees"]
+                comparison_snapshot["total_active_employees"]
             )
             avg_salary_trend = kpi_snapshot_service.calculate_trend(
                 today_snapshot["average_pensionable_salary"],
-                week_ago_snapshot["average_pensionable_salary"]
+                comparison_snapshot["average_pensionable_salary"]
             )
             total_salary_trend = kpi_snapshot_service.calculate_trend(
                 today_snapshot["total_salary_under_management"],
-                week_ago_snapshot["total_salary_under_management"]
+                comparison_snapshot["total_salary_under_management"]
             )
             pending_trend = kpi_snapshot_service.calculate_trend(
                 today_snapshot["pending_pension_activations"],
-                week_ago_snapshot["pending_pension_activations"]
+                comparison_snapshot["pending_pension_activations"]
             )
             # For pending items, decrease is positive
             pending_trend["is_positive"] = pending_trend["value"] <= 0
@@ -78,11 +94,11 @@ async def get_workforce_kpis(
             # Calculate trends for IO uploads and pension packs
             io_uploads_trend = kpi_snapshot_service.calculate_trend(
                 today_snapshot["io_uploads_completed"],
-                week_ago_snapshot["io_uploads_completed"]
+                comparison_snapshot["io_uploads_completed"]
             )
             pension_packs_trend = kpi_snapshot_service.calculate_trend(
                 today_snapshot["pension_packs_sent"],
-                week_ago_snapshot["pension_packs_sent"]
+                comparison_snapshot["pension_packs_sent"]
             )
         else:
             # No historical data, show 0% trend
@@ -99,7 +115,7 @@ async def get_workforce_kpis(
             .select("pension_start_date")\
             .eq("organization_id", org_id)\
             .eq("service_status", "Active")\
-            .gt("pension_start_date", today.isoformat())\
+            .gt("pension_start_date", target_end_date.isoformat())\
             .order("pension_start_date", desc=False)\
             .limit(1)\
             .execute()
@@ -152,12 +168,16 @@ async def get_workforce_kpis(
 
 @router.get("/time-series")
 async def get_time_series_data(
+    start_date: Optional[str] = Query(None, description="Start date in YYYY-MM-DD format"),
+    end_date: Optional[str] = Query(None, description="End date in YYYY-MM-DD format"),
     current_user: Dict = Depends(get_current_user)
 ) -> Dict[str, Any]:
     """
     Get time series data for charts:
-    - New Hires (Weekly): Last 16 weeks of hiring data
-    - Employee Growth Rate (Monthly): Last 12 months of growth percentage
+    - New Hires (Weekly): Hiring data for the specified period
+    - Employee Growth Rate (Monthly): Growth percentage for the period
+    
+    If no dates provided, defaults to last 16 weeks and 12 months
     """
     try:
         org_id = current_user.get("organization_id")
@@ -167,12 +187,26 @@ async def get_time_series_data(
                 detail="Organization ID not found"
             )
         
-        today = date.today()
+        # Parse dates or use defaults
+        if end_date:
+            target_end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+        else:
+            target_end_date = date.today()
         
-        # Calculate new hires per week for last 16 weeks
+        if start_date:
+            target_start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+        else:
+            # Default to 16 weeks back
+            target_start_date = target_end_date - timedelta(weeks=16)
+        
+        # Calculate number of weeks in the period
+        period_days = (target_end_date - target_start_date).days
+        num_weeks = max(1, period_days // 7)
+        
+        # Calculate new hires per week for the period
         weeks_data = []
-        for i in range(15, -1, -1):  # 16 weeks back to now
-            week_end = today - timedelta(weeks=i)
+        for i in range(num_weeks - 1, -1, -1):
+            week_end = target_end_date - timedelta(weeks=i)
             week_start = week_end - timedelta(days=6)
             
             # Query employees created in this week
@@ -188,10 +222,13 @@ async def get_time_series_data(
                 "new_hires": response.count or 0
             })
         
-        # Calculate monthly growth rate for last 12 months
+        # Calculate number of months in the period
+        num_months = max(1, period_days // 30)
+        
+        # Calculate monthly growth rate for the period
         months_data = []
-        for i in range(11, -1, -1):  # 12 months back to now
-            current_month = today - timedelta(days=30*i)
+        for i in range(num_months - 1, -1, -1):
+            current_month = target_end_date - timedelta(days=30*i)
             previous_month = current_month - timedelta(days=30)
             
             # Get snapshots for these months (or closest available)
@@ -234,6 +271,7 @@ async def get_time_series_data(
 
 @router.get("/analytics")
 async def get_analytics_data(
+    date: Optional[str] = Query(None, description="Target date in YYYY-MM-DD format (defaults to today)"),
     current_user: Dict = Depends(get_current_user)
 ) -> Dict[str, Any]:
     """
@@ -247,6 +285,8 @@ async def get_analytics_data(
     - UK Resident vs Non-Resident
     - IO Upload Status
     - Geographic Distribution
+    
+    Note: Currently returns live data. Historical snapshot support coming soon.
     """
     try:
         org_id = current_user.get("organization_id")

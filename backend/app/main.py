@@ -16,7 +16,7 @@ import base64
 import json
 
 from app.config import settings
-from app.routes import auth, forms, public_forms, companies, employees, form_submissions, form_templates, form_analytics, audit_logs, kpi_stats, change_information, user_profiles, team_management
+from app.routes import auth, forms, public_forms, companies, employees, form_submissions, form_templates, form_analytics, audit_logs, kpi_stats, change_information, user_profiles, team_management, lookups
 from app.middleware import ActivityTrackingMiddleware, SecurityHeadersMiddleware
 
 # Configure logging
@@ -144,6 +144,7 @@ app.include_router(audit_logs.router, prefix="/api/audit-logs", tags=["Audit Log
 app.include_router(kpi_stats.router, prefix="/api/kpi", tags=["KPI Statistics"])
 app.include_router(user_profiles.router, prefix="/api/user-profiles", tags=["User Profiles"])
 app.include_router(team_management.router, prefix="/api/team", tags=["Team Management"])
+app.include_router(lookups.router, prefix="/api/lookups", tags=["Lookups"])
 
 # =====================================================
 # Health Check
