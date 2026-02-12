@@ -11,6 +11,9 @@ CREATE TABLE IF NOT EXISTS public.lookup_nationalities (
 -- Enable RLS
 ALTER TABLE public.lookup_nationalities ENABLE ROW LEVEL SECURITY;
 
+-- Drop existing policy if it exists
+DROP POLICY IF EXISTS "Allow authenticated users to read nationalities" ON public.lookup_nationalities;
+
 -- Allow all authenticated users to read nationalities
 CREATE POLICY "Allow authenticated users to read nationalities"
   ON public.lookup_nationalities

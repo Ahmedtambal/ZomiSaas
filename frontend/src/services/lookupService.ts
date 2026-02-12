@@ -13,7 +13,7 @@ export interface LookupStatus {
  */
 export const getNationalities = async (): Promise<string[]> => {
   try {
-    const response = await api.get<string[]>('/lookups/nationalities');
+    const response = await api.get<string[]>('/api/lookups/nationalities');
     return response.data;
   } catch (error) {
     console.error('Failed to fetch nationalities:', error);
@@ -27,7 +27,7 @@ export const getNationalities = async (): Promise<string[]> => {
  */
 export const checkNationalitiesTable = async (): Promise<LookupStatus> => {
   try {
-    const response = await api.get<LookupStatus>('/lookups/nationalities/check');
+    const response = await api.get<LookupStatus>('/api/lookups/nationalities/check');
     return response.data;
   } catch (error) {
     console.error('Failed to check nationalities table:', error);
