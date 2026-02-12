@@ -70,10 +70,13 @@ async def get_current_user(authorization: Optional[str] = Header(None), request:
     # Verify Supabase JWT token and get user
     try:
         # Import here to avoid circular dependency
-        from app.services.database_service import db_service
+        from app.services.database_service import create_anon_auth_client, create_user_auth_client
+        
+        # Create fresh client for token validation (prevents JWT contamination)
+        auth_client = create_anon_auth_client()
         
         # Verify token with Supabase
-        response = db_service.client.auth.get_user(token)
+        response = auth_client.auth.get_user(token)
         
         if not response.user:
             raise HTTPException(
@@ -95,9 +98,7 @@ async def get_current_user(authorization: Optional[str] = Header(None), request:
         update_session_activity(user_id)
         
         # Get user profile using authenticated client (respects RLS)
-        from supabase import create_client
-        user_client = create_client(settings.SUPABASE_URL, settings.SUPABASE_ANON_KEY)
-        user_client.auth.set_session(token, token)  # Set access token
+        user_client = create_user_auth_client(token)
         
         profile_response = user_client.table("user_profiles").select("*").eq("id", user_id).execute()
         profile = profile_response.data[0] if profile_response.data else None
@@ -397,13 +398,16 @@ async def logout(token_data: TokenRefresh) -> Dict[str, Any]:
     Note: Supabase Auth manages session invalidation
     """
     from app.services.auth_service import AuthService
-    from app.services.database_service import db_service
+    from app.services.database_service import create_anon_auth_client
     
     # Get user ID from refresh token to clear activity tracking
     user_id = None
     try:
+        # Create fresh client for refresh operation (prevents JWT contamination)
+        auth_client = create_anon_auth_client()
+        
         # Use Supabase to get user info from refresh token
-        response = db_service.client.auth.refresh_session(token_data.refresh_token)
+        response = auth_client.auth.refresh_session(token_data.refresh_token)
         if response and response.session:
             user_id = response.session.user.id
             access_token = response.session.access_token

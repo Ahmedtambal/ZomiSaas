@@ -129,5 +129,53 @@ class SupabaseService:
             return False
 
 
-# Singleton instance
+def create_user_auth_client(access_token: str) -> Client:
+    """
+    Create a fresh Supabase client for user authentication operations.
+    
+    Use this for ANY operation that involves user JWT tokens:
+    - .auth.get_user(token)
+    - .auth.set_session(token, refresh_token)
+    - .auth.refresh_session(refresh_token)
+    - .auth.sign_in_with_password()
+    
+    ⚠️ WARNING: NEVER pass user JWT tokens to db_service.client.auth methods!
+    This will contaminate the service_role client and cause "JWT expired" errors.
+    
+    Args:
+        access_token: User's JWT access token
+    
+    Returns:
+        Fresh Supabase client configured with user's token
+    """
+    client = create_client(settings.SUPABASE_URL, settings.SUPABASE_ANON_KEY)
+    # Set session with user token to respect RLS
+    client.auth.set_session(access_token, access_token)
+    return client
+
+
+def create_anon_auth_client() -> Client:
+    """
+    Create a fresh Supabase client with anon key for auth operations
+    that don't need an existing session.
+    
+    Use this for:
+    - .auth.sign_in_with_password() (initial login)
+    - .auth.get_user(token) (token validation)
+    - .auth.refresh_session(refresh_token)
+    
+    Returns:
+        Fresh Supabase client with anon key
+    """
+    return create_client(settings.SUPABASE_URL, settings.SUPABASE_ANON_KEY)
+
+
+# ⚠️ WARNING: Singleton instance for database operations ONLY
+# NEVER use db_service.client.auth methods with user JWT tokens!
+# Use create_user_auth_client() or create_anon_auth_client() instead.
+# 
+# Why: The Supabase Python client is stateful. Calling .auth.get_user(token)
+# or .auth.set_session() mutates the client's internal state, contaminating
+# the service_role key with user JWTs. This causes "JWT expired PGRST303" errors
+# on subsequent database operations when user tokens expire.
 db_service = SupabaseService()

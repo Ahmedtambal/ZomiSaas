@@ -35,11 +35,9 @@ async def get_my_profile(
         scheme, token = authorization.split()
         
         # Get user profile using authenticated client (respects RLS)
-        from supabase import create_client
-        from app.config import settings
+        from app.services.database_service import create_user_auth_client
         
-        user_client = create_client(settings.SUPABASE_URL, settings.SUPABASE_ANON_KEY)
-        user_client.auth.set_session(token, token)
+        user_client = create_user_auth_client(token)
         
         profile_response = user_client.table("user_profiles").select("*").eq("id", user_id).execute()
         profile = profile_response.data[0] if profile_response.data else None
@@ -86,11 +84,9 @@ async def update_my_profile(
         scheme, token = authorization.split()
         
         # Create authenticated client (respects RLS)
-        from supabase import create_client
-        from app.config import settings
+        from app.services.database_service import create_user_auth_client
         
-        user_client = create_client(settings.SUPABASE_URL, settings.SUPABASE_ANON_KEY)
-        user_client.auth.set_session(token, token)
+        user_client = create_user_auth_client(token)
         
         # Prepare update data (only include non-None fields)
         update_data = {
@@ -167,9 +163,14 @@ async def change_password(
         # Extract token
         access_token = authorization.replace("Bearer ", "")
         
-        # Verify current password by attempting sign-in
+        # Verify current password by attempting sign-in with fresh client
+        from app.services.database_service import create_anon_auth_client, create_user_auth_client
+        
         try:
-            sign_in_response = db_service.client.auth.sign_in_with_password({
+            # Create fresh client for password verification (prevents JWT contamination)
+            auth_client = create_anon_auth_client()
+            
+            sign_in_response = auth_client.auth.sign_in_with_password({
                 "email": email,
                 "password": password_data.current_password
             })
@@ -193,12 +194,8 @@ async def change_password(
                 detail="New password must be at least 8 characters"
             )
         
-        # Create a new client with the user's access token
-        from supabase import create_client
-        from app.config import settings
-        
-        user_client = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
-        user_client.auth.set_session(access_token, sign_in_response.session.refresh_token)
+        # Create authenticated user client for password update
+        user_client = create_user_auth_client(access_token)
         
         # Update password using the authenticated user's session
         try:
