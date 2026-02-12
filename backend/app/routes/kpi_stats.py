@@ -77,10 +77,12 @@ async def get_workforce_kpis(
                 date(2000, 1, 1),  # Far back date to get all snapshots
                 target_end_date
             )
-            # Use the oldest snapshot (exclude today's snapshot)
+            # Snapshots are returned in DESC order, so [-1] is oldest, [0] is newest
+            # We need at least 2 snapshots: one for today and one for comparison
             if len(all_snapshots) >= 2:
-                comparison_snapshot = all_snapshots[0]
-                logger.info(f"Using oldest available snapshot from {all_snapshots[0].get('snapshot_date')} for comparison")
+                # Use the oldest snapshot (last in DESC list) for comparison
+                comparison_snapshot = all_snapshots[-1]
+                logger.info(f"Using oldest available snapshot from {comparison_snapshot.get('snapshot_date')} for comparison")
             elif len(all_snapshots) == 1:
                 # Only one snapshot exists (today's), no comparison possible
                 comparison_snapshot = None
@@ -222,8 +224,8 @@ async def get_time_series_data(
         )
         
         if all_snapshots:
-            # Use the oldest snapshot date as the earliest possible start date
-            oldest_snapshot_date = datetime.strptime(all_snapshots[0]["snapshot_date"], '%Y-%m-%d').date()
+            # Snapshots are in DESC order, so [-1] is the oldest
+            oldest_snapshot_date = datetime.strptime(all_snapshots[-1]["snapshot_date"], '%Y-%m-%d').date()
             if target_start_date < oldest_snapshot_date:
                 logger.info(f"Adjusting start date from {target_start_date} to {oldest_snapshot_date} (oldest snapshot)")
                 target_start_date = oldest_snapshot_date
@@ -274,8 +276,9 @@ async def get_time_series_data(
             
             growth_rate = 0.0
             if current_snapshots and previous_snapshots:
-                current_count = current_snapshots[-1]["total_active_employees"]
-                previous_count = previous_snapshots[-1]["total_active_employees"]
+                # Snapshots are in DESC order, [0] is most recent in range
+                current_count = current_snapshots[0]["total_active_employees"]
+                previous_count = previous_snapshots[0]["total_active_employees"]
                 
                 if previous_count > 0:
                     growth_rate = ((current_count - previous_count) / previous_count) * 100
