@@ -31,7 +31,7 @@ interface FormData {
   nationality: string;
   salary: string;
   employmentStartDate: string;
-  selectedRetirementAge: string;
+  other: string;
   sectionNumber: string;
   pensionInvestmentApproach: string;
 }
@@ -53,7 +53,7 @@ const initialFormData: FormData = {
   nationality: '',
   salary: '',
   employmentStartDate: '',
-  selectedRetirementAge: '',
+  other: '',
   sectionNumber: '',
   pensionInvestmentApproach: '',
 };
@@ -112,8 +112,8 @@ export const SWNewEmployeeForm: React.FC = () => {
       case 2: // Contact Details
         return !!(formData.address1 && formData.postcode);
       case 3: // Employment Details
-        return !!(formData.ukResident && formData.nationality && formData.salary && 
-                  formData.employmentStartDate && formData.selectedRetirementAge);
+        return !!(formData.ukResident && formData.salary && 
+                  formData.employmentStartDate);
       case 4: // Pension Details (Section Number and Pension Investment Approach disabled - filled by team later)
         return true; // No required fields in this step anymore
       default:
@@ -162,7 +162,7 @@ export const SWNewEmployeeForm: React.FC = () => {
             { name: 'surname', label: 'Surname', type: 'text', required: true },
             { name: 'niNumber', label: 'NI Number', type: 'text', required: true, pattern: '^[A-Z]{2}[0-9]{6}[A-Z]$' },
             { name: 'dateOfBirth', label: 'Date of Birth', type: 'date', required: true },
-            { name: 'sex', label: 'Sex', type: 'select', required: true, options: ['Male', 'Female', 'Other'] },
+            { name: 'sex', label: 'Legal Gender', type: 'select', required: true, options: ['Male', 'Female', 'Other'] },
             { name: 'maritalStatus', label: 'Marital Status', type: 'select', required: true, options: ['Single', 'Married', 'Divorced', 'Widowed', 'Civil Partnership'] },
             { name: 'address1', label: 'Address Line 1', type: 'text', required: true },
             { name: 'address2', label: 'Address Line 2', type: 'text', required: false },
@@ -170,10 +170,10 @@ export const SWNewEmployeeForm: React.FC = () => {
             { name: 'address4', label: 'Address Line 4', type: 'text', required: false },
             { name: 'postcode', label: 'Postcode', type: 'text', required: true },
             { name: 'ukResident', label: 'UK Resident', type: 'select', required: true, options: ['Yes', 'No'] },
-            { name: 'nationality', label: 'Nationality', type: 'text', required: true },
+            { name: 'nationality', label: 'Nationality', type: 'text', required: false },
             { name: 'salary', label: 'Salary', type: 'number', required: true, min: 0 },
             { name: 'employmentStartDate', label: 'Employment Start Date', type: 'date', required: true },
-            { name: 'selectedRetirementAge', label: 'Selected Retirement Age', type: 'number', required: true, min: 55, max: 75 },
+            { name: 'other', label: 'Other', type: 'text', required: false },
             // Disabled fields - to be filled by team in database later
             // { name: 'sectionNumber', label: 'Section Number', type: 'text', required: false },
             // { name: 'pensionInvestmentApproach', label: 'Pension Investment Approach', type: 'select', required: false, options: ['Default', 'Ethical', 'High Growth', 'Conservative'] },
@@ -317,7 +317,7 @@ export const SWNewEmployeeForm: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-white mb-2">Sex *</label>
+                  <label className="block text-white mb-2">Legal Gender *</label>
                   <select
                     value={formData.sex}
                     onChange={(e) => handleInputChange('sex', e.target.value)}
@@ -429,7 +429,7 @@ export const SWNewEmployeeForm: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-white mb-2">Nationality *</label>
+                  <label className="block text-white mb-2">Nationality</label>
                   <select
                     value={formData.nationality}
                     onChange={(e) => handleInputChange('nationality', e.target.value)}
@@ -465,13 +465,11 @@ export const SWNewEmployeeForm: React.FC = () => {
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="block text-white mb-2">Selected Retirement Age *</label>
+                  <label className="block text-white mb-2">Other</label>
                   <input
-                    type="number"
-                    value={formData.selectedRetirementAge}
-                    onChange={(e) => handleInputChange('selectedRetirementAge', e.target.value)}
-                    min="55"
-                    max="75"
+                    type="text"
+                    value={formData.other}
+                    onChange={(e) => handleInputChange('other', e.target.value)}
                     className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-purple-500"
                   />
                 </div>

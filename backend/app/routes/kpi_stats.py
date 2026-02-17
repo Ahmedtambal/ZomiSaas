@@ -424,7 +424,7 @@ async def get_analytics_data(
         # 6. Gender Distribution
         gender_counts = {}
         for emp in employees:
-            gender = emp.get("gender", "Not Specified") or "Not Specified"
+            gender = emp.get("legal_gender", "Not Specified") or "Not Specified"
             gender_counts[gender] = gender_counts.get(gender, 0) + 1
         
         gender_distribution = [{"name": name, "count": count} for name, count in gender_counts.items()]

@@ -554,7 +554,7 @@ async def export_employees_io_template(
                 'DateJoinedScheme': emp.get('date_joined_scheme', ''),
                 'DateofBirth*': emp.get('date_of_birth', ''),
                 'EmailAddress': emp.get('email_address', ''),
-                'Gender': emp.get('gender', ''),
+                'Gender': emp.get('legal_gender', ''),
                 'HomeNumber': emp.get('home_number', ''),
                 'MobileNumber': emp.get('mobile_number', ''),
                 'NINumber': emp.get('ni_number', ''),

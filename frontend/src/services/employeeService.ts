@@ -13,7 +13,7 @@ export interface Employee {
   surname: string;
   ni_number?: string;
   date_of_birth?: string;
-  gender?: string;
+  legal_gender?: string;
   marital_status?: string;
   address_line_1?: string;
   address_line_2?: string;
@@ -33,7 +33,7 @@ export interface Employee {
   salary_post_sacrifice?: number;
   employment_start_date?: string;
   date_joined_scheme?: string;
-  selected_retirement_age?: number;
+  other?: string;
   pension_investment_approach?: string;
   policy_number?: string;
   split_template_group_name?: string;

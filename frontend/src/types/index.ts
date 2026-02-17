@@ -26,7 +26,7 @@ export interface Member {
   nationality: string;
   maritalStatus: string;
   investmentApproach: 'Adventurous' | 'Cautious';
-  selectedRetirementAge: number;
+  other: string;
   status: 'Active' | 'Pending' | 'Inactive';
   createdAt: string;
   updatedAt: string;
@@ -69,7 +69,7 @@ export const IO_UPLOAD_COLUMNS: ColumnDefinition[] = [
   { id: 'surname', label: 'Surname*', sortable: true, editable: true, type: 'text', validation: { required: true } },
   { id: 'niNumber', label: 'NINumber', sortable: true, editable: true, type: 'text', validation: { pattern: '^[A-Z]{2}[0-9]{6}[A-Z]$', customMessage: 'NI Number format: AB123456C' } },
   { id: 'dateOfBirth', label: 'Date of Birth*', sortable: true, editable: true, type: 'date', validation: { required: true } },
-  { id: 'sex', label: 'Sex', sortable: true, editable: true, type: 'select', options: ['Male', 'Female'] },
+  { id: 'sex', label: 'Legal Gender', sortable: true, editable: true, type: 'select', options: ['Male', 'Female'] },
   { id: 'maritalStatus', label: 'Marital Status', sortable: true, editable: true, type: 'select', options: ['Single', 'Married', 'Divorced', 'Widowed', 'Civil Partnership'] },
   { id: 'address1', label: 'Address 1', sortable: true, editable: true, type: 'text' },
   { id: 'address2', label: 'Address 2', sortable: true, editable: true, type: 'text' },
@@ -80,7 +80,7 @@ export const IO_UPLOAD_COLUMNS: ColumnDefinition[] = [
   { id: 'nationality', label: 'Nationality', sortable: true, editable: true, type: 'select', options: ['British', 'Irish', 'American', 'Canadian', 'Australian', 'Other'] },
   { id: 'salary', label: 'Salary', sortable: true, editable: true, type: 'number', validation: { min: 0, max: 1000000 } },
   { id: 'employmentStartDate', label: 'Employment Start Date', sortable: true, editable: true, type: 'date' },
-  { id: 'selectedRetirementAge', label: 'Selected Retirement Age', sortable: true, editable: true, type: 'number', validation: { min: 50, max: 75 } },
+  { id: 'other', label: 'Other', sortable: true, editable: true, type: 'text' },
   { id: 'sectionNumber', label: 'Section Number', sortable: true, editable: true, type: 'text' },
   { id: 'pensionInvestmentApproach', label: 'Pension Investment Approach', sortable: true, editable: true, type: 'select', options: ['Adventurous', 'Cautious'] },
   
@@ -115,7 +115,7 @@ export const NEW_EMPLOYEE_UPLOAD_COLUMNS: ColumnDefinition[] = [
   { id: 'surname', label: 'Surname', sortable: true, editable: true, type: 'text', validation: { required: true } },
   { id: 'niNumber', label: 'NI Number', sortable: true, editable: true, type: 'text', validation: { pattern: '^[A-Z]{2}[0-9]{6}[A-Z]$', customMessage: 'NI Number format: AB123456C' } },
   { id: 'dateOfBirth', label: 'Date of Birth', sortable: true, editable: true, type: 'date', validation: { required: true } },
-  { id: 'sex', label: 'Sex', sortable: true, editable: true, type: 'select', options: ['Male', 'Female'] },
+  { id: 'sex', label: 'Legal Gender', sortable: true, editable: true, type: 'select', options: ['Male', 'Female'] },
   { id: 'maritalStatus', label: 'Marital Status', sortable: true, editable: true, type: 'select', options: ['Single', 'Married', 'Divorced', 'Widowed', 'Civil Partnership'] },
   { id: 'address1', label: 'Address 1', sortable: true, editable: true, type: 'text' },
   { id: 'address2', label: 'Address 2', sortable: true, editable: true, type: 'text' },
@@ -126,7 +126,7 @@ export const NEW_EMPLOYEE_UPLOAD_COLUMNS: ColumnDefinition[] = [
   { id: 'nationality', label: 'Nationality', sortable: true, editable: true, type: 'select', options: ['British', 'Irish', 'American', 'Canadian', 'Australian', 'Other'] },
   { id: 'salary', label: 'Salary', sortable: true, editable: true, type: 'number', validation: { min: 0, max: 1000000 } },
   { id: 'employmentStartDate', label: 'Employment Start Date', sortable: true, editable: true, type: 'date' },
-  { id: 'selectedRetirementAge', label: 'Selected Retirement Age', sortable: true, editable: true, type: 'number', validation: { min: 50, max: 75 } },
+  { id: 'other', label: 'Other', sortable: true, editable: true, type: 'text' },
   { id: 'sectionNumber', label: 'Section number', sortable: true, editable: true, type: 'text' },
   { id: 'pensionInvestmentApproach', label: 'Pension Investment Approach', sortable: true, editable: true, type: 'select', options: ['Adventurous', 'Cautious'] },
 ];

@@ -16,7 +16,7 @@ const getNewEmployeeTemplate = (nationalities: string[]) => ({
     { name: 'emailAddress', label: 'Email Address', type: 'email', required: true },
     { name: 'contactNumber', label: 'Contact Number', type: 'tel', required: true },
     { name: 'dateOfBirth', label: 'Date of Birth', type: 'date', required: true },
-    { name: 'gender', label: 'Sex', type: 'select', required: true, options: ['Male', 'Female'] },
+    { name: 'gender', label: 'Legal Gender', type: 'select', required: true, options: ['Male', 'Female'] },
     { name: 'maritalStatus', label: 'Marital Status', type: 'select', required: true, options: ['Single', 'Married', 'Divorced', 'Separated', 'Widowed'] },
     { name: 'addressLine1', label: 'Address 1', type: 'text', required: true },
     { name: 'addressLine2', label: 'Address 2', type: 'text', required: false },
@@ -24,11 +24,11 @@ const getNewEmployeeTemplate = (nationalities: string[]) => ({
     { name: 'addressLine4', label: 'Address 4', type: 'text', required: false },
     { name: 'postcode', label: 'Postcode', type: 'text', required: true },
     { name: 'ukResident', label: 'UK Resident', type: 'select', required: true, options: ['Yes', 'No'] },
-    { name: 'nationality', label: 'Nationality', type: 'searchable-select', required: true, options: nationalities },
+    { name: 'nationality', label: 'Nationality', type: 'searchable-select', required: false, options: nationalities },
     { name: 'jobTitle', label: 'Job Title', type: 'text', required: true },
     { name: 'salary', label: 'Basic Annual Salary', type: 'number', required: true },
     { name: 'employmentStartDate', label: 'Employment Start Date', type: 'date', required: true },
-    { name: 'selectedRetirementAge', label: 'Selected Retirement Age', type: 'number', required: true },
+    { name: 'other', label: 'Other', type: 'text', required: false },
     // Section Number and Pension Investment Approach removed - will be filled by team in database later
   ]
 });
@@ -118,7 +118,7 @@ export const FormManagementPage: React.FC = () => {
       setLoading(true);
       const newForm = await createForm({
         name: 'New Employee Form',
-        description: 'Complete employee onboarding form with all required information including personal details, contact info, job title, address, and employment data',
+        description: 'Please complete for each new employee as soon as they start working for you.',
         form_data: getNewEmployeeTemplate(nationalities),
         template_type: 'new_employee_upload',
       });
@@ -145,7 +145,7 @@ export const FormManagementPage: React.FC = () => {
       setLoading(true);
       const newForm = await createForm({
         name: 'Change Information Form',
-        description: 'Form for employees to submit change requests such as address changes, salary updates, leaves, and other personnel information changes',
+        description: 'Please complete with the employee details and the change so we can update our records',
         form_data: CHANGE_INFORMATION_TEMPLATE,
         template_type: 'change_information_upload',
       });

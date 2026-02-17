@@ -22,7 +22,7 @@ class IOUploadMember(BaseModel):
     surname: str
     ni_number: Optional[str] = None
     date_of_birth: date
-    sex: Optional[str] = None
+    legal_gender: Optional[str] = None
     marital_status: Optional[str] = None
     
     # Address
@@ -37,7 +37,7 @@ class IOUploadMember(BaseModel):
     # Employment
     salary: Optional[Decimal] = None
     employment_start_date: Optional[date] = None
-    selected_retirement_age: Optional[int] = None
+    other: Optional[int] = None
     section_number: Optional[str] = None
     
     # Pension Information
@@ -84,7 +84,7 @@ class NewEmployeeMember(BaseModel):
     surname: str
     ni_number: Optional[str] = None
     date_of_birth: date
-    sex: Optional[str] = None
+    legal_gender: Optional[str] = None
     marital_status: Optional[str] = None
     
     # Address
@@ -99,7 +99,7 @@ class NewEmployeeMember(BaseModel):
     # Employment
     salary: Optional[Decimal] = None
     employment_start_date: Optional[date] = None
-    selected_retirement_age: Optional[int] = None
+    other: Optional[int] = None
     section_number: Optional[str] = None
     
     # Pension

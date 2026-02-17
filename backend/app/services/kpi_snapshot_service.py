@@ -104,14 +104,14 @@ class KPISnapshotService:
             
             # 5. Demographics
             demo_response = self.db.table("employees")\
-                .select("gender, uk_resident")\
+                .select("legal_gender, uk_resident")\
                 .eq("organization_id", organization_id)\
                 .eq("service_status", "Active")\
                 .execute()
             
-            gender_male = sum(1 for emp in demo_response.data if emp.get("gender") == "Male")
-            gender_female = sum(1 for emp in demo_response.data if emp.get("gender") == "Female")
-            gender_other = sum(1 for emp in demo_response.data if emp.get("gender") not in ["Male", "Female"])
+            gender_male = sum(1 for emp in demo_response.data if emp.get("legal_gender") == "Male")
+            gender_female = sum(1 for emp in demo_response.data if emp.get("legal_gender") == "Female")
+            gender_other = sum(1 for emp in demo_response.data if emp.get("legal_gender") not in ["Male", "Female"])
             uk_resident = sum(1 for emp in demo_response.data if emp.get("uk_resident") is True)
             non_uk_resident = sum(1 for emp in demo_response.data if emp.get("uk_resident") is False)
             

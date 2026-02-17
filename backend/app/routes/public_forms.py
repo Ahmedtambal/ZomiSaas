@@ -423,18 +423,18 @@ async def submit_form(token: str, submission_data: Dict[str, Any], request: Requ
                 "title": submission_data.get("title"),
                 "first_name": submission_data.get("forename"),
                 "surname": submission_data.get("surname"),
-                "ni_number": submission_data.get("nationalInsuranceNumber"),
+                "ni_number": submission_data.get("niNumber") or submission_data.get("nationalInsuranceNumber"),  # Handle both formats
                 "email_address": submission_data.get("emailAddress"),  # NEW: Email Address
                 "mobile_number": submission_data.get("contactNumber"),  # NEW: Contact Number
                 "date_of_birth": submission_data.get("dateOfBirth"),
-                "gender": submission_data.get("gender"),
+                "legal_gender": submission_data.get("sex") or submission_data.get("gender"),  # Handle both 'sex' (SW form) and 'gender' (standard form)
                 "marital_status": submission_data.get("maritalStatus"),
                 
-                # Address
-                "address_line_1": submission_data.get("addressLine1"),
-                "address_line_2": submission_data.get("addressLine2"),
-                "address_line_3": submission_data.get("addressLine3"),
-                "address_line_4": submission_data.get("addressLine4"),
+                # Address (handle both 'address1' (SW form) and 'addressLine1' (standard form))
+                "address_line_1": submission_data.get("address1") or submission_data.get("addressLine1"),
+                "address_line_2": submission_data.get("address2") or submission_data.get("addressLine2"),
+                "address_line_3": submission_data.get("address3") or submission_data.get("addressLine3"),
+                "address_line_4": submission_data.get("address4") or submission_data.get("addressLine4"),
                 "postcode": submission_data.get("postcode"),
                 "uk_resident": submission_data.get("ukResident") == "Yes" if submission_data.get("ukResident") else None,
                 "nationality": submission_data.get("nationality"),
@@ -443,7 +443,7 @@ async def submit_form(token: str, submission_data: Dict[str, Any], request: Requ
                 "job_title": submission_data.get("jobTitle"),  # NEW: Job Title
                 "pensionable_salary": submission_data.get("salary"),
                 "employment_start_date": submission_data.get("employmentStartDate"),
-                "selected_retirement_age": submission_data.get("selectedRetirementAge"),
+                "other": submission_data.get("other"),
                 "pension_investment_approach": submission_data.get("pensionInvestmentApproach"),
                 
                 # Auto-filled from company data
