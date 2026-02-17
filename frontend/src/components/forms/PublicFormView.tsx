@@ -117,22 +117,38 @@ export const PublicFormView: React.FC<PublicFormViewProps> = ({ token }) => {
     const fields = form.formData?.fields || [];
 
     fields.forEach((field: any) => {
-      if (field.required && !formData[field.name]) {
-        newErrors[field.name] = `${field.label} is required`;
+      const value = formData[field.name];
+      
+      // Check required fields
+      if (field.required) {
+        // Check for empty, null, undefined
+        if (value === undefined || value === null || value === '') {
+          newErrors[field.name] = `${field.label} is required`;
+        }
+        // Check for empty arrays (multi-select)
+        else if (Array.isArray(value) && value.length === 0) {
+          newErrors[field.name] = `${field.label} is required`;
+        }
+        // Check for whitespace-only strings
+        else if (typeof value === 'string' && value.trim() === '') {
+          newErrors[field.name] = `${field.label} is required`;
+        }
       }
 
-      if (field.pattern && formData[field.name]) {
+      // Pattern validation (only if value exists)
+      if (field.pattern && value) {
         const regex = new RegExp(field.pattern);
-        if (!regex.test(formData[field.name])) {
+        if (!regex.test(value)) {
           newErrors[field.name] = `Invalid format for ${field.label}`;
         }
       }
 
-      if (field.min !== undefined && formData[field.name] < field.min) {
+      // Min/Max validation for numbers
+      if (field.min !== undefined && value !== undefined && value !== '' && value < field.min) {
         newErrors[field.name] = `${field.label} must be at least ${field.min}`;
       }
 
-      if (field.max !== undefined && formData[field.name] > field.max) {
+      if (field.max !== undefined && value !== undefined && value !== '' && value > field.max) {
         newErrors[field.name] = `${field.label} must be at most ${field.max}`;
       }
     });
@@ -146,6 +162,14 @@ export const PublicFormView: React.FC<PublicFormViewProps> = ({ token }) => {
 
     if (!validateForm() || !token) {
       setError('Please fill in all required fields correctly');
+      // Scroll to first error
+      const firstErrorField = Object.keys(errors)[0];
+      if (firstErrorField) {
+        const element = document.querySelector(`[name="${firstErrorField}"]`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }
       return;
     }
 
@@ -157,7 +181,10 @@ export const PublicFormView: React.FC<PublicFormViewProps> = ({ token }) => {
       setSubmissionId(result.submission_id);
       setSubmitted(true);
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to submit form');
+      const errorMsg = err.response?.data?.detail || err.message || 'Failed to submit form';
+      setError(`Submission failed: ${errorMsg}`);
+      // Scroll to error message
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally {
       setSubmitting(false);
     }
@@ -193,6 +220,7 @@ export const PublicFormView: React.FC<PublicFormViewProps> = ({ token }) => {
               {field.label} {field.required && <span className="text-red-500">*</span>}
             </label>
             <select
+              name={field.name}
               value={formData[field.name] || ''}
               onChange={(e) => handleInputChange(field.name, e.target.value)}
               className={`${baseInputClasses} ${errorClasses}`}
@@ -214,8 +242,7 @@ export const PublicFormView: React.FC<PublicFormViewProps> = ({ token }) => {
             <label className="block text-gray-800 font-medium">
               {field.label} {field.required && <span className="text-red-500">*</span>}
             </label>
-            <textarea
-              value={formData[field.name] || ''}
+            <textarea              name={field.name}              value={formData[field.name] || ''}
               onChange={(e) => handleInputChange(field.name, e.target.value)}
               placeholder={field.placeholder}
               rows={4}
@@ -230,6 +257,7 @@ export const PublicFormView: React.FC<PublicFormViewProps> = ({ token }) => {
           <div key={field.name} className="flex items-center space-x-3">
             <input
               type="checkbox"
+              name={field.name}
               checked={formData[field.name] || false}
               onChange={(e) => handleInputChange(field.name, e.target.checked)}
               className="w-5 h-5 rounded border-gray-300 text-[#38b000] focus:ring-2 focus:ring-[#38b000]"
@@ -247,12 +275,13 @@ export const PublicFormView: React.FC<PublicFormViewProps> = ({ token }) => {
             <label className="block text-gray-800 font-medium">
               {field.label} {field.required && <span className="text-red-500">*</span>}
             </label>
-            <div className="space-y-2 bg-white/60 backdrop-blur-sm border border-gray-300 rounded-lg px-4 py-3">
-              {field.options?.map((option: string) => (
+            <div className={`space-y-2 bg-white/60 backdrop-blur-sm border rounded-lg px-4 py-3 ${hasError ? 'border-red-500 ring-2 ring-red-500/50' : 'border-gray-300'}`}>
+              {field.options?.map((option: string, index: number) => (
                 <div key={option} className="flex items-center space-x-3">
                   <input
                     type="checkbox"
                     id={`${field.name}-${option}`}
+                    name={index === 0 ? field.name : undefined}
                     checked={(formData[field.name] || []).includes(option)}
                     onChange={(e) => {
                       const currentValues = formData[field.name] || [];
@@ -282,6 +311,7 @@ export const PublicFormView: React.FC<PublicFormViewProps> = ({ token }) => {
             </label>
             <input
               type={field.type}
+              name={field.name}
               value={formData[field.name] || ''}
               onChange={(e) => handleInputChange(field.name, e.target.value)}
               placeholder={field.placeholder}
@@ -377,40 +407,47 @@ export const PublicFormView: React.FC<PublicFormViewProps> = ({ token }) => {
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="bg-white/60 backdrop-blur-xl rounded-2xl p-8 mb-6 shadow-lg border border-white/40">
-          {/* Logo and Privacy Notice */}
+          {/* Logo and Form Title */}
           <div className="flex flex-col items-center mb-6">
             <img
               src="/whiteleaf%20group/whiteleaf.png"
               alt="WhiteLeaf"
-              className="w-56 max-w-full h-auto mb-4"
+              className="w-56 max-w-full h-auto mb-6"
               loading="eager"
               fetchPriority="high"
               onError={(e) => {
                 e.currentTarget.src = '/whiteleaf%20group/Whiteleaf%20Logo%20-%20New.png';
               }}
             />
+            
+            {/* Form Title */}
+            <h1 className="text-4xl font-bold text-gray-900 mb-3 text-center">{form?.name || 'Form'}</h1>
+            
+            {/* Description based on form type */}
             <div className="text-center text-sm text-gray-700 space-y-2 max-w-2xl">
-              <p className="font-medium">Please complete with the employee details and the change so we can update our records</p>
+              {form?.templateType === 'change_information_upload' ? (
+                <p className="font-medium text-base">Please complete with the employee details and the change so we can update our records</p>
+              ) : (
+                <p className="font-medium text-base">Please complete for each new employee as soon as they start working for you.</p>
+              )}
               <p className="text-gray-600 text-xs">When you submit this form, it will not automatically collect your details like name and email address unless you provide it yourself.</p>
             </div>
+            
+            {/* Company Badge */}
+            {company && (
+              <div className="mt-4 flex items-center gap-2 text-gray-800 bg-[#c7f9cc]/40 px-4 py-2 rounded-lg">
+                <Building2 className="w-5 h-5 text-[#38b000]" />
+                <span className="font-medium">{company.name}</span>
+              </div>
+            )}
           </div>
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <h1 className="text-4xl font-bold text-gray-900 mb-3">{form?.name}</h1>
-              {form?.description && (
-                <p className="text-gray-700 text-lg leading-relaxed">{form.description}</p>
-              )}
-              {company && (
-                <div className="mt-4 flex items-center gap-2 text-gray-800 bg-[#c7f9cc]/40 px-4 py-2 rounded-lg inline-flex">
-                  <Building2 className="w-5 h-5 text-[#38b000]" />
-                  <span className="font-medium">{company.name}</span>
-                </div>
-              )}
-            </div>
+          
+          {/* Submission and Timer Info */}
+          <div className="flex items-center justify-center gap-6 mb-6">
             {tokenInfo && (
-              <div className="text-right ml-4">
+              <>
                 {tokenInfo.max_submissions && (
-                  <div className="flex items-center gap-2 text-gray-700 text-sm mb-2">
+                  <div className="flex items-center gap-2 text-gray-700 text-sm">
                     <Users className="w-4 h-4" />
                     <span>{tokenInfo.submission_count} / {tokenInfo.max_submissions} submissions</span>
                   </div>
@@ -427,7 +464,7 @@ export const PublicFormView: React.FC<PublicFormViewProps> = ({ token }) => {
                     </span>
                   </div>
                 )}
-              </div>
+              </>
             )}
           </div>
         </div>

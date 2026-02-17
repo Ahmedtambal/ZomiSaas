@@ -37,7 +37,7 @@ class IOUploadMember(BaseModel):
     # Employment
     salary: Optional[Decimal] = None
     employment_start_date: Optional[date] = None
-    other: Optional[int] = None
+    other: Optional[str] = None
     section_number: Optional[str] = None
     
     # Pension Information
@@ -99,7 +99,7 @@ class NewEmployeeMember(BaseModel):
     # Employment
     salary: Optional[Decimal] = None
     employment_start_date: Optional[date] = None
-    other: Optional[int] = None
+    other: Optional[str] = None
     section_number: Optional[str] = None
     
     # Pension

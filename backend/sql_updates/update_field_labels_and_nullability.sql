@@ -13,24 +13,65 @@
 -- EMPLOYEES TABLE
 -- ====================
 
--- Step 1: Drop foreign key constraint on gender (will be recreated)
-ALTER TABLE public.employees 
-DROP CONSTRAINT IF EXISTS employees_gender_fkey;
+-- Check if columns already have the new names
+DO $$ 
+BEGIN
+    -- Only rename gender to legal_gender if gender exists and legal_gender doesn't
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'employees' AND column_name = 'gender'
+    ) AND NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'employees' AND column_name = 'legal_gender'
+    ) THEN
+        -- Step 1: Drop foreign key constraint on gender (will be recreated)
+        ALTER TABLE public.employees DROP CONSTRAINT IF EXISTS employees_gender_fkey;
+        
+        -- Step 2: Rename gender column to legal_gender
+        ALTER TABLE public.employees RENAME COLUMN gender TO legal_gender;
+        
+        -- Step 3: Recreate foreign key constraint with new column name
+        ALTER TABLE public.employees 
+        ADD CONSTRAINT employees_legal_gender_fkey 
+        FOREIGN KEY (legal_gender) REFERENCES lookup_genders (value);
+        
+        RAISE NOTICE 'Renamed gender to legal_gender';
+    ELSE
+        RAISE NOTICE 'Column gender already renamed or legal_gender already exists';
+    END IF;
 
--- Step 2: Rename gender column to legal_gender
-ALTER TABLE public.employees 
-RENAME COLUMN gender TO legal_gender;
+    -- Only rename selected_retirement_age to other if it exists and other doesn't
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'employees' AND column_name = 'selected_retirement_age'
+    ) AND NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'employees' AND column_name = 'other'
+    ) THEN
+        -- Step 4: Rename selected_retirement_age to other
+        ALTER TABLE public.employees RENAME COLUMN selected_retirement_age TO other;
+        
+        RAISE NOTICE 'Renamed selected_retirement_age to other';
+    ELSE
+        RAISE NOTICE 'Column selected_retirement_age already renamed or other already exists';
+    END IF;
 
--- Step 3: Recreate foreign key constraint with new column name
-ALTER TABLE public.employees 
-ADD CONSTRAINT employees_legal_gender_fkey 
-FOREIGN KEY (legal_gender) REFERENCES lookup_genders (value);
+    -- Change other column type to TEXT if it exists and is not already TEXT
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'employees' AND column_name = 'other' 
+        AND data_type != 'text'
+    ) THEN
+        -- Step 4b: Change other column type from INTEGER to TEXT for free-form input
+        ALTER TABLE public.employees ALTER COLUMN other TYPE TEXT USING other::TEXT;
+        
+        RAISE NOTICE 'Changed other column type to TEXT';
+    ELSE
+        RAISE NOTICE 'Column other is already TEXT type or does not exist';
+    END IF;
+END $$;
 
--- Step 4: Rename selected_retirement_age to other
-ALTER TABLE public.employees 
-RENAME COLUMN selected_retirement_age TO other;
-
--- Step 5: Add column comments
+-- Step 5: Add column comments (safe to run multiple times)
 COMMENT ON COLUMN public.employees.legal_gender IS 
 'Legal Gender of the employee. Form label: "Legal Gender". Required field. Values: Male, Female, Other, Prefer not to say. References lookup_genders table.';
 
@@ -38,9 +79,9 @@ COMMENT ON COLUMN public.employees.nationality IS
 'Nationality of the employee. Form label: "Nationality". Optional field. References lookup_nationalities table.';
 
 COMMENT ON COLUMN public.employees.other IS 
-'Other information (previously retirement age). Form label: "Other". Optional field. Integer value.';
+'Other information (previously retirement age). Form label: "Other". Optional field. Text value for free-form input.';
 
--- Step 6: Update any indexes that reference the old column names
+-- Step 6: Update any indexes that reference the old column names (safe to run multiple times)
 DROP INDEX IF EXISTS idx_employees_gender;
 CREATE INDEX IF NOT EXISTS idx_employees_legal_gender ON public.employees USING btree (legal_gender);
 
