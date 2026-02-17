@@ -204,7 +204,7 @@ async def refresh_form_template(
                 {"name": "addressLine4", "label": "Address 4", "type": "text", "required": False},
                 {"name": "postcode", "label": "Postcode", "type": "text", "required": True},
                 {"name": "ukResident", "label": "UK Resident", "type": "select", "required": True, "options": ["Yes", "No"]},
-                {"name": "nationality", "label": "Nationality", "type": "text", "required": False},
+                {"name": "nationality", "label": "Nationality", "type": "searchable-select", "required": False, "options": ["British", "Irish", "Other EU", "American", "Canadian", "Australian", "Indian", "Pakistani", "Bangladeshi", "Chinese", "Filipino", "Nigerian", "South African", "Other"]},
                 {"name": "salary", "label": "Salary", "type": "number", "required": True},
                 {"name": "employmentStartDate", "label": "Employment Start Date", "type": "date", "required": True},
                 {"name": "other", "label": "Other", "type": "text", "required": False},
