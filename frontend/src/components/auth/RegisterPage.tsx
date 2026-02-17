@@ -123,6 +123,8 @@ export const RegisterPage = () => {
               src="/whiteleaf%20group/whiteleaf.png"
               alt="WhiteLeaf"
               className="w-64 max-w-full h-auto mb-4"
+              loading="eager"
+              fetchPriority="high"
               onError={(e) => {
                 e.currentTarget.src = '/whiteleaf%20group/Whiteleaf%20Logo%20-%20New.png';
               }}
@@ -165,6 +167,8 @@ export const RegisterPage = () => {
             src="/whiteleaf%20group/whiteleaf.png"
             alt="WhiteLeaf"
             className="w-64 max-w-full h-auto mb-4"
+            loading="eager"
+            fetchPriority="high"
             onError={(e) => {
               e.currentTarget.src = '/whiteleaf%20group/Whiteleaf%20Logo%20-%20New.png';
             }}

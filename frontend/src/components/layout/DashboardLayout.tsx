@@ -61,6 +61,8 @@ export const DashboardLayout = ({ children, currentPage }: DashboardLayoutProps)
                   src="/whiteleaf%20group/whiteleaf.png"
                   alt="WhiteLeaf"
                   className="h-10 w-auto max-w-full"
+                  loading="eager"
+                  fetchPriority="high"
                   onError={(e) => {
                     e.currentTarget.src = '/whiteleaf%20group/Whiteleaf%20Logo%20-%20New.png';
                   }}
@@ -72,6 +74,8 @@ export const DashboardLayout = ({ children, currentPage }: DashboardLayoutProps)
                 src="/whiteleaf%20group/whiteleaf.png"
                 alt="WhiteLeaf"
                 className="h-10 w-auto mx-auto max-w-full"
+                loading="eager"
+                fetchPriority="high"
                 onError={(e) => {
                   e.currentTarget.src = '/whiteleaf%20group/Whiteleaf%20Logo%20-%20New.png';
                 }}
@@ -148,7 +152,7 @@ export const DashboardLayout = ({ children, currentPage }: DashboardLayoutProps)
       </aside>
 
       {/* MAIN CONTENT - WITH SIDEBAR OFFSET */}
-      <div className={`flex-1 flex flex-col min-h-screen transition-all duration-300 ${isSidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'}`}>
+      <div className={`flex-1 flex flex-col min-h-screen transition-all duration-300 ${isSidebarCollapsed ? 'lg:ml-44' : 'lg:ml-64'}`}>
         <header className="glass-panel border-b border-white/30 px-6 py-4 lg:hidden">
           <button
             onClick={() => setIsMobileMenuOpen(true)}

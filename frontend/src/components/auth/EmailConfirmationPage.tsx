@@ -62,6 +62,8 @@ export const EmailConfirmationPage = ({ email, onBackToLogin }: EmailConfirmatio
                 src="/whiteleaf%20group/whiteleaf.png"
                 alt="WhiteLeaf"
                 className="w-14 h-auto"
+                loading="eager"
+                fetchPriority="high"
                 onError={(e) => {
                   e.currentTarget.src = '/whiteleaf%20group/Whiteleaf%20Logo%20-%20New.png';
                 }}
