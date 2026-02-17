@@ -14,8 +14,8 @@ export interface ChangeInformation {
   new_name?: string;
   new_address?: string;
   new_salary?: string;
-  update_employee_contribution?: boolean;
   new_employee_contribution?: string;
+  new_employer_contribution?: string;
   source_form_id: string;
   submission_token?: string;
   submitted_via: string;
@@ -38,8 +38,8 @@ export interface CreateChangeInformationDto {
   new_name?: string;
   new_address?: string;
   new_salary?: string;
-  update_employee_contribution?: boolean;
   new_employee_contribution?: string;
+  new_employer_contribution?: string;
   source_form_id: string;
 }
 
@@ -53,8 +53,8 @@ export interface UpdateChangeInformationDto {
   new_name?: string;
   new_address?: string;
   new_salary?: string;
-  update_employee_contribution?: boolean;
   new_employee_contribution?: string;
+  new_employer_contribution?: string;
   processing_status?: string;
 }
 

@@ -71,6 +71,12 @@ async def get_change_information(current_user: dict = Depends(get_current_user))
                 except Exception as e:
                     logger.warning(f"Failed to decrypt new_employee_contribution: {str(e)}")
             
+            if item.get("new_employer_contribution"):
+                try:
+                    item["new_employer_contribution"] = encryption.decrypt(item["new_employer_contribution"])
+                except Exception as e:
+                    logger.warning(f"Failed to decrypt new_employer_contribution: {str(e)}")
+            
             change_requests.append(item)
         
         return change_requests
@@ -187,6 +193,12 @@ async def get_change_information_by_id(
                 change_request["new_employee_contribution"] = encryption.decrypt(change_request["new_employee_contribution"])
             except Exception as e:
                 logger.warning(f"Failed to decrypt new_employee_contribution: {str(e)}")
+        
+        if change_request.get("new_employer_contribution"):
+            try:
+                change_request["new_employer_contribution"] = encryption.decrypt(change_request["new_employer_contribution"])
+            except Exception as e:
+                logger.warning(f"Failed to decrypt new_employer_contribution: {str(e)}")
         
         return change_request
         

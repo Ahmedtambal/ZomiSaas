@@ -40,12 +40,12 @@ const CHANGE_INFORMATION_TEMPLATE = {
     { name: 'surname', label: 'Surname', type: 'text', required: true },
     { name: 'dateOfBirth', label: 'Date of Birth', type: 'date', required: true },
     { name: 'dateOfEffect', label: 'Date of Effect for the Change', type: 'date', required: true },
-    { name: 'changeType', label: 'What is the Change?', type: 'multi-select', required: true, options: ['Leaver', 'Maternity Leave', 'Died', 'Change of Name', 'Change of Address', 'Change of Salary', 'Other'] },
+    { name: 'changeType', label: 'What is the Change?', type: 'multi-select', required: true, options: ['Leaver', 'Maternity Leave', 'Died', 'Change of Name', 'Change of Address', 'Change of Salary', 'Update Employee Contribution', 'Update Employer Contribution', 'Other'] },
     { name: 'newName', label: 'New Name', type: 'text', required: false },
     { name: 'newAddress', label: 'New Postal Address', type: 'textarea', required: false },
     { name: 'newSalary', label: 'New Salary', type: 'text', required: false },
-    { name: 'updateEmployeeContribution', label: 'Update Employee Contribution', type: 'checkbox', required: false },
     { name: 'newEmployeeContribution', label: 'New Employee Contribution', type: 'text', required: false },
+    { name: 'newEmployerContribution', label: 'New Employer Contribution', type: 'text', required: false },
     { name: 'otherReason', label: 'Please explain (for Other)', type: 'text', required: false },
   ]
 };

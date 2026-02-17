@@ -284,8 +284,8 @@ async def submit_form(token: str, submission_data: Dict[str, Any], request: Requ
                 "new_name": encryption.encrypt(submission_data.get("newName")) if submission_data.get("newName") else None,
                 "new_address": encryption.encrypt(submission_data.get("newAddress")) if submission_data.get("newAddress") else None,
                 "new_salary": encryption.encrypt(submission_data.get("newSalary")) if submission_data.get("newSalary") else None,
-                "update_employee_contribution": submission_data.get("updateEmployeeContribution", False),
                 "new_employee_contribution": encryption.encrypt(submission_data.get("newEmployeeContribution")) if submission_data.get("newEmployeeContribution") else None,
+                "new_employer_contribution": encryption.encrypt(submission_data.get("newEmployerContribution")) if submission_data.get("newEmployerContribution") else None,
                 
                 # Tracking
                 "submission_token": token,
@@ -338,6 +338,7 @@ async def submit_form(token: str, submission_data: Dict[str, Any], request: Requ
                             "new_address": submission_data.get("newAddress"),
                             "new_salary": submission_data.get("newSalary"),
                             "new_employee_contribution": submission_data.get("newEmployeeContribution"),
+                            "new_employer_contribution": submission_data.get("newEmployerContribution"),
                             "other_reason": submission_data.get("otherReason")
                         },
                         company["name"],

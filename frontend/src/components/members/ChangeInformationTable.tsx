@@ -83,8 +83,8 @@ const generateColumnsFromData = (records: ChangeInformation[]): ColumnDefinition
     new_name: 'New Name',
     new_address: 'New Address',
     new_salary: 'New Salary',
-    update_employee_contribution: 'Update EE Contribution',
     new_employee_contribution: 'New EE Contribution',
+    new_employer_contribution: 'New ER Contribution',
     submission_token: 'Submission Token',
     submitted_via: 'Submitted Via',
     ip_address: 'IP Address',
@@ -225,7 +225,7 @@ export const ChangeInformationTable = ({ databaseType, onBack }: ChangeInformati
         // Define desired column order for new fields (before submission_token)
         const priorityOrder = [
           'first_name', 'surname', 'date_of_birth', 'date_of_effect', 'change_type', 'other_reason',
-          'new_name', 'new_address', 'new_salary', 'update_employee_contribution', 'new_employee_contribution',
+          'new_name', 'new_address', 'new_salary', 'new_employee_contribution', 'new_employer_contribution',
           'submission_token', 'submitted_via', 'ip_address', 'user_agent', 'processing_status', 'created_at', 'updated_at'
         ];
         

@@ -30,6 +30,8 @@ export const PublicFormView: React.FC<PublicFormViewProps> = ({ token }) => {
   const [error, setError] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [submissionId, setSubmissionId] = useState('');
+  const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
+  const [isExpired, setIsExpired] = useState(false);
 
   useEffect(() => {
     const loadForm = async () => {
@@ -63,6 +65,39 @@ export const PublicFormView: React.FC<PublicFormViewProps> = ({ token }) => {
 
     loadForm();
   }, [token]);
+
+  // Countdown timer effect
+  useEffect(() => {
+    if (!tokenInfo?.expires_at) return;
+
+    const updateCountdown = () => {
+      const now = new Date().getTime();
+      const expiryTime = new Date(tokenInfo.expires_at!).getTime();
+      const diff = expiryTime - now;
+
+      if (diff <= -10000) {
+        // 10 seconds grace period has passed
+        setIsExpired(true);
+        return;
+      }
+
+      if (diff <= 0) {
+        // In grace period (0 to -10 seconds)
+        setTimeRemaining(0);
+      } else {
+        // Still valid
+        setTimeRemaining(Math.floor(diff / 1000)); // Convert to seconds
+      }
+    };
+
+    // Update immediately
+    updateCountdown();
+
+    // Update every second
+    const interval = setInterval(updateCountdown, 1000);
+
+    return () => clearInterval(interval);
+  }, [tokenInfo]);
 
   const handleInputChange = (fieldName: string, value: any) => {
     setFormData(prev => ({ ...prev, [fieldName]: value }));
@@ -307,28 +342,35 @@ export const PublicFormView: React.FC<PublicFormViewProps> = ({ token }) => {
     );
   }
 
-  // Helper function to format expiry time
-  const formatExpiryTime = (expiresAt: string): string => {
-    const now = new Date();
-    const expiryDate = new Date(expiresAt);
-    const diffMs = expiryDate.getTime() - now.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMins / 60);
-    const diffDays = Math.floor(diffHours / 24);
+  // Helper function to format countdown time
+  const formatCountdown = (seconds: number | null): string => {
+    if (seconds === null) return 'Loading...';
+    if (seconds <= 0) return 'Expiring...';
 
-    // If less than 1 day away, show relative time
-    if (diffDays === 0) {
-      if (diffHours > 0) {
-        return `Expires in ${diffHours} hour${diffHours > 1 ? 's' : ''}`;
-      } else if (diffMins > 0) {
-        return `Expires in ${diffMins} min${diffMins > 1 ? 's' : ''}`;
-      } else {
-        return 'Expires soon';
-      }
-    }
-    // Otherwise show date
-    return `Expires: ${expiryDate.toLocaleDateString()}`;
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
+
+  // Show expired message
+  if (isExpired) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#fefae0] to-white flex items-center justify-center p-6 font-['Inter',_'Roboto',_sans-serif]">
+        <div className="bg-white/60 backdrop-blur-xl rounded-2xl p-8 max-w-md w-full text-center shadow-lg border border-white/40">
+          <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <AlertCircle className="w-12 h-12 text-red-600" />
+          </div>
+          <h2 className="text-3xl font-bold text-gray-900 mb-3">Form Expired</h2>
+          <p className="text-gray-700 mb-4 text-lg">
+            Sorry, this form has expired.
+          </p>
+          <p className="text-gray-600 text-sm">
+            Please ask the team for a new link.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#fefae0] to-white p-6 font-['Inter',_'Roboto',_sans-serif]">
@@ -373,10 +415,16 @@ export const PublicFormView: React.FC<PublicFormViewProps> = ({ token }) => {
                     <span>{tokenInfo.submission_count} / {tokenInfo.max_submissions} submissions</span>
                   </div>
                 )}
-                {tokenInfo.expires_at && (
-                  <div className="flex items-center gap-2 text-gray-700 text-sm">
+                {tokenInfo.expires_at && timeRemaining !== null && (
+                  <div className="flex items-center gap-2 text-sm">
                     <Calendar className="w-4 h-4" />
-                    <span>{formatExpiryTime(tokenInfo.expires_at)}</span>
+                    <span className={`font-mono font-semibold ${
+                      timeRemaining <= 60 ? 'text-red-600 animate-pulse' : 
+                      timeRemaining <= 300 ? 'text-orange-600' : 
+                      'text-gray-700'
+                    }`}>
+                      {formatCountdown(timeRemaining)}
+                    </span>
                   </div>
                 )}
               </div>
@@ -427,9 +475,18 @@ export const PublicFormView: React.FC<PublicFormViewProps> = ({ token }) => {
                 }
               }
               
-              // Hide newEmployeeContribution field unless updateEmployeeContribution checkbox is checked
+              // Hide newEmployeeContribution field unless "Update Employee Contribution" is selected in changeType
               if (field.name === 'newEmployeeContribution') {
-                if (!formData['updateEmployeeContribution']) {
+                const changeTypeValues = formData['changeType'] || [];
+                if (!changeTypeValues.includes('Update Employee Contribution')) {
+                  return null;
+                }
+              }
+              
+              // Hide newEmployerContribution field unless "Update Employer Contribution" is selected in changeType
+              if (field.name === 'newEmployerContribution') {
+                const changeTypeValues = formData['changeType'] || [];
+                if (!changeTypeValues.includes('Update Employer Contribution')) {
                   return null;
                 }
               }
