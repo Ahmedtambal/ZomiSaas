@@ -243,6 +243,15 @@ export const MembersTable = ({ databaseType, onBack }: MembersTableProps) => {
       // Generate columns dynamically from the first employee
       if (sortedEmployees.length > 0) {
         const dynamicColumns = generateColumnsFromData(sortedEmployees);
+        
+        // Reorder: Move company_name to 3rd position (index 2)
+        const companyColIndex = dynamicColumns.findIndex(c => c.id === 'company_name');
+        if (companyColIndex !== -1 && companyColIndex !== 2) {
+          const companyCol = dynamicColumns[companyColIndex];
+          dynamicColumns.splice(companyColIndex, 1); // Remove from current position
+          dynamicColumns.splice(2, 0, companyCol); // Insert at index 2 (3rd position)
+        }
+        
         setColumnOrder(dynamicColumns);
       }
     } catch (err: any) {
@@ -675,26 +684,30 @@ export const MembersTable = ({ databaseType, onBack }: MembersTableProps) => {
       );
     }
 
+    // For checkbox columns, render directly without clickable wrapper
+    if (column.type === 'checkbox') {
+      return (
+        <div className="flex justify-center px-2 py-1">
+          <input
+            type="checkbox"
+            checked={!!((member as any)[column.id])}
+            onChange={(e) => {
+              e.stopPropagation();
+              handleCellSave(member.id, column.id, e.target.checked.toString());
+            }}
+            className="w-4 h-4 accent-zomi-green cursor-pointer"
+          />
+        </div>
+      );
+    }
+
+    // For all other columns, wrap in clickable div
     return (
       <div
         onClick={() => handleCellEdit(member.id, column.id)}
         className={`cursor-pointer hover:bg-slate-100 px-2 py-1 rounded ${column.editable ? 'hover:bg-blue-50' : ''} ${hasError ? 'bg-red-50' : ''}`}
       >
-        {column.type === 'checkbox' ? (
-          <div className="flex justify-center">
-            <input
-              type="checkbox"
-              checked={!!((member as any)[column.id])}
-              onChange={(e) => {
-                e.stopPropagation();
-                handleCellSave(member.id, column.id, e.target.checked.toString());
-              }}
-              className="w-4 h-4 accent-zomi-green cursor-pointer"
-            />
-          </div>
-        ) : (
-          getCellValue(member, column.id)
-        )}
+        {getCellValue(member, column.id)}
       </div>
     );
   };
@@ -855,7 +868,7 @@ export const MembersTable = ({ databaseType, onBack }: MembersTableProps) => {
             >
                     <thead className="bg-slate-50 border-b border-slate-200">
                       <tr>
-                        <th className="text-left p-4 bg-white sticky left-0 z-10 border-r border-slate-200 shadow-[2px_0_4px_rgba(0,0,0,0.05)]">
+                        <th className="text-left p-4 bg-slate-50 sticky left-0 z-20 border-r border-slate-200 shadow-[2px_0_4px_rgba(0,0,0,0.1)]">
                           <input
                             type="checkbox"
                             checked={selectedRows.size === paginatedMembers.length && paginatedMembers.length > 0}
@@ -885,7 +898,7 @@ export const MembersTable = ({ databaseType, onBack }: MembersTableProps) => {
                           key={member.id}
                           className="border-b border-slate-100 hover:bg-slate-50 transition-colors"
                         >
-                          <td className="p-4 bg-white sticky left-0 z-5 border-r border-slate-200 shadow-[2px_0_4px_rgba(0,0,0,0.05)]">
+                          <td className="p-4 bg-white sticky left-0 z-10 border-r border-slate-200 shadow-[2px_0_4px_rgba(0,0,0,0.1)]">
                             <input
                               type="checkbox"
                               checked={selectedRows.has(member.id)}

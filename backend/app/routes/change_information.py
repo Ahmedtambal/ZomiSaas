@@ -11,6 +11,7 @@ import csv
 
 from app.services.database_service import db_service
 from app.services.audit_service import audit_service
+from app.services.encryption_service import get_encryption_service
 from app.routes.auth import get_current_user
 
 router = APIRouter()
@@ -22,6 +23,7 @@ async def get_change_information(current_user: dict = Depends(get_current_user))
     """
     Get all change of information requests for the user's organization
     Includes company name from companies table
+    Decrypts sensitive fields (new_name, new_address, new_salary, new_employee_contribution)
     """
     try:
         organization_id = current_user["organization_id"]
@@ -33,13 +35,42 @@ async def get_change_information(current_user: dict = Depends(get_current_user))
             "organization_id", organization_id
         ).order("created_at", desc=True).execute()
         
-        # Extract company name from nested object
+        # Get encryption service for decrypting sensitive fields
+        encryption = get_encryption_service()
+        
+        # Extract company name from nested object and decrypt sensitive fields
         change_requests = []
         for item in response.data:
             if item.get("companies"):
                 item["company_name"] = item["companies"].get("name")
                 # Remove nested companies object to keep response clean
                 del item["companies"]
+            
+            # Decrypt encrypted fields if they exist
+            if item.get("new_name"):
+                try:
+                    item["new_name"] = encryption.decrypt(item["new_name"])
+                except Exception as e:
+                    logger.warning(f"Failed to decrypt new_name: {str(e)}")
+            
+            if item.get("new_address"):
+                try:
+                    item["new_address"] = encryption.decrypt(item["new_address"])
+                except Exception as e:
+                    logger.warning(f"Failed to decrypt new_address: {str(e)}")
+            
+            if item.get("new_salary"):
+                try:
+                    item["new_salary"] = encryption.decrypt(item["new_salary"])
+                except Exception as e:
+                    logger.warning(f"Failed to decrypt new_salary: {str(e)}")
+            
+            if item.get("new_employee_contribution"):
+                try:
+                    item["new_employee_contribution"] = encryption.decrypt(item["new_employee_contribution"])
+                except Exception as e:
+                    logger.warning(f"Failed to decrypt new_employee_contribution: {str(e)}")
+            
             change_requests.append(item)
         
         return change_requests
@@ -123,11 +154,39 @@ async def get_change_information_by_id(
                 detail="Change information request not found"
             )
         
+        # Get encryption service for decrypting sensitive fields
+        encryption = get_encryption_service()
+        
         # Extract company name
         change_request = response.data
         if change_request.get("companies"):
             change_request["company_name"] = change_request["companies"].get("name")
             del change_request["companies"]
+        
+        # Decrypt encrypted fields if they exist
+        if change_request.get("new_name"):
+            try:
+                change_request["new_name"] = encryption.decrypt(change_request["new_name"])
+            except Exception as e:
+                logger.warning(f"Failed to decrypt new_name: {str(e)}")
+        
+        if change_request.get("new_address"):
+            try:
+                change_request["new_address"] = encryption.decrypt(change_request["new_address"])
+            except Exception as e:
+                logger.warning(f"Failed to decrypt new_address: {str(e)}")
+        
+        if change_request.get("new_salary"):
+            try:
+                change_request["new_salary"] = encryption.decrypt(change_request["new_salary"])
+            except Exception as e:
+                logger.warning(f"Failed to decrypt new_salary: {str(e)}")
+        
+        if change_request.get("new_employee_contribution"):
+            try:
+                change_request["new_employee_contribution"] = encryption.decrypt(change_request["new_employee_contribution"])
+            except Exception as e:
+                logger.warning(f"Failed to decrypt new_employee_contribution: {str(e)}")
         
         return change_request
         

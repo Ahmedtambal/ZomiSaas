@@ -310,6 +310,22 @@ export const PublicFormView: React.FC<PublicFormViewProps> = ({ token }) => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#fefae0] to-white p-6 font-['Inter',_'Roboto',_sans-serif]">
       <div className="max-w-4xl mx-auto">
+        {/* Logo and Privacy Notice */}
+        <div className="flex flex-col items-center mb-6">
+          <img
+            src="/whiteleaf%20group/whiteleaf.png"
+            alt="WhiteLeaf"
+            className="w-56 max-w-full h-auto mb-4"
+            onError={(e) => {
+              e.currentTarget.src = '/whiteleaf%20group/Whiteleaf%20Logo%20-%20New.png';
+            }}
+          />
+          <div className="text-center text-sm text-gray-700 space-y-2 max-w-2xl">
+            <p className="font-medium">Please complete with the employee details and the change so we can update our records</p>
+            <p className="text-gray-600 text-xs">When you submit this form, it will not automatically collect your details like name and email address unless you provide it yourself.</p>
+          </div>
+        </div>
+        
         {/* Header */}
         <div className="bg-white/60 backdrop-blur-xl rounded-2xl p-8 mb-6 shadow-lg border border-white/40">
           <div className="flex items-start justify-between">
@@ -362,6 +378,38 @@ export const PublicFormView: React.FC<PublicFormViewProps> = ({ token }) => {
                   return null;
                 }
               }
+              
+              // Hide newName field unless "Change of Name" is selected in changeType
+              if (field.name === 'newName') {
+                const changeTypeValues = formData['changeType'] || [];
+                if (!changeTypeValues.includes('Change of Name')) {
+                  return null;
+                }
+              }
+              
+              // Hide newAddress field unless "Change of Address" is selected in changeType
+              if (field.name === 'newAddress') {
+                const changeTypeValues = formData['changeType'] || [];
+                if (!changeTypeValues.includes('Change of Address')) {
+                  return null;
+                }
+              }
+              
+              // Hide newSalary field unless "Change of Salary" is selected in changeType
+              if (field.name === 'newSalary') {
+                const changeTypeValues = formData['changeType'] || [];
+                if (!changeTypeValues.includes('Change of Salary')) {
+                  return null;
+                }
+              }
+              
+              // Hide newEmployeeContribution field unless updateEmployeeContribution checkbox is checked
+              if (field.name === 'newEmployeeContribution') {
+                if (!formData['updateEmployeeContribution']) {
+                  return null;
+                }
+              }
+              
               return renderField(field);
             })}
           </div>

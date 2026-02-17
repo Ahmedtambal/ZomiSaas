@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 
 # Edge Function configuration from environment variables
 EDGE_FUNCTION_URL = os.getenv("EDGE_FUNCTION_URL", "")
+EDGE_FUNCTION_CHANGE_INFO_URL = os.getenv("EDGE_FUNCTION_CHANGE_INFO_URL", "")
 EDGE_FUNCTION_SECRET = os.getenv("EDGE_FUNCTION_SECRET", "")
 
 
@@ -61,6 +62,52 @@ async def notify_edge_function(employee: Dict[str, Any], company_name: str, reci
     except Exception as e:
         logger.error(f"Failed to call Edge Function: {str(e)}")
         # Don't raise - we don't want email failures to break employee creation
+
+
+async def notify_edge_function_change_info(change_record: Dict[str, Any], company_name: str, recipient_email: str):
+    """
+    Call Edge Function to send email notification for change information request.
+    
+    Args:
+        change_record: The inserted change information record
+        company_name: Name of the company
+        recipient_email: Email address to send notification to
+    """
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.post(
+                EDGE_FUNCTION_CHANGE_INFO_URL,
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {EDGE_FUNCTION_SECRET}"
+                },
+                json={
+                    "record": {
+                        "employee_name": change_record.get("employee_name"),
+                        "company_name": company_name,
+                        "recipient_email": recipient_email,
+                        "change_type": change_record.get("change_type"),
+                        "date_of_effect": change_record.get("date_of_effect"),
+                        "new_name": change_record.get("new_name"),
+                        "new_address": change_record.get("new_address"),
+                        "new_salary": change_record.get("new_salary"),
+                        "new_employee_contribution": change_record.get("new_employee_contribution"),
+                        "other_reason": change_record.get("other_reason")
+                    }
+                }
+            )
+            
+            if response.status_code == 200:
+                logger.info(f"Change notification email sent successfully for record {change_record.get('id')}")
+            else:
+                error_data = response.json() if response.text else {}
+                logger.warning(f"Edge Function returned status {response.status_code}: {error_data}")
+    
+    except httpx.TimeoutException:
+        logger.warning(f"Timeout calling Edge Function for change record {change_record.get('id')}")
+    except Exception as e:
+        logger.error(f"Failed to call Edge Function: {str(e)}")
+        # Don't raise - we don't want email failures to break change record creation
 
 
 @router.get("/forms/{token}")
@@ -214,6 +261,10 @@ async def submit_form(token: str, submission_data: Dict[str, Any], request: Requ
             # Supabase Python client sends lists as JSON strings, need to format for PostgreSQL
             change_type_pg = "{" + ",".join(f'"{item}"' for item in change_type_array) + "}"
             
+            # Get encryption service for sensitive fields
+            encryption = get_encryption_service()
+            
+            # Prepare change data with encrypted sensitive fields
             change_data = {
                 "organization_id": token_record["organization_id"],
                 "company_id": company["id"],
@@ -228,6 +279,13 @@ async def submit_form(token: str, submission_data: Dict[str, Any], request: Requ
                 "date_of_effect": submission_data.get("dateOfEffect"),
                 "change_type": change_type_pg,  # PostgreSQL array literal format
                 "other_reason": submission_data.get("otherReason"),
+                
+                # Conditional encrypted fields
+                "new_name": encryption.encrypt(submission_data.get("newName")) if submission_data.get("newName") else None,
+                "new_address": encryption.encrypt(submission_data.get("newAddress")) if submission_data.get("newAddress") else None,
+                "new_salary": encryption.encrypt(submission_data.get("newSalary")) if submission_data.get("newSalary") else None,
+                "update_employee_contribution": submission_data.get("updateEmployeeContribution", False),
+                "new_employee_contribution": encryption.encrypt(submission_data.get("newEmployeeContribution")) if submission_data.get("newEmployeeContribution") else None,
                 
                 # Tracking
                 "submission_token": token,
@@ -264,13 +322,34 @@ async def submit_form(token: str, submission_data: Dict[str, Any], request: Requ
                 except Exception as e:
                     logger.warning(f"Failed to fetch creator email: {str(e)}")
             
-            # TODO: Add email notification for change requests if needed
+            # Send email notification for change request (non-blocking)
+            if recipient_email and EDGE_FUNCTION_CHANGE_INFO_URL:
+                try:
+                    # Create employee_name from first_name and surname
+                    employee_name = f"{submission_data.get('firstName', '')} {submission_data.get('surname', '')}".strip()
+                    
+                    await notify_edge_function_change_info(
+                        {
+                            "id": change_record.get("id"),
+                            "employee_name": employee_name,
+                            "change_type": change_type_array,  # Use original array, not PG format
+                            "date_of_effect": submission_data.get("dateOfEffect"),
+                            "new_name": submission_data.get("newName"),
+                            "new_address": submission_data.get("newAddress"),
+                            "new_salary": submission_data.get("newSalary"),
+                            "new_employee_contribution": submission_data.get("newEmployeeContribution"),
+                            "other_reason": submission_data.get("otherReason")
+                        },
+                        company["name"],
+                        recipient_email
+                    )
+                except Exception as e:
+                    logger.error(f"Failed to send change notification: {str(e)}")
             
             # Get current form version
             form_version = token_record["forms"].get("version", 1)
             
-            # **ENCRYPT SUBMISSION_DATA (contains all PII)**
-            encryption = get_encryption_service()
+            # **ENCRYPT SUBMISSION_DATA (contains all PII)** - encryption service already initialized above
             encrypted_submission_data = encryption.encrypt_json(submission_data)
             logger.info(f"Encrypted submission_data for form {token_record['form_id']}")
             

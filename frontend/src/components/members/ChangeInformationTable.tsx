@@ -80,6 +80,15 @@ const generateColumnsFromData = (records: ChangeInformation[]): ColumnDefinition
     date_of_effect: 'Date of Effect',
     change_type: 'Change Type',
     other_reason: 'Other Reason',
+    new_name: 'New Name',
+    new_address: 'New Address',
+    new_salary: 'New Salary',
+    update_employee_contribution: 'Update EE Contribution',
+    new_employee_contribution: 'New EE Contribution',
+    submission_token: 'Submission Token',
+    submitted_via: 'Submitted Via',
+    ip_address: 'IP Address',
+    user_agent: 'User Agent',
     processing_status: 'Processing Status',
     created_at: 'Created At',
     updated_at: 'Updated At',
@@ -208,7 +217,31 @@ export const ChangeInformationTable = ({ databaseType, onBack }: ChangeInformati
       // Generate columns dynamically from the first record
       if (sortedRecords.length > 0) {
         const dynamicColumns = generateColumnsFromData(sortedRecords);
-        setColumnOrder(dynamicColumns);
+        
+        // Reorder columns: company_name first, new fields before submission_token
+        const companyCol = dynamicColumns.find(c => c.id === 'company_name');
+        const otherCols = dynamicColumns.filter(c => c.id !== 'company_name');
+        
+        // Define desired column order for new fields (before submission_token)
+        const priorityOrder = [
+          'first_name', 'surname', 'date_of_birth', 'date_of_effect', 'change_type', 'other_reason',
+          'new_name', 'new_address', 'new_salary', 'update_employee_contribution', 'new_employee_contribution',
+          'submission_token', 'submitted_via', 'ip_address', 'user_agent', 'processing_status', 'created_at', 'updated_at'
+        ];
+        
+        // Sort otherCols according to priorityOrder
+        const sortedCols = otherCols.sort((a, b) => {
+          const aIndex = priorityOrder.indexOf(a.id);
+          const bIndex = priorityOrder.indexOf(b.id);
+          if (aIndex === -1 && bIndex === -1) return 0;
+          if (aIndex === -1) return 1;
+          if (bIndex === -1) return -1;
+          return aIndex - bIndex;
+        });
+        
+        // Company name first, then sorted columns
+        const orderedColumns = companyCol ? [companyCol, ...sortedCols] : sortedCols;
+        setColumnOrder(orderedColumns);
       }
     } catch (err: any) {
       console.error('Failed to load change information:', err);
@@ -786,7 +819,7 @@ export const ChangeInformationTable = ({ databaseType, onBack }: ChangeInformati
             >
               <thead className="bg-slate-50 border-b border-slate-200">
                 <tr>
-                  <th className="text-left p-4 bg-white sticky left-0 z-10 border-r border-slate-200 shadow-[2px_0_4px_rgba(0,0,0,0.05)]">
+                  <th className="text-left p-4 bg-slate-50 sticky left-0 z-20 border-r border-slate-200 shadow-[2px_0_4px_rgba(0,0,0,0.1)]">
                     <input
                       type="checkbox"
                       checked={selectedRows.size === paginatedRecords.length && paginatedRecords.length > 0}
@@ -816,7 +849,7 @@ export const ChangeInformationTable = ({ databaseType, onBack }: ChangeInformati
                     key={record.id}
                     className="border-b border-slate-100 hover:bg-slate-50 transition-colors"
                   >
-                    <td className="p-4 bg-white sticky left-0 z-5 border-r border-slate-200 shadow-[2px_0_4px_rgba(0,0,0,0.05)]">
+                    <td className="p-4 bg-white sticky left-0 z-10 border-r border-slate-200 shadow-[2px_0_4px_rgba(0,0,0,0.1)]">
                       <input
                         type="checkbox"
                         checked={selectedRows.has(record.id)}

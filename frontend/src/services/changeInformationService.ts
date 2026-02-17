@@ -11,6 +11,11 @@ export interface ChangeInformation {
   date_of_effect: string;
   change_type: string;
   other_reason?: string;
+  new_name?: string;
+  new_address?: string;
+  new_salary?: string;
+  update_employee_contribution?: boolean;
+  new_employee_contribution?: string;
   source_form_id: string;
   submission_token?: string;
   submitted_via: string;
@@ -30,6 +35,11 @@ export interface CreateChangeInformationDto {
   date_of_effect: string;
   change_type: string;
   other_reason?: string;
+  new_name?: string;
+  new_address?: string;
+  new_salary?: string;
+  update_employee_contribution?: boolean;
+  new_employee_contribution?: string;
   source_form_id: string;
 }
 
@@ -40,6 +50,11 @@ export interface UpdateChangeInformationDto {
   date_of_effect?: string;
   change_type?: string;
   other_reason?: string;
+  new_name?: string;
+  new_address?: string;
+  new_salary?: string;
+  update_employee_contribution?: boolean;
+  new_employee_contribution?: string;
   processing_status?: string;
 }
 
