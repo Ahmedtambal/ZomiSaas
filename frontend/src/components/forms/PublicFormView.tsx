@@ -307,27 +307,49 @@ export const PublicFormView: React.FC<PublicFormViewProps> = ({ token }) => {
     );
   }
 
+  // Helper function to format expiry time
+  const formatExpiryTime = (expiresAt: string): string => {
+    const now = new Date();
+    const expiryDate = new Date(expiresAt);
+    const diffMs = expiryDate.getTime() - now.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    // If less than 1 day away, show relative time
+    if (diffDays === 0) {
+      if (diffHours > 0) {
+        return `Expires in ${diffHours} hour${diffHours > 1 ? 's' : ''}`;
+      } else if (diffMins > 0) {
+        return `Expires in ${diffMins} min${diffMins > 1 ? 's' : ''}`;
+      } else {
+        return 'Expires soon';
+      }
+    }
+    // Otherwise show date
+    return `Expires: ${expiryDate.toLocaleDateString()}`;
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#fefae0] to-white p-6 font-['Inter',_'Roboto',_sans-serif]">
       <div className="max-w-4xl mx-auto">
-        {/* Logo and Privacy Notice */}
-        <div className="flex flex-col items-center mb-6">
-          <img
-            src="/whiteleaf%20group/whiteleaf.png"
-            alt="WhiteLeaf"
-            className="w-56 max-w-full h-auto mb-4"
-            onError={(e) => {
-              e.currentTarget.src = '/whiteleaf%20group/Whiteleaf%20Logo%20-%20New.png';
-            }}
-          />
-          <div className="text-center text-sm text-gray-700 space-y-2 max-w-2xl">
-            <p className="font-medium">Please complete with the employee details and the change so we can update our records</p>
-            <p className="text-gray-600 text-xs">When you submit this form, it will not automatically collect your details like name and email address unless you provide it yourself.</p>
-          </div>
-        </div>
-        
         {/* Header */}
         <div className="bg-white/60 backdrop-blur-xl rounded-2xl p-8 mb-6 shadow-lg border border-white/40">
+          {/* Logo and Privacy Notice */}
+          <div className="flex flex-col items-center mb-6">
+            <img
+              src="/whiteleaf%20group/whiteleaf.png"
+              alt="WhiteLeaf"
+              className="w-56 max-w-full h-auto mb-4"
+              onError={(e) => {
+                e.currentTarget.src = '/whiteleaf%20group/Whiteleaf%20Logo%20-%20New.png';
+              }}
+            />
+            <div className="text-center text-sm text-gray-700 space-y-2 max-w-2xl">
+              <p className="font-medium">Please complete with the employee details and the change so we can update our records</p>
+              <p className="text-gray-600 text-xs">When you submit this form, it will not automatically collect your details like name and email address unless you provide it yourself.</p>
+            </div>
+          </div>
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <h1 className="text-4xl font-bold text-gray-900 mb-3">{form?.name}</h1>
@@ -352,7 +374,7 @@ export const PublicFormView: React.FC<PublicFormViewProps> = ({ token }) => {
                 {tokenInfo.expires_at && (
                   <div className="flex items-center gap-2 text-gray-700 text-sm">
                     <Calendar className="w-4 h-4" />
-                    <span>Expires: {new Date(tokenInfo.expires_at).toLocaleDateString()}</span>
+                    <span>{formatExpiryTime(tokenInfo.expires_at)}</span>
                   </div>
                 )}
               </div>
