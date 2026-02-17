@@ -110,8 +110,8 @@ export const PublicFormView: React.FC<PublicFormViewProps> = ({ token }) => {
     }
   };
 
-  const validateForm = (): boolean => {
-    if (!form) return false;
+  const validateForm = (): { valid: boolean, errors: Record<string, string> } => {
+    if (!form) return { valid: false, errors: {} };
 
     const newErrors: Record<string, string> = {};
     const fields = form.formData?.fields || [];
@@ -154,16 +154,17 @@ export const PublicFormView: React.FC<PublicFormViewProps> = ({ token }) => {
     });
 
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    return { valid: Object.keys(newErrors).length === 0, errors: newErrors };
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!validateForm() || !token) {
+    const validation = validateForm();
+    if (!validation.valid || !token) {
       setError('Please fill in all required fields correctly');
-      // Scroll to first error
-      const firstErrorField = Object.keys(errors)[0];
+      // Scroll to first error using the newly computed errors
+      const firstErrorField = Object.keys(validation.errors)[0];
       if (firstErrorField) {
         const element = document.querySelector(`[name="${firstErrorField}"]`);
         if (element) {
@@ -420,30 +421,46 @@ export const PublicFormView: React.FC<PublicFormViewProps> = ({ token }) => {
               }}
             />
             
-            {/* Form Title */}
-            <h1 className="text-4xl font-bold text-gray-900 mb-3 text-center">{form?.name || 'Form'}</h1>
+            {/* Form Title and Description */}
+            {form?.templateType === 'change_information_upload' ? (
+              <>
+                <h1 className="text-4xl font-bold text-gray-900 mb-4 text-center">Change Information Form</h1>
+                <div className="text-center text-gray-700 space-y-3 max-w-2xl">
+                  <p className="font-medium text-base">Please complete with the employee details and the change so we can update our records</p>
+                  <p className="text-gray-600 text-sm">When you submit this form, it will not automatically collect your details like name and email address unless you provide it yourself.</p>
+                </div>
+              </>
+            ) : form?.templateType === 'new_employee_upload' ? (
+              <>
+                <h1 className="text-4xl font-bold text-gray-900 mb-4 text-center">New Employee Form</h1>
+                <div className="text-center text-gray-700 space-y-3 max-w-2xl">
+                  <p className="font-medium text-base">Please complete for each new employee as soon as they start working for you.</p>
+                  <p className="text-gray-600 text-sm">When you submit this form, it will not automatically collect your details like name and email address unless you provide it yourself.</p>
+                </div>
+              </>
+            ) : (
+              <>
+                <h1 className="text-4xl font-bold text-gray-900 mb-4 text-center">{form?.name || 'Form'}</h1>
+                <div className="text-center text-gray-700 space-y-3 max-w-2xl">
+                  <p className="text-gray-600 text-sm">When you submit this form, it will not automatically collect your details like name and email address unless you provide it yourself.</p>
+                </div>
+              </>
+            )}
             
-            {/* Description based on form type */}
-            <div className="text-center text-sm text-gray-700 space-y-2 max-w-2xl">
-              {form?.templateType === 'change_information_upload' ? (
-                <p className="font-medium text-base">Please complete with the employee details and the change so we can update our records</p>
-              ) : (
-                <p className="font-medium text-base">Please complete for each new employee as soon as they start working for you.</p>
-              )}
-              <p className="text-gray-600 text-xs">When you submit this form, it will not automatically collect your details like name and email address unless you provide it yourself.</p>
-            </div>
-            
-            {/* Company Badge */}
-            {company && (
-              <div className="mt-4 flex items-center gap-2 text-gray-800 bg-[#c7f9cc]/40 px-4 py-2 rounded-lg">
+          </div>
+          
+          {/* Company Badge - Separate Row */}
+          {company && (
+            <div className="flex items-center justify-center mb-4">
+              <div className="flex items-center gap-2 text-gray-800 bg-[#c7f9cc]/40 px-4 py-2 rounded-lg">
                 <Building2 className="w-5 h-5 text-[#38b000]" />
                 <span className="font-medium">{company.name}</span>
               </div>
-            )}
-          </div>
+            </div>
+          )}
           
-          {/* Submission and Timer Info */}
-          <div className="flex items-center justify-center gap-6 mb-6">
+          {/* Submission and Timer Info - Separate Row */}
+          <div className="flex items-center justify-center gap-6">
             {tokenInfo && (
               <>
                 {tokenInfo.max_submissions && (
@@ -468,6 +485,7 @@ export const PublicFormView: React.FC<PublicFormViewProps> = ({ token }) => {
             )}
           </div>
         </div>
+
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="bg-white/60 backdrop-blur-xl rounded-2xl p-8 shadow-lg border border-white/40">
