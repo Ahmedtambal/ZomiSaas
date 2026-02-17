@@ -459,7 +459,7 @@ export const PublicFormView: React.FC<PublicFormViewProps> = ({ token }) => {
             {/* Form Title and Description */}
             {((form as any)?.template_type === 'change_information_upload' || form?.templateType === 'change_information_upload') ? (
               <>
-                <h1 className="text-xl text-gray-900 mb-4 text-center">Change Information Form</h1>
+                <h1 className="text-xl font-medium text-gray-900 mb-4 text-center">Change Information Form</h1>
                 <div className="text-center text-gray-700 space-y-3 max-w-2xl">
                   <p className="font-medium text-base">Please complete with the employee details and the change so we can update our records</p>
                   <p className="text-gray-600 text-sm">When you submit this form, it will not automatically collect your details like name and email address unless you provide it yourself.</p>
@@ -467,7 +467,7 @@ export const PublicFormView: React.FC<PublicFormViewProps> = ({ token }) => {
               </>
             ) : ((form as any)?.template_type === 'new_employee_upload' || form?.templateType === 'new_employee_upload') ? (
               <>
-                <h1 className="text-xl text-gray-900 mb-4 text-center">New Employee Form</h1>
+                <h1 className="text-xl font-medium text-gray-900 mb-4 text-center">New Employee Form</h1>
                 <div className="text-center text-gray-700 space-y-3 max-w-2xl">
                   <p className="font-medium text-base">Please complete for each new employee as soon as they start working for you.</p>
                   <p className="text-gray-600 text-sm">When you submit this form, it will not automatically collect your details like name and email address unless you provide it yourself.</p>
@@ -475,7 +475,7 @@ export const PublicFormView: React.FC<PublicFormViewProps> = ({ token }) => {
               </>
             ) : (
               <>
-                <h1 className="text-xl text-gray-900 mb-4 text-center">{form?.name || 'Form'}</h1>
+                <h1 className="text-xl font-medium text-gray-900 mb-4 text-center">{form?.name || 'Form'}</h1>
                 <div className="text-center text-gray-700 space-y-3 max-w-2xl">
                   <p className="text-gray-600 text-sm">When you submit this form, it will not automatically collect your details like name and email address unless you provide it yourself.</p>
                 </div>
