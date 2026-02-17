@@ -114,8 +114,11 @@ export const PublicFormView: React.FC<PublicFormViewProps> = ({ token }) => {
     if (!form) return { valid: false, errors: {} };
 
     const newErrors: Record<string, string> = {};
-    const fields = form.formData?.fields || [];
+    // Backend returns snake_case form_data, frontend uses camelCase formData
+    const fields = form.formData?.fields || (form as any).form_data?.fields || [];
 
+    console.log('Validating form with fields:', fields.length);
+    
     fields.forEach((field: any) => {
       const value = formData[field.name];
       
@@ -153,6 +156,7 @@ export const PublicFormView: React.FC<PublicFormViewProps> = ({ token }) => {
       }
     });
 
+    console.log('Validation errors:', newErrors);
     setErrors(newErrors);
     return { valid: Object.keys(newErrors).length === 0, errors: newErrors };
   };
@@ -182,8 +186,39 @@ export const PublicFormView: React.FC<PublicFormViewProps> = ({ token }) => {
       setSubmissionId(result.submission_id);
       setSubmitted(true);
     } catch (err: any) {
-      const errorMsg = err.response?.data?.detail || err.message || 'Failed to submit form';
-      setError(`Submission failed: ${errorMsg}`);
+      // Parse error response
+      let errorMsg = 'Failed to submit form';
+      
+      if (err.response?.data?.detail) {
+        const detail = err.response.data.detail;
+        
+        // Check if it's a database error with constraint violation
+        if (typeof detail === 'object' && detail.message) {
+          const dbError = detail.message.toLowerCase();
+          
+          // Handle NOT NULL constraint violations
+          if (dbError.includes('null value') && dbError.includes('not-null constraint')) {
+            const fieldMatch = dbError.match(/column "([^"]+)"/);
+            const fieldName = fieldMatch ? fieldMatch[1] : 'required field';
+            errorMsg = `The ${fieldName} field is required and cannot be empty. Please fill in all required fields.`;
+          }
+          // Handle other constraint violations
+          else if (dbError.includes('violates') && dbError.includes('constraint')) {
+            errorMsg = 'Some required information is missing. Please check all required fields and try again.';
+          }
+          else {
+            errorMsg = detail.message;
+          }
+        }
+        // Handle string error details
+        else if (typeof detail === 'string') {
+          errorMsg = detail;
+        }
+      } else if (err.message) {
+        errorMsg = err.message;
+      }
+      
+      setError(errorMsg);
       // Scroll to error message
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally {
