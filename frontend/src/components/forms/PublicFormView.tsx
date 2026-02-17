@@ -422,7 +422,7 @@ export const PublicFormView: React.FC<PublicFormViewProps> = ({ token }) => {
             />
             
             {/* Form Title and Description */}
-            {form?.templateType === 'change_information_upload' ? (
+            {((form as any)?.template_type === 'change_information_upload' || form?.templateType === 'change_information_upload') ? (
               <>
                 <h1 className="text-4xl font-bold text-gray-900 mb-4 text-center">Change Information Form</h1>
                 <div className="text-center text-gray-700 space-y-3 max-w-2xl">
@@ -430,7 +430,7 @@ export const PublicFormView: React.FC<PublicFormViewProps> = ({ token }) => {
                   <p className="text-gray-600 text-sm">When you submit this form, it will not automatically collect your details like name and email address unless you provide it yourself.</p>
                 </div>
               </>
-            ) : form?.templateType === 'new_employee_upload' ? (
+            ) : ((form as any)?.template_type === 'new_employee_upload' || form?.templateType === 'new_employee_upload') ? (
               <>
                 <h1 className="text-4xl font-bold text-gray-900 mb-4 text-center">New Employee Form</h1>
                 <div className="text-center text-gray-700 space-y-3 max-w-2xl">

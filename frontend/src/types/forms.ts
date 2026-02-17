@@ -72,6 +72,7 @@ export interface FormDefinition {
   organizationId?: string;
   createdByUserId?: string;
   templateType?: 'custom' | 'sw_new_employee' | 'io_upload' | 'new_employee_upload' | 'change_information_upload';
+  template_type?: 'custom' | 'sw_new_employee' | 'io_upload' | 'new_employee_upload' | 'change_information_upload'; // Backend returns snake_case
   linkedCompanyId?: string;
 }
 
